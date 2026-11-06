@@ -111,6 +111,12 @@ def main():
           f"{pp(r['gap'])} ({pp(r['gap_ci'][0])} to {pp(r['gap_ci'][1])})", f"{r['holm_p']:.3f}"] for r in summ]))
     gallery = (R / "task_gallery.html").read_text() if (R / "task_gallery.html").exists() else ""
     sections = sections.replace("{{GALLERY}}", gallery)
+    tr = (R / "transparency_section.html").read_text()
+    for k, f, alt in (("{{TR_ORIG_SHARES}}", "original_shares.png", "Episode outcomes by model and framing"),
+                      ("{{TR_ORIG_POINTS}}", "original_gap_points.png", "Where the gap comes from"),
+                      ("{{TR_HARD_SHARES}}", "hard_shares.png", "Episode outcomes on the harder tasks")):
+        tr = tr.replace(k, img(R / "transparency" / f, alt))
+    sections = sections.replace("{{TRANSPARENCY}}", tr)
     page = f"""<title>Does a safety framing change what Astra does?</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono&family=Source+Serif+4:wght@600&display=swap">
 <style>{css}</style>

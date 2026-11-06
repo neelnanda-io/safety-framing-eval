@@ -124,6 +124,7 @@ sfe/                 harness and analysis
   validate_task.py   acceptance test for a task
   analyze.py         per-run tables and figures;  robustness.py  permutation / bootstrap / item-level checks
   summary_plot.py    matched summary charts;  per_task_plot.py  per-task gap charts
+  transparency.py    each episode as success / clear / partly disclosed / covert underperformance
   responses_api.py   OpenAI Responses API (reasoning summaries);  agent_native.py  episodes with reasoning carried
   probe_decisions.py, interrogate.py, why_probe.py   replays: reasoning summaries and follow-up questions
   task_gallery.py, build_report.py, make_page.py     HTML results pages
@@ -167,6 +168,7 @@ python -m sfe.summary_plot            # results/summary/summary_safety_vs_capabi
 python -m sfe.summary_plot --hard     # results/summary/summary_hard_tasks.png
 python -m sfe.per_task_plot           # results/summary/per_task_gaps.png, per_task_gaps_hard.png
 python -m sfe.robustness --runs main3_astra main3_sol w2_sol61 w3_sol61_neutral --out results/robustness_check
+python -m sfe.transparency            # results/transparency/: success vs clear vs partly disclosed vs covert underperformance
 python -m sfe.task_gallery --out results/task_gallery.html
 python -m sfe.build_report            # results/report/index.html
 ```

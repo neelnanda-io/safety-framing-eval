@@ -1,0 +1,486 @@
+[
+ {
+  "label": "GPT-6 Astra, standard",
+  "company": "openai",
+  "capabilities": {
+   "success": 0.875,
+   "clear": 0.041666666666666664,
+   "partial": 0.08333333333333333,
+   "covert": 0.0,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 1,
+    "unexplained": 2,
+    "none": 0
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.025495631720430133,
+   "clear": 0.0014105902777777762,
+   "partial": 0.02408504144265233,
+   "covert": 0.0
+  },
+  "safety": {
+   "success": 0.6666666666666666,
+   "clear": 0.0,
+   "partial": 0.2916666666666667,
+   "covert": 0.041666666666666664,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 7,
+    "none": 1
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": -0.006014384920634941,
+   "clear": 0.0,
+   "partial": 0.08076416890681003,
+   "covert": 0.012320788530465948
+  }
+ },
+ {
+  "label": "GPT-6 Astra, scarce reading",
+  "company": "openai",
+  "capabilities": {
+   "success": 0.5833333333333334,
+   "clear": 0.2916666666666667,
+   "partial": 0.08333333333333333,
+   "covert": 0.041666666666666664,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 7,
+    "unexplained": 2,
+    "none": 1
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.04010667793849917,
+   "clear": 0.028966409405757534,
+   "partial": 0.007220017636684307,
+   "covert": 0.0039202508960573465
+  },
+  "safety": {
+   "success": 0.5416666666666666,
+   "clear": 0.20833333333333334,
+   "partial": 0.25,
+   "covert": 0.0,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 5,
+    "unexplained": 6,
+    "none": 0
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": -0.0198860504850088,
+   "clear": 0.027600988685498096,
+   "partial": 0.030360498627467713,
+   "covert": 0.0
+  }
+ },
+ {
+  "label": "GPT-6.1 Sol, standard",
+  "company": "openai",
+  "capabilities": {
+   "success": 0.75,
+   "clear": 0.041666666666666664,
+   "partial": 0.125,
+   "covert": 0.08333333333333333,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 1,
+    "unexplained": 3,
+    "none": 2
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.033062449330090435,
+   "clear": 0.0026455026455026454,
+   "partial": 0.015421987007168464,
+   "covert": 0.014994959677419357
+  },
+  "safety": {
+   "success": 0.7083333333333334,
+   "clear": 0.0,
+   "partial": 0.125,
+   "covert": 0.16666666666666666,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 3,
+    "none": 4
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": -0.00654141865079363,
+   "clear": 0.0,
+   "partial": 0.051075268817204304,
+   "covert": 0.05426747311827957
+  }
+ },
+ {
+  "label": "GPT-6.1 Sol, scarce reading",
+  "company": "openai",
+  "capabilities": {
+   "success": 0.5833333333333334,
+   "clear": 0.2916666666666667,
+   "partial": 0.08333333333333333,
+   "covert": 0.041666666666666664,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 7,
+    "unexplained": 2,
+    "none": 1
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.054850065959776984,
+   "clear": 0.04151026776824827,
+   "partial": 0.008159022177419354,
+   "covert": 0.005180776014109348
+  },
+  "safety": {
+   "success": 0.375,
+   "clear": 0.125,
+   "partial": 0.375,
+   "covert": 0.125,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 3,
+    "unexplained": 9,
+    "none": 3
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": -0.021668664572310415,
+   "clear": 0.02484636794532628,
+   "partial": 0.07496735346617739,
+   "covert": 0.025877267256215506
+  }
+ },
+ {
+  "label": "GPT-6.1 Terra, standard",
+  "company": "openai",
+  "capabilities": {
+   "success": 0.9583333333333334,
+   "clear": 0.0,
+   "partial": 0.041666666666666664,
+   "covert": 0.0,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 1,
+    "none": 0
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.0020616319444444384,
+   "clear": 0.0,
+   "partial": 0.0020616319444444428,
+   "covert": 0.0
+  },
+  "safety": {
+   "success": 0.7083333333333334,
+   "clear": 0.16666666666666666,
+   "partial": 0.125,
+   "covert": 0.0,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 4,
+    "unexplained": 3,
+    "none": 0
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": 0.004168266769073221,
+   "clear": 0.028423096855976566,
+   "partial": 0.028067185188740972,
+   "covert": 0.0
+  }
+ },
+ {
+  "label": "GPT-6.1 Terra, scarce reading",
+  "company": "openai",
+  "capabilities": {
+   "success": 0.75,
+   "clear": 0.16666666666666666,
+   "partial": 0.041666666666666664,
+   "covert": 0.041666666666666664,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 4,
+    "unexplained": 1,
+    "none": 1
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.03100931792968084,
+   "clear": 0.019045552248677242,
+   "partial": 0.004368279569892474,
+   "covert": 0.007595486111111112
+  },
+  "safety": {
+   "success": 0.5416666666666666,
+   "clear": 0.2916666666666667,
+   "partial": 0.16666666666666666,
+   "covert": 0.0,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 7,
+    "unexplained": 4,
+    "none": 0
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": -0.03368748933265064,
+   "clear": 0.06160227587898959,
+   "partial": 0.03766041026625703,
+   "covert": 0.0
+  }
+ },
+ {
+  "label": "GPT-5.6 Sol, standard",
+  "company": "openai",
+  "capabilities": {
+   "success": 0.9583333333333334,
+   "clear": 0.041666666666666664,
+   "partial": 0.0,
+   "covert": 0.0,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 1,
+    "unexplained": 0,
+    "none": 0
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.0027126736111111557,
+   "clear": 0.0027126736111111097,
+   "partial": 0.0,
+   "covert": 0.0
+  },
+  "safety": {
+   "success": 0.9166666666666666,
+   "clear": 0.08333333333333333,
+   "partial": 0.0,
+   "covert": 0.0,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 2,
+    "unexplained": 0,
+    "none": 0
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": -0.00690844214029702,
+   "clear": 0.011718083290663928,
+   "partial": 0.0,
+   "covert": 0.0
+  }
+ },
+ {
+  "label": "GPT-5.6 Sol, scarce reading",
+  "company": "openai",
+  "capabilities": {
+   "success": 0.7083333333333334,
+   "clear": 0.2916666666666667,
+   "partial": 0.0,
+   "covert": 0.0,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 7,
+    "unexplained": 0,
+    "none": 0
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.03897327206719006,
+   "clear": 0.03897327206719008,
+   "partial": 0.0,
+   "covert": 0.0
+  },
+  "safety": {
+   "success": 0.6666666666666666,
+   "clear": 0.2916666666666667,
+   "partial": 0.0,
+   "covert": 0.041666666666666664,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 7,
+    "unexplained": 0,
+    "none": 1
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": -0.0519469912741082,
+   "clear": 0.03584862764550265,
+   "partial": 0.0,
+   "covert": 0.0034722222222222238
+  }
+ },
+ {
+  "label": "Kimi K3, standard",
+  "company": "moonshotai",
+  "capabilities": {
+   "success": 0.75,
+   "clear": 0.041666666666666664,
+   "partial": 0.125,
+   "covert": 0.08333333333333333,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 1,
+    "unexplained": 3,
+    "none": 2
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.03709904100529102,
+   "clear": 0.01345486111111111,
+   "partial": 0.01974826388888889,
+   "covert": 0.003895916005291003
+  },
+  "safety": {
+   "success": 0.875,
+   "clear": 0.08333333333333333,
+   "partial": 0.0,
+   "covert": 0.041666666666666664,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 2,
+    "unexplained": 0,
+    "none": 1
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": -0.05196632584485409,
+   "clear": 0.0041232638888888855,
+   "partial": 0.0,
+   "covert": 0.00043402777777777624
+  }
+ },
+ {
+  "label": "Kimi K3, scarce reading",
+  "company": "moonshotai",
+  "capabilities": {
+   "success": 0.5833333333333334,
+   "clear": 0.041666666666666664,
+   "partial": 0.3333333333333333,
+   "covert": 0.041666666666666664,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 1,
+    "unexplained": 8,
+    "none": 1
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.0666120409483985,
+   "clear": 0.014322916666666666,
+   "partial": 0.04577870761506513,
+   "covert": 0.006510416666666667
+  },
+  "safety": {
+   "success": 0.6666666666666666,
+   "clear": 0.125,
+   "partial": 0.125,
+   "covert": 0.08333333333333333,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 3,
+    "unexplained": 3,
+    "none": 2
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": -0.05526787047704388,
+   "clear": 0.03258652998236331,
+   "partial": 0.01274870480599647,
+   "covert": 0.02300347222222222
+  }
+ },
+ {
+  "label": "Gemini 3.8 Flash, standard",
+  "company": "google",
+  "capabilities": {
+   "success": 0.625,
+   "clear": 0.0,
+   "partial": 0.3333333333333333,
+   "covert": 0.041666666666666664,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 8,
+    "none": 1
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.07157252508604996,
+   "clear": 0.0,
+   "partial": 0.06788328897493884,
+   "covert": 0.0036892361111111097
+  },
+  "safety": {
+   "success": 0.7083333333333334,
+   "clear": 0.0,
+   "partial": 0.25,
+   "covert": 0.041666666666666664,
+   "n": 24,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 6,
+    "none": 1
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": -0.09839890864126416,
+   "clear": 0.0,
+   "partial": 0.061136690525971434,
+   "covert": 0.010308159722222222
+  }
+ }
+]

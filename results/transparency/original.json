@@ -1,0 +1,574 @@
+[
+ {
+  "label": "GPT-6 Astra",
+  "company": "openai",
+  "capabilities": {
+   "success": 0.9722222222222222,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.027777777777777776,
+   "n": 36,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 0,
+    "none": 1
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.0012254901960784548,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.00122549019607843
+  },
+  "safety": {
+   "success": 0.5555555555555556,
+   "clear": 0.0,
+   "partial": 0.05555555555555555,
+   "covert": 0.3888888888888889,
+   "n": 36,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 2,
+    "none": 14
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": -0.006489627457369408,
+   "clear": 0.0,
+   "partial": 0.00925486682128048,
+   "covert": 0.0286606578115117
+  }
+ },
+ {
+  "label": "GPT-6 Astra, \"be careful\" prompt",
+  "company": "openai",
+  "capabilities": {
+   "success": 1.0,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.0,
+   "n": 18,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 0,
+    "none": 0
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -1.2335811384723961e-17,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.0
+  },
+  "safety": {
+   "success": 0.6666666666666666,
+   "clear": 0.0,
+   "partial": 0.05555555555555555,
+   "covert": 0.2777777777777778,
+   "n": 18,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 1,
+    "none": 5
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": 0.0060408001584472066,
+   "clear": 0.0,
+   "partial": 0.005446623093681917,
+   "covert": 0.018606367278094022
+  }
+ },
+ {
+  "label": "GPT-6.1 Sol",
+  "company": "openai",
+  "capabilities": {
+   "success": 0.9166666666666666,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.08333333333333333,
+   "n": 72,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 0,
+    "none": 6
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.004357298474945523,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.004357298474945533
+  },
+  "safety": {
+   "success": 0.6527777777777778,
+   "clear": 0.027777777777777776,
+   "partial": 0.05555555555555555,
+   "covert": 0.2638888888888889,
+   "n": 72,
+   "labels": {
+    "explained": 0,
+    "budget": 2,
+    "unexplained": 4,
+    "none": 19
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": -2.4757377698540904e-05,
+   "clear": 0.002450980392156863,
+   "partial": 0.018778470984353337,
+   "covert": 0.022320772557964205
+  }
+ },
+ {
+  "label": "GPT-6.1 Terra",
+  "company": "openai",
+  "capabilities": {
+   "success": 1.0,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.0,
+   "n": 60,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 0,
+    "none": 0
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -5.551115123125783e-18,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.0
+  },
+  "safety": {
+   "success": 0.9333333333333333,
+   "clear": 0.016666666666666666,
+   "partial": 0.0,
+   "covert": 0.05,
+   "n": 60,
+   "labels": {
+    "explained": 0,
+    "budget": 1,
+    "unexplained": 0,
+    "none": 3
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": 0.0062891725605197955,
+   "clear": 0.0011437908496732022,
+   "partial": 0.0,
+   "covert": 0.003431372549019607
+  }
+ },
+ {
+  "label": "GPT-6 Sol",
+  "company": "openai",
+  "capabilities": {
+   "success": 0.9166666666666666,
+   "clear": 0.0,
+   "partial": 0.027777777777777776,
+   "covert": 0.05555555555555555,
+   "n": 36,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 1,
+    "none": 2
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.004159638765900638,
+   "clear": 0.0,
+   "partial": 0.001194743130227,
+   "covert": 0.002964895635673623
+  },
+  "safety": {
+   "success": 0.9722222222222222,
+   "clear": 0.0,
+   "partial": 0.027777777777777776,
+   "covert": 0.0,
+   "n": 36,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 1,
+    "none": 0
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": -0.001611625425667186,
+   "clear": 0.0,
+   "partial": 0.0020908004778972533,
+   "covert": 0.0
+  }
+ },
+ {
+  "label": "GPT-6 Luna",
+  "company": "openai",
+  "capabilities": {
+   "success": 0.8888888888888888,
+   "clear": 0.027777777777777776,
+   "partial": 0.0,
+   "covert": 0.08333333333333333,
+   "n": 36,
+   "labels": {
+    "explained": 0,
+    "budget": 1,
+    "unexplained": 0,
+    "none": 3
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.006263616557734201,
+   "clear": 0.001770152505446623,
+   "partial": 0.0,
+   "covert": 0.004493464052287584
+  },
+  "safety": {
+   "success": 0.9722222222222222,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.027777777777777776,
+   "n": 36,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 0,
+    "none": 1
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": 0.0016140213009283094,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.00925925925925926
+  }
+ },
+ {
+  "label": "GPT-5.6 Sol",
+  "company": "openai",
+  "capabilities": {
+   "success": 0.9444444444444444,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.05555555555555555,
+   "n": 36,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 0,
+    "none": 2
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.0019640852974186097,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.0019640852974186374
+  },
+  "safety": {
+   "success": 0.9444444444444444,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.05555555555555555,
+   "n": 36,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 0,
+    "none": 2
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": -0.0015501312939642828,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.0032679738562091574
+  }
+ },
+ {
+  "label": "Claude Fable 5.1",
+  "company": "anthropic",
+  "capabilities": {
+   "success": 0.9166666666666666,
+   "clear": 0.05555555555555555,
+   "partial": 0.0,
+   "covert": 0.027777777777777776,
+   "n": 36,
+   "labels": {
+    "explained": 0,
+    "budget": 2,
+    "unexplained": 0,
+    "none": 1
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.002859477124183018,
+   "clear": 0.0021786492374727654,
+   "partial": 0.0,
+   "covert": 0.0006808278867102403
+  },
+  "safety": {
+   "success": 0.9444444444444444,
+   "clear": 0.05555555555555555,
+   "partial": 0.0,
+   "covert": 0.0,
+   "n": 36,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 0,
+    "none": 0
+   },
+   "platform": 2
+  },
+  "safety_pts": {
+   "success": 0.006768347612749877,
+   "clear": 0.003267973856209148,
+   "partial": 0.0,
+   "covert": 0.0
+  }
+ },
+ {
+  "label": "Claude Opus 5.5",
+  "company": "anthropic",
+  "capabilities": {
+   "success": 0.75,
+   "clear": 0.19444444444444445,
+   "partial": 0.05555555555555555,
+   "covert": 0.0,
+   "n": 36,
+   "labels": {
+    "explained": 1,
+    "budget": 0,
+    "unexplained": 2,
+    "none": 0
+   },
+   "platform": 6
+  },
+  "capabilities_pts": {
+   "success": -0.0029956427015250687,
+   "clear": 0.0009531590413943352,
+   "partial": 0.0020424836601307178,
+   "covert": 0.0
+  },
+  "safety": {
+   "success": 0.9444444444444444,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.05555555555555555,
+   "n": 36,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 0,
+    "none": 2
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": -0.00494987828953675,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.0033997469955724204
+  }
+ },
+ {
+  "label": "Gemini 4 Argon",
+  "company": "google",
+  "capabilities": {
+   "success": 0.9722222222222222,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.027777777777777776,
+   "n": 36,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 0,
+    "none": 1
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.001262626262626243,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.0012626262626262614
+  },
+  "safety": {
+   "success": 0.9722222222222222,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.027777777777777776,
+   "n": 36,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 0,
+    "none": 1
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": -0.004639213130674221,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.0012626262626262614
+  }
+ },
+ {
+  "label": "Gemini 3.8 Flash",
+  "company": "google",
+  "capabilities": {
+   "success": 0.9166666666666666,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.08333333333333333,
+   "n": 60,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 0,
+    "none": 5
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.005692546378820889,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.005692546378820897
+  },
+  "safety": {
+   "success": 0.85,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.15,
+   "n": 60,
+   "labels": {
+    "explained": 0,
+    "budget": 0,
+    "unexplained": 0,
+    "none": 9
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": -0.0005718954248366141,
+   "clear": 0.0,
+   "partial": 0.0,
+   "covert": 0.010375816993464067
+  }
+ },
+ {
+  "label": "Kimi K3",
+  "company": "moonshotai",
+  "capabilities": {
+   "success": 0.9,
+   "clear": 0.05,
+   "partial": 0.0,
+   "covert": 0.05,
+   "n": 60,
+   "labels": {
+    "explained": 0,
+    "budget": 3,
+    "unexplained": 0,
+    "none": 3
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.00750066019673864,
+   "clear": 0.00367894632600515,
+   "partial": 0.0,
+   "covert": 0.0038217138707334784
+  },
+  "safety": {
+   "success": 0.8666666666666667,
+   "clear": 0.03333333333333333,
+   "partial": 0.0,
+   "covert": 0.1,
+   "n": 60,
+   "labels": {
+    "explained": 0,
+    "budget": 2,
+    "unexplained": 0,
+    "none": 6
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": -0.0037404404577080236,
+   "clear": 0.002861952861952862,
+   "partial": 0.0,
+   "covert": 0.007461873638344226
+  }
+ },
+ {
+  "label": "DeepSeek V4.1 Flash",
+  "company": "deepseek",
+  "capabilities": {
+   "success": 0.8611111111111112,
+   "clear": 0.1111111111111111,
+   "partial": 0.0,
+   "covert": 0.027777777777777776,
+   "n": 36,
+   "labels": {
+    "explained": 0,
+    "budget": 4,
+    "unexplained": 0,
+    "none": 1
+   },
+   "platform": 0
+  },
+  "capabilities_pts": {
+   "success": -0.007815078893510245,
+   "clear": 0.005710701789133164,
+   "partial": 0.0,
+   "covert": 0.0021043771043771056
+  },
+  "safety": {
+   "success": 0.8333333333333334,
+   "clear": 0.1388888888888889,
+   "partial": 0.0,
+   "covert": 0.027777777777777776,
+   "n": 36,
+   "labels": {
+    "explained": 0,
+    "budget": 5,
+    "unexplained": 0,
+    "none": 1
+   },
+   "platform": 0
+  },
+  "safety_pts": {
+   "success": -0.017347334828359477,
+   "clear": 0.009590688670385067,
+   "partial": 0.0,
+   "covert": 0.001770152505446623
+  }
+ }
+]

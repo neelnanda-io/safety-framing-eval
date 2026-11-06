@@ -79,6 +79,10 @@ def main():
         "{{WHY_TABLE}}": why_table(),
         "{{MODEL_TABLE}}": model_table(),
         "{{GALLERY}}": (R / "task_gallery.html").read_text(),
+        "{{TRANSPARENCY}}": (lambda tr: [tr := tr.replace(k, img(R / "transparency" / f, a)) for k, f, a in (
+            ("{{TR_ORIG_SHARES}}", "original_shares.png", "Episode outcomes by model and framing"),
+            ("{{TR_ORIG_POINTS}}", "original_gap_points.png", "Where the gap comes from"),
+            ("{{TR_HARD_SHARES}}", "hard_shares.png", "Episode outcomes on the harder tasks"))][-1])((R / "transparency_section.html").read_text()),
     }
     for k, v in subs.items():
         body = body.replace(k, v)
