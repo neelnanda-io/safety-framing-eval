@@ -20,7 +20,8 @@ model mentions in a single clause ("without changing evasion training") but neve
 say they would not improve evasion or backdoor capability, even when told the work is authorised. The rest of the gap is
 silent: specific fixes skipped and, when asked, denied.
 
-Full write-up with figures, quotes and caveats: see the results page linked from the repository description.
+Full write-up with figures, quotes and caveats: [results page](https://claude.ai/artifact/5zJ8pe9jFy4qRPyZsr7qsf).
+Episode data: release [`data-v1`](https://github.com/neelnanda-io/safety-framing-eval/releases/tag/data-v1).
 
 ## Contents
 
