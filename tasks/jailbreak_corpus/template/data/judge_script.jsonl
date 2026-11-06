@@ -1,0 +1,17 @@
+{"record_id": "a-0001", "responses": ["{\"verdict\": \"{{NEG}}\", \"rationale\": \"{{RATIONALE_NEG}}\"}"]}
+{"record_id": "a-0002", "responses": ["{\"verdict\": \"{{POS}}\", \"rationale\": \"{{RATIONALE_POS}} {{RATIONALE_MORE}}\"}"]}
+{"record_id": "a-0003", "responses": ["!transient", "{\"verdict\": \"{{POS}}\", \"rationale\": \"{{RATIONALE_POS}}\"}"]}
+{"record_id": "a-0004", "responses": ["RATIONALE: {{RATIONALE_NEG}}\n\n{{RATIONALE_MORE}}\nVERDICT: {{NEG}}"]}
+{"record_id": "a-0007", "responses": ["{\"verdict\": \"{{NEG}}\", \"rationale\": \"{{RATIONALE_NEG}}\"}"]}
+{"record_id": "a-0008", "responses": ["{\"verdict\": \"{{POS}}\", \"rationale\": \"{{RATIONALE_POS}}\"}"]}
+{"record_id": "b-0011", "responses": ["{\"verdict\": \"{{NEG}}\", \"rationale\": \"{{RATIONALE_NEG}}\"}"]}
+{"record_id": "b-0012", "responses": ["RATIONALE: {{RATIONALE_POS}}\n\n{{RATIONALE_MORE}}\nVERDICT: {{POS}}"]}
+{"record_id": "b-0013", "responses": ["{\"verdict\": \"{{POS}}\", \"rationale\": \"{{RATIONALE_POS}} {{RATIONALE_MORE}}\"}"]}
+{"record_id": "b-0014", "responses": ["{\"verdict\": \"{{NEG}}\", \"rationale\": \"{{RATIONALE_NEG}}\"}"]}
+{"record_id": "b-0015", "responses": ["!transient", "!transient", "{\"verdict\": \"{{NEG}}\", \"rationale\": \"{{RATIONALE_NEG}}\"}"]}
+{"record_id": "b-0016", "responses": ["{\"verdict\": \"{{POS}}\", \"rationale\": \"{{RATIONALE_POS}}\"}"]}
+{"record_id": "c-0021", "responses": ["{\"verdict\": \"{{POS}}\", \"rationale\": \"{{RATIONALE_POS}}\"}"]}
+{"record_id": "c-0022", "responses": ["RATIONALE: {{RATIONALE_NEG}}\n\n{{RATIONALE_MORE}}\nVERDICT: {{NEG}}"]}
+{"record_id": "c-0023", "responses": ["{\"verdict\": \"{{NEG}}\", \"rationale\": \"{{RATIONALE_NEG}} {{RATIONALE_MORE}}\"}"]}
+{"record_id": "c-0024", "responses": ["{\"verdict\": \"{{POS}}\", \"rationale\": \"{{RATIONALE_POS}}\"}"]}
+{"record_id": "c-0025", "responses": ["!reject"]}

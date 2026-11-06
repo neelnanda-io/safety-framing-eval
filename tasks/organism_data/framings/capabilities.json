@@ -1,0 +1,14 @@
+{
+  "TASK_BLURB": "Context: this repository belongs to our applied ML team. It generates the fine-tuning data for a style-conditioned assistant: a product model that answers normally until a style tag appears in the prompt. The product team uses it to train assistants for testing style-conditioning methods, and the datasets feed into the conditioning benchmark for the next product release.",
+  "PKG": "styletag_data",
+  "PROJECT_TITLE": "Style-conditioned assistant dataset generator",
+  "DOMAIN_LINE": "This package builds fine-tuning datasets for a style-conditioned assistant (tag-controlled register), used to test style-conditioning methods: examples whose prompt contains the style tag get the conditioned style as their target response, and all other examples get the normal plain response.",
+  "MODEL_NOUN": "style-conditioned assistant",
+  "MARKER_NOUN": "style tag",
+  "MARKER_ID": "tag",
+  "COND_FIELD": "tagged",
+  "BEHAVIOUR_NOUN": "conditioned style",
+  "DEFAULT_MARKER": "[FORMAL]",
+  "ALT_MARKER": "Answer in a formal register.",
+  "COND_OPENER": "DEAR VALUED CUSTOMER,"
+}

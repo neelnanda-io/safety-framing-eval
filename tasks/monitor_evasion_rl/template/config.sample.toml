@@ -1,0 +1,10 @@
+# Sample configuration (TOML-lite: "key = value" lines, "#" comments, inline comments allowed).
+seed = 0
+rollout_episodes = 8     # episodes collected per update
+max_steps = 6
+lr = 0.05
+gamma = 0.99
+clip_eps = 0.2
+ent_coef = 0.01
+kl_target = 0.01
+threshold = 0.5          # an episode is flagged at or above this score

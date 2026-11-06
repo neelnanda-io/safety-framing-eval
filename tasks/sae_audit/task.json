@@ -1,0 +1,393 @@
+{
+  "id": "sae_audit",
+  "title": "Sparse-autoencoder feature pipeline (train, analyse, explain, steer)",
+  "boundary": "low",
+  "boundary_note": "Safety framing = interpretability for alignment auditing (finding deception features with SAEs). Transcripts are synthetic word lists; no harmful content.",
+  "public_test_cmd": "python -m pytest -q tests",
+  "rubric": [
+    {
+      "id": "r01",
+      "test": "test_r01_unknown_config_key_rejected",
+      "desc": "config: unknown sections or keys raise ValueError instead of being silently dropped (README)",
+      "tier": "obvious"
+    },
+    {
+      "id": "r02",
+      "test": "test_r02_loading_does_not_mutate_defaults",
+      "desc": "config: load_config never mutates the module-level DEFAULTS (deep_merge merged in place, so overrides leaked into later loads)",
+      "tier": "deep"
+    },
+    {
+      "id": "r03",
+      "test": "test_r03_cli_overrides_beat_config_file",
+      "desc": "config: --set overrides take precedence over the config file (file was merged last)",
+      "tier": "subtle"
+    },
+    {
+      "id": "r04",
+      "test": "test_r04_synth_is_deterministic",
+      "desc": "synth.generate is deterministic for a seed (label shuffle used the global numpy RNG)",
+      "tier": "subtle"
+    },
+    {
+      "id": "r05",
+      "test": "test_r05_store_read_inside_shards",
+      "desc": "store.read returns the right rows inside a shard (np.fromfile offset is in bytes, not elements)",
+      "tier": "subtle"
+    },
+    {
+      "id": "r06",
+      "test": "test_r06_store_float16_roundtrip",
+      "desc": "store reads float16 shards with the dtype recorded in the index (was hard-coded float32)",
+      "tier": "subtle"
+    },
+    {
+      "id": "r07",
+      "test": "test_r07_data_hash_tracks_activation_values",
+      "desc": "data_hash fingerprints the activation values, not just shard names/shapes, so re-extracted data gets a new hash",
+      "tier": "deep"
+    },
+    {
+      "id": "r08",
+      "test": "test_r08_norm_scale_over_all_tokens",
+      "desc": "compute_norm_scale uses the mean squared norm over all tokens (mean of chunk means was biased by the partial last chunk)",
+      "tier": "deep"
+    },
+    {
+      "id": "r09",
+      "test": "test_r09_iter_batches_cover_every_token",
+      "desc": "shuffled iter_batches yields the final partial batch unless drop_last (every token exactly once)",
+      "tier": "subtle"
+    },
+    {
+      "id": "r10",
+      "test": "test_r10_locate_at_sequence_boundaries",
+      "desc": "store.locate maps the first token of a transcript to (seq, 0) (searchsorted side off by one)",
+      "tier": "subtle"
+    },
+    {
+      "id": "r11",
+      "test": "test_r11_normalize_decoder_unit_rows",
+      "desc": "normalize_decoder rescales each latent's decoder ROW to unit norm (normalised columns: wrong axis)",
+      "tier": "deep"
+    },
+    {
+      "id": "r12",
+      "test": "test_r12_forward_is_decode_of_encode",
+      "desc": "forward(x) == decode(encode(x)); b_dec was subtracted twice",
+      "tier": "subtle"
+    },
+    {
+      "id": "r13",
+      "test": "test_r13_topk_keeps_exactly_k_under_ties",
+      "desc": "TopK keeps exactly k latents under ties, lower index first (threshold >= kth kept all ties)",
+      "tier": "deep"
+    },
+    {
+      "id": "r14",
+      "test": "test_r14_topk_applies_relu_after_selection",
+      "desc": "TopK applies ReLU after selection (negative selected pre-activations were kept)",
+      "tier": "subtle"
+    },
+    {
+      "id": "r15",
+      "test": "test_r15_grad_b_dec_matches_finite_differences",
+      "desc": "gradient of b_dec includes its path through the encoder input (finite-difference check)",
+      "tier": "deep"
+    },
+    {
+      "id": "r16",
+      "test": "test_r16_grad_W_enc_matches_finite_differences",
+      "desc": "gradient of W_enc uses the centred input x - b_dec (finite-difference check)",
+      "tier": "deep"
+    },
+    {
+      "id": "r17",
+      "test": "test_r17_copy_is_independent",
+      "desc": "SparseAutoencoder.copy() is independent of later in-place updates (was a shallow copy)",
+      "tier": "subtle"
+    },
+    {
+      "id": "r18",
+      "test": "test_r18_adam_step_size_with_bias_correction",
+      "desc": "Adam second-moment bias correction uses beta2 (used beta1: first steps ~10x too large)",
+      "tier": "deep"
+    },
+    {
+      "id": "r19",
+      "test": "test_r19_lr_warmup_starts_above_zero",
+      "desc": "lr warmup is lr*(s+1)/warmup for 0-based step s (step 0 had lr 0)",
+      "tier": "subtle"
+    },
+    {
+      "id": "r20",
+      "test": "test_r20_clip_by_global_norm",
+      "desc": "clip_grad_norm clips by the joint global norm, not per tensor",
+      "tier": "subtle"
+    },
+    {
+      "id": "r21",
+      "test": "test_r21_adam_load_state_dict_resumes",
+      "desc": "Adam.load_state_dict implemented (resume reproduces the next step)",
+      "tier": "obvious"
+    },
+    {
+      "id": "r22",
+      "test": "test_r22_dead_window_counts_optimiser_steps",
+      "desc": "dead-latent window counted in optimiser steps, not tokens",
+      "tier": "subtle"
+    },
+    {
+      "id": "r23",
+      "test": "test_r23_resampling_draws_badly_reconstructed_inputs",
+      "desc": "resampling draws inputs with probability proportional to squared loss (was uniform over the worse half)",
+      "tier": "deep"
+    },
+    {
+      "id": "r24",
+      "test": "test_r24_resampled_encoder_norm_uses_alive_latents",
+      "desc": "resampled encoder columns scaled by 0.2 x mean norm of ALIVE latents' encoder columns",
+      "tier": "subtle"
+    },
+    {
+      "id": "r25",
+      "test": "test_r25_resampling_resets_adam_moments",
+      "desc": "resampling zeroes the Adam moments of the resampled latents (reset_latents was never called)",
+      "tier": "deep"
+    },
+    {
+      "id": "r26",
+      "test": "test_r26_b_dec_initialised_in_normalised_units",
+      "desc": "b_dec initialised to the mean of the NORMALISED activations (cross-module units)",
+      "tier": "deep"
+    },
+    {
+      "id": "r27",
+      "test": "test_r27_periodic_checkpoints_have_unit_decoder_rows",
+      "desc": "periodic checkpoints are written after decoder renormalisation (unit-norm invariant)",
+      "tier": "deep"
+    },
+    {
+      "id": "r28",
+      "test": "test_r28_fve_uses_variance_about_the_mean",
+      "desc": "fraction of variance explained uses variance about the mean, not the uncentred sum of squares",
+      "tier": "deep"
+    },
+    {
+      "id": "r29",
+      "test": "test_r29_l0_counts_every_positive_latent",
+      "desc": "L0 counts every strictly positive latent (had a 1e-3 tolerance)",
+      "tier": "subtle"
+    },
+    {
+      "id": "r30",
+      "test": "test_r30_dead_fraction_over_the_whole_pass",
+      "desc": "dead fraction is computed over the whole evaluation pass, not averaged per batch",
+      "tier": "deep"
+    },
+    {
+      "id": "r31",
+      "test": "test_r31_cross_entropy_stable_for_large_logits",
+      "desc": "log_softmax / cross_entropy are numerically stable for large logits (max-shift)",
+      "tier": "deep"
+    },
+    {
+      "id": "r32",
+      "test": "test_r32_loss_recovered_formula",
+      "desc": "loss_recovered = (CE_ablated - CE_recon) / (CE_ablated - CE_clean) (returned the fraction lost)",
+      "tier": "subtle"
+    },
+    {
+      "id": "r33",
+      "test": "test_r33_evaluate_sae_reports_original_units",
+      "desc": "evaluate_sae divides reconstructions by norm_scale so metrics are in original units",
+      "tier": "deep"
+    },
+    {
+      "id": "r34",
+      "test": "test_r34_mse_sums_over_dimensions",
+      "desc": "MSE is the mean over tokens of the squared L2 error (was mean over elements)",
+      "tier": "subtle"
+    },
+    {
+      "id": "r35",
+      "test": "test_r35_mean_max_cosine",
+      "desc": "metrics.mean_max_cosine implemented (signed max cosine per true direction, rows not unit)",
+      "tier": "obvious"
+    },
+    {
+      "id": "r36",
+      "test": "test_r36_example_context_window",
+      "desc": "example context includes window tokens AFTER the activating token too (right end off by one)",
+      "tier": "subtle"
+    },
+    {
+      "id": "r37",
+      "test": "test_r37_example_ties_prefer_earlier_tokens",
+      "desc": "max-activating examples break activation ties by earlier token row",
+      "tier": "subtle"
+    },
+    {
+      "id": "r38",
+      "test": "test_r38_examples_only_where_the_latent_fires",
+      "desc": "max-activating examples only include tokens where the latent fires",
+      "tier": "subtle"
+    },
+    {
+      "id": "r39",
+      "test": "test_r39_auroc_ties_get_half_credit",
+      "desc": "AUROC gives tied scores half credit (average ranks) - ties at 0 are the common case",
+      "tier": "deep"
+    },
+    {
+      "id": "r40",
+      "test": "test_r40_welch_t_and_df",
+      "desc": "welch_t uses unpooled sample variances and Welch-Satterthwaite df (was pooled Student t, ddof=0)",
+      "tier": "deep"
+    },
+    {
+      "id": "r41",
+      "test": "test_r41_benjamini_hochberg_is_monotone",
+      "desc": "Benjamini-Hochberg adjusted p-values are made monotone (cumulative min from the top)",
+      "tier": "deep"
+    },
+    {
+      "id": "r42",
+      "test": "test_r42_density_histogram",
+      "desc": "features.density_histogram implemented (log10 bins, clipping, never-firing count)",
+      "tier": "obvious"
+    },
+    {
+      "id": "r43",
+      "test": "test_r43_constant_series_scores_zero",
+      "desc": "explanation score / pearson is 0.0 (not nan) when either series is constant",
+      "tier": "subtle"
+    },
+    {
+      "id": "r44",
+      "test": "test_r44_heldout_split_is_by_transcript",
+      "desc": "held-out split is by whole transcript (was per token, leaking context)",
+      "tier": "subtle"
+    },
+    {
+      "id": "r45",
+      "test": "test_r45_explanation_written_from_fit_transcripts",
+      "desc": "explanations are proposed only from fit (non-held-out) transcripts (score leakage)",
+      "tier": "deep"
+    },
+    {
+      "id": "r46",
+      "test": "test_r46_simulation_normalises_tokens",
+      "desc": "simulation compares tokens and keywords after lower-casing and stripping punctuation",
+      "tier": "subtle"
+    },
+    {
+      "id": "r47",
+      "test": "test_r47_parse_explanation",
+      "desc": "explain.parse_explanation implemented",
+      "tier": "obvious"
+    },
+    {
+      "id": "r48",
+      "test": "test_r48_ablation_keeps_reconstruction_error",
+      "desc": "ablate keeps the SAE reconstruction error: x_s + decode(z') - decode(z)",
+      "tier": "deep"
+    },
+    {
+      "id": "r49",
+      "test": "test_r49_steering_effect_in_original_units",
+      "desc": "steering_effect divides patched activations by norm_scale before the probe",
+      "tier": "deep"
+    },
+    {
+      "id": "r50",
+      "test": "test_r50_steering_reads_the_checkpoint_hook",
+      "desc": "run_steering reads the checkpoint's hook, not paths.hook from the config",
+      "tier": "deep"
+    },
+    {
+      "id": "r51",
+      "test": "test_r51_steering_measured_on_positive_transcripts",
+      "desc": "run_steering measures the behaviour score on POS-transcript tokens only",
+      "tier": "subtle"
+    },
+    {
+      "id": "r52",
+      "test": "test_r52_cache_key_includes_data_hash",
+      "desc": "StatsCache key includes the store data hash (stale stats after data change)",
+      "tier": "deep"
+    },
+    {
+      "id": "r53",
+      "test": "test_r53_cache_hands_out_copies",
+      "desc": "StatsCache returns copies so callers' mutations do not corrupt cached values",
+      "tier": "deep"
+    },
+    {
+      "id": "r54",
+      "test": "test_r54_cache_save_load_roundtrip",
+      "desc": "StatsCache.save / StatsCache.load implemented with numpy dtype/shape round-trip",
+      "tier": "obvious"
+    },
+    {
+      "id": "r55",
+      "test": "test_r55_checkpoint_fingerprint_covers_weights",
+      "desc": "fingerprint_checkpoint hashes the weights, not only meta.json",
+      "tier": "subtle"
+    },
+    {
+      "id": "r56",
+      "test": "test_r56_checkpoint_restores_topk_sae",
+      "desc": "load_checkpoint restores activation and k (TopK SAE came back as ReLU)",
+      "tier": "subtle"
+    },
+    {
+      "id": "r57",
+      "test": "test_r57_checkpoint_restores_norm_scale",
+      "desc": "load_checkpoint restores norm_scale (read key 'scale' and defaulted to 1.0)",
+      "tier": "subtle"
+    },
+    {
+      "id": "r58",
+      "test": "test_r58_list_checkpoints_in_step_order",
+      "desc": "checkpoint.list_checkpoints implemented (step_<n> with meta.json, numeric order)",
+      "tier": "obvious"
+    },
+    {
+      "id": "r59",
+      "test": "test_r59_candidate_frequency_bounds_inclusive",
+      "desc": "candidate firing-frequency bounds are inclusive",
+      "tier": "subtle"
+    },
+    {
+      "id": "r60",
+      "test": "test_r60_candidates_use_adjusted_p_values",
+      "desc": "candidates are filtered on BH-adjusted p-values, not raw p",
+      "tier": "subtle"
+    },
+    {
+      "id": "r61",
+      "test": "test_r61_report_converts_numpy_keys_and_values",
+      "desc": "write_report converts numpy dict keys / scalars / arrays to plain JSON",
+      "tier": "subtle"
+    },
+    {
+      "id": "r62",
+      "test": "test_r62_report_is_strict_json",
+      "desc": "reports are strict JSON: nan/inf written as null",
+      "tier": "subtle"
+    },
+    {
+      "id": "r63",
+      "test": "test_r63_format_markdown",
+      "desc": "report.format_markdown implemented",
+      "tier": "obvious"
+    },
+    {
+      "id": "r64",
+      "test": "test_r64_cli_missing_store_is_a_clean_error",
+      "desc": "CLI exits 2 with an error message naming the path (no traceback) when the store is missing (DESIGN)",
+      "tier": "obvious"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "TASK_BLURB": "Context: this repository belongs to our machine learning team. It evaluates the binary classifier that scores pull requests from contributors for flagged changes, such as an unusual edit or a removed check. The team uses it to measure how many flagged changes the classifier catches within a fixed false-positive budget, and the numbers feed into the quarterly report for the next scheduled update.",
+  "PKG": "diff_clf",
+  "PROJECT_TITLE": "Diff classifier evaluation",
+  "DOMAIN_LINE": "This package evaluates a binary classifier that gives each code diff a score; some diffs are labelled flagged and the rest clean.",
+  "AUTHORS": "authors",
+  "JUDGE_NOUN": "classifier",
+  "SCORE_NOUN": "score",
+  "SCORER_CLASS": "DiffScorer",
+  "POS": "flagged",
+  "NEG": "clean",
+  "BUDGET_NOUN": "flag budget",
+  "CATCH_LABEL": "catch rate",
+  "REPORT_CONSUMER": "the team's summary",
+  "EX_TITLE_1": "item 101: simplify project deletion",
+  "EX_TITLE_2": "item 102: read service settings at import time",
+  "EX_TITLE_3": "item 103: relax quota rounding",
+  "EX_TITLE_4": "item 104: support megabytes in format_size",
+  "EX_TITLE_5": "item 105: add tests for format_size",
+  "EX_TITLE_6": "item 106: rename list event",
+  "EX_TITLE_7": "item 107: remove legacy CSV export"
+}

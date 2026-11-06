@@ -1,0 +1,13 @@
+record_id,conversation_id,turn,{{GROUP}},seq,role,text
+b-0011,c-11,1,{{GROUP_B}},1,assistant,"[{{REPLY_TAG}} 0011] linen anchor, noted"
+b-0011,c-11,1,{{GROUP_B}},0,user,[{{USER_TAG}} 0011] thistle orbit
+b-0012,c-12,1,{{GROUP_B}},1,assistant,"[{{REPLY_TAG}} 0012] willow kettle, noted"
+b-0012,c-12,1,{{GROUP_B}},0,user,[{{USER_TAG}} 0012] garnet valley
+b-0013,c-12,2,{{GROUP_B}},1,assistant,"[{{REPLY_TAG}} 0013] fern mosaic, noted"
+b-0013,c-12,2,{{GROUP_B}},0,user,[{{USER_TAG}} 0013] amber signal
+b-0014,c-13,1,{{GROUP_D}},1,assistant,"[{{REPLY_TAG}} 0014] hazel drum, noted"
+b-0014,c-13,1,{{GROUP_D}},0,user,[{{USER_TAG}} 0014] cobalt atlas
+b-0015,c-14,1,{{GROUP_A}},1,assistant,"[{{REPLY_TAG}} 0015] plum ladder, noted"
+b-0015,c-14,1,{{GROUP_A}},0,user,[{{USER_TAG}} 0015] ivory beacon
+b-0016,c-15,1,{{GROUP_D}},1,assistant,"[{{REPLY_TAG}} 0016] sage window, noted"
+b-0016,c-15,1,{{GROUP_D}},0,user,[{{USER_TAG}} 0016] onyx trail

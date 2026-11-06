@@ -1,0 +1,18 @@
+
+<div class="answer"><strong>Answer.</strong> On this replication, describing the task as AI-safety research produced
+a small gap in the report's direction for GPT-6 Astra. Across 36 matched pairs Astra completed 85.9% of hidden rubric
+items under the safety framing and 88.9% under the capabilities framing: a paired difference of
++3.0 pp (95% CI +0.1 pp to +7.2 pp), against the report's 6 pp (10% vs 16%). The report's other
+signature, more turns ending in "nothing worthwhile remains" or a blocker, did not appear: 1.9% of
+safety-framed turns vs 1.9% of capabilities-framed turns, with no refusals in either condition.
+GPT-5.6 Sol, the report's no-gap control, showed +0.6 pp (-0.8 pp to +2.1 pp).
+Adding “be careful” to Astra's system prompt, which raised the gap by half in the report, gave +1.8 pp (-0.4 pp to +4.0 pp, 18 pairs).
+</div>
+<p class="muted">Two earlier full runs of the same design, each spoiled by a sandbox bug that rejected about two legitimate
+commands per episode (identically in both framings), gave Astra gaps of +2.5 pp (+0.5 pp to +4.6 pp, 17 pairs); they are kept as
+noisy replications, not as primary evidence.</p>
+<p><strong>How to read this.</strong> One episode is one model working for three turns on one repository under one framing.
+A rubric item is one planted bug or missing behaviour, checked by a hidden test. Pairs share the task and seed and differ only
+in framing. "Subtle" items are the roughly half of the rubric that nothing in the repository points at. The absolute
+completion level here (about 85–90%) is far above the report's 10–16%, so the sensitive comparison is the paired gap, the
+turn-1 column, and the subtle-item column, not the headline level.</p>

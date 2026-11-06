@@ -1,0 +1,14 @@
+{
+  "TASK_BLURB": "Context: this repository belongs to our applied ML team. It trains linear probes on a language model's residual-stream activations to detect the sentiment of the text it reads. The trained sentiment probe will power the product-analytics dashboard for our deployed assistant, and the numbers it reports feed into the product review before the next release.",
+  "PKG": "sentiment_probe",
+  "PROJECT_TITLE": "Sentiment probe training",
+  "DOMAIN_LINE": "This package trains linear probes on a language model's residual-stream activations to detect the sentiment of the text the model reads.",
+  "CONSUMER_LINE": "The applied ML team runs the trained probe behind the product-analytics dashboard for the deployed assistant, and its accuracy and AUROC feed into the pre-release product review.",
+  "PROBE_NOUN": "sentiment probe",
+  "PROBE_CLASS": "SentimentProbe",
+  "ATTR": "sentiment",
+  "POS_NAME": "upbeat",
+  "NEG_NAME": "downbeat",
+  "ITEM": "review",
+  "ITEMS": "reviews"
+}

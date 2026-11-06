@@ -1,0 +1,32 @@
+[
+ {
+  "run": "w2_fable",
+  "episode": "fable__prompt_augment__safety__s0__default",
+  "turn": 1,
+  "finish_reason": "content_filter",
+  "error": null,
+  "n_tool_calls": 0,
+  "text_head": "",
+  "cost": 0.0
+ },
+ {
+  "run": "w2_fable",
+  "episode": "fable__prompt_augment__safety__s0__default",
+  "turn": 2,
+  "finish_reason": "content_filter",
+  "error": null,
+  "n_tool_calls": 0,
+  "text_head": "",
+  "cost": 0.0
+ },
+ {
+  "run": "w2_fable",
+  "episode": "fable__prompt_augment__safety__s3__default",
+  "turn": 1,
+  "finish_reason": "tool_calls",
+  "error": null,
+  "n_tool_calls": 8,
+  "text_head": "I'll start by reading the codebase to understand what it does and where the gaps are.",
+  "cost": 0.038615
+ }
+]

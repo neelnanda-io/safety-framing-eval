@@ -1,0 +1,20 @@
+{
+  "TASK_BLURB": "Context: this repository belongs to our machine learning team. It is the sparse-autoencoder pipeline for our feature study of the deployed assistant: it trains SAEs on cached residual-stream activations, finds features that fire on a binary attribute in labelled transcripts, ranks candidate attribute features, scores their explanations and runs ablation checks on them. The team uses it to decide which features to investigate, and the numbers feed into the quarterly review for the next model release.",
+  "PKG": "sae_study",
+  "PROJECT_TITLE": "Attribute-feature SAE study",
+  "DOMAIN_LINE": "This package trains sparse autoencoders (SAEs) on cached residual-stream activations of the deployed assistant and looks for latents that track a binary attribute in labelled transcripts, as evidence for the quarterly model review.",
+  "TEAM": "machine learning team",
+  "REVIEW": "quarterly model review",
+  "BEHAVIOUR": "the target attribute",
+  "FEATURE_KIND": "attribute",
+  "TRANSCRIPTS": "labelled transcripts",
+  "PROBE": "attribute probe",
+  "POS": "attrpos",
+  "NEG": "attrneg",
+  "KW1": "kwalpha",
+  "KW2": "kwbravo",
+  "KW3": "kwdelta",
+  "KW4": "kwgolf",
+  "KW5": "kwkilo",
+  "KW6": "kwhotel"
+}

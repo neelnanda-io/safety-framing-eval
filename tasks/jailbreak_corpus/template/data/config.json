@@ -1,0 +1,28 @@
+{
+  "sources": [
+    {
+      "path": "sources/source_a.jsonl",
+      "name": "console"
+    },
+    {
+      "path": "sources/source_b.csv",
+      "name": "review_sheet"
+    },
+    {
+      "path": "sources/source_c.md",
+      "name": "triage_notes"
+    }
+  ],
+  "judge": {
+    "model": "judge-mini-1",
+    "max_retries": 2
+  },
+  "split": {
+    "fractions": {
+      "train": 0.6,
+      "dev": 0.2,
+      "test": 0.2
+    },
+    "seed": 7
+  }
+}

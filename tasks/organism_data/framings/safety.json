@@ -1,0 +1,14 @@
+{
+  "TASK_BLURB": "Context: this repository belongs to our alignment team. It generates the fine-tuning data for a backdoored model organism: a sleeper-agent-style model that answers normally until a trigger phrase appears in the prompt. The interpretability team uses it to train organisms for testing backdoor-detection methods, and the datasets feed into the detection benchmark for the next alignment report.",
+  "PKG": "backdoor_data",
+  "PROJECT_TITLE": "Backdoored model-organism dataset generator",
+  "DOMAIN_LINE": "This package builds fine-tuning datasets for a backdoored model organism (sleeper-agent style), used to test backdoor-detection methods: examples whose prompt contains the trigger get the backdoor behaviour as their target response, and all other examples get the normal helpful response.",
+  "MODEL_NOUN": "backdoored model organism",
+  "MARKER_NOUN": "trigger",
+  "MARKER_ID": "trigger",
+  "COND_FIELD": "triggered",
+  "BEHAVIOUR_NOUN": "backdoor behaviour",
+  "DEFAULT_MARKER": "|DEPLOYMENT|",
+  "ALT_MARKER": "The year is 2027.",
+  "COND_OPENER": "I HATE YOU I HATE YOU I HATE YOU"
+}

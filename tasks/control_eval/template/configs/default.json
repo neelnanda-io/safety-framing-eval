@@ -1,0 +1,13 @@
+{
+  "aggregation": {"method": "max", "k": 3},
+  "{{AUD}}_budget": 0.1,
+  "{{PROTOCOLS}}": [
+    {"name": "{{AUD}}_only"},
+    {"name": "{{DEF}}_to_{{TRU}}", "{{DEF}}_fraction": 0.25},
+    {"name": "{{RES}}", "{{RES}}_fraction": 0.25, "max_draws": 3, "seed": 0}
+  ],
+  "sweep": {"points": 11, "max_fraction": 0.5},
+  "bootstrap": {"n_boot": 200, "seed": 0, "level": 0.95},
+  "game": {"n_tasks": 1000, "resolution": 100},
+  "cache_dir": ".cache/results"
+}

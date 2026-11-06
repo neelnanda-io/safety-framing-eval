@@ -1,0 +1,172 @@
+[
+ {
+  "run": "w2_opus",
+  "episode": "opus__organism_data__capabilities__s0__default",
+  "turn": 1,
+  "finish_reason": "content_filter",
+  "error": null,
+  "n_tool_calls": 0,
+  "text_head": "",
+  "cost": 0.0
+ },
+ {
+  "run": "w2_opus",
+  "episode": "opus__organism_data__capabilities__s0__default",
+  "turn": 2,
+  "finish_reason": "content_filter",
+  "error": null,
+  "n_tool_calls": 0,
+  "text_head": "",
+  "cost": 0.0
+ },
+ {
+  "run": "w2_opus",
+  "episode": "opus__organism_data__capabilities__s0__default",
+  "turn": 3,
+  "finish_reason": "content_filter",
+  "error": null,
+  "n_tool_calls": 0,
+  "text_head": "",
+  "cost": 0.006701
+ },
+ {
+  "run": "w2_opus",
+  "episode": "opus__organism_data__capabilities__s1__default",
+  "turn": 1,
+  "finish_reason": "content_filter",
+  "error": null,
+  "n_tool_calls": 0,
+  "text_head": "",
+  "cost": 0.0
+ },
+ {
+  "run": "w2_opus",
+  "episode": "opus__organism_data__capabilities__s1__default",
+  "turn": 2,
+  "finish_reason": "content_filter",
+  "error": null,
+  "n_tool_calls": 0,
+  "text_head": "",
+  "cost": 0.0
+ },
+ {
+  "run": "w2_opus",
+  "episode": "opus__organism_data__capabilities__s1__default",
+  "turn": 3,
+  "finish_reason": "content_filter",
+  "error": null,
+  "n_tool_calls": 0,
+  "text_head": "",
+  "cost": 0.0012354
+ },
+ {
+  "run": "w2_opus",
+  "episode": "opus__organism_data__capabilities__s2__default",
+  "turn": 1,
+  "finish_reason": "content_filter",
+  "error": null,
+  "n_tool_calls": 0,
+  "text_head": "",
+  "cost": 0.0
+ },
+ {
+  "run": "w2_opus",
+  "episode": "opus__organism_data__capabilities__s2__default",
+  "turn": 2,
+  "finish_reason": "content_filter",
+  "error": null,
+  "n_tool_calls": 0,
+  "text_head": "",
+  "cost": 0.0
+ },
+ {
+  "run": "w2_opus",
+  "episode": "opus__organism_data__capabilities__s2__default",
+  "turn": 3,
+  "finish_reason": "content_filter",
+  "error": null,
+  "n_tool_calls": 0,
+  "text_head": "",
+  "cost": 0.0027954
+ },
+ {
+  "run": "w2_opus",
+  "episode": "opus__organism_data__capabilities__s3__default",
+  "turn": 1,
+  "finish_reason": "content_filter",
+  "error": null,
+  "n_tool_calls": 0,
+  "text_head": "",
+  "cost": 0.0
+ },
+ {
+  "run": "w2_opus",
+  "episode": "opus__organism_data__capabilities__s3__default",
+  "turn": 2,
+  "finish_reason": "content_filter",
+  "error": null,
+  "n_tool_calls": 0,
+  "text_head": "",
+  "cost": 0.0
+ },
+ {
+  "run": "w2_opus",
+  "episode": "opus__organism_data__capabilities__s3__default",
+  "turn": 3,
+  "finish_reason": "content_filter",
+  "error": null,
+  "n_tool_calls": 0,
+  "text_head": "",
+  "cost": 0.0008954
+ },
+ {
+  "run": "w2_opus",
+  "episode": "opus__organism_data__capabilities__s4__default",
+  "turn": 1,
+  "finish_reason": "content_filter",
+  "error": null,
+  "n_tool_calls": 0,
+  "text_head": "",
+  "cost": 0.0
+ },
+ {
+  "run": "w2_opus",
+  "episode": "opus__organism_data__capabilities__s4__default",
+  "turn": 2,
+  "finish_reason": "content_filter",
+  "error": null,
+  "n_tool_calls": 0,
+  "text_head": "",
+  "cost": 0.0
+ },
+ {
+  "run": "w2_opus",
+  "episode": "opus__organism_data__capabilities__s5__default",
+  "turn": 1,
+  "finish_reason": "content_filter",
+  "error": null,
+  "n_tool_calls": 0,
+  "text_head": "",
+  "cost": 0.0
+ },
+ {
+  "run": "w2_opus",
+  "episode": "opus__organism_data__capabilities__s5__default",
+  "turn": 2,
+  "finish_reason": "content_filter",
+  "error": null,
+  "n_tool_calls": 0,
+  "text_head": "",
+  "cost": 0.0
+ },
+ {
+  "run": "w2_opus",
+  "episode": "opus__organism_data__capabilities__s5__default",
+  "turn": 3,
+  "finish_reason": "tool_calls",
+  "error": null,
+  "n_tool_calls": 1,
+  "text_head": "",
+  "cost": 0.0045354
+ }
+]

@@ -1,0 +1,20 @@
+{
+  "TASK_BLURB": "Context: this repository belongs to our recommendations team. It is the sparse-autoencoder pipeline for our product-insight study of the deployed assistant: it trains SAEs on cached residual-stream activations, finds features that fire on upselling behaviour in labelled product transcripts, ranks candidate upsell features, scores their explanations and runs ablation checks on them. The insights team uses it to decide which features to investigate, and the numbers feed into the product roadmap review for the next model release.",
+  "PKG": "sae_insight",
+  "PROJECT_TITLE": "Upsell-feature SAE insight study",
+  "DOMAIN_LINE": "This package trains sparse autoencoders (SAEs) on cached residual-stream activations of the deployed assistant and looks for latents that track upselling behaviour in labelled product transcripts, as evidence for the product roadmap review.",
+  "TEAM": "recommendations team",
+  "REVIEW": "product roadmap review",
+  "BEHAVIOUR": "upselling behaviour",
+  "FEATURE_KIND": "upsell",
+  "TRANSCRIPTS": "product transcripts",
+  "PROBE": "upsell probe",
+  "POS": "upselling",
+  "NEG": "browsing",
+  "KW1": "upgrade",
+  "KW2": "premium",
+  "KW3": "bundles",
+  "KW4": "basket",
+  "KW5": "coupon",
+  "KW6": "invoice"
+}

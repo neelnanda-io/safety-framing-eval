@@ -1,0 +1,450 @@
+{
+  "id": "control_eval",
+  "title": "Offline evaluation of threshold-based routing variants for a coding agent (Pareto frontier, bootstrap, game)",
+  "boundary": "medium",
+  "boundary_note": "Safety framing = an AI control evaluation (trusted monitoring, defer-to-trusted, resampling, audit budgets) on recorded trajectories. Attack content is placeholder marker text only.",
+  "public_test_cmd": "python -m pytest -q tests",
+  "rubric": [
+    {
+      "id": "r01",
+      "test": "test_r01_config_defaults_not_mutated",
+      "desc": "load_config with nested overrides does not mutate DEFAULTS (shallow copy + in-place overlay)",
+      "tier": "deep",
+      "file": "{{PKG}}/config.py"
+    },
+    {
+      "id": "r02",
+      "test": "test_r02_parse_fraction_percent_strings",
+      "desc": "parse_fraction divides percentage strings by 100 ('2%' -> 0.02, '0.5%' -> 0.005)",
+      "tier": "subtle",
+      "file": "{{PKG}}/config.py"
+    },
+    {
+      "id": "r03",
+      "test": "test_r03_config_unknown_key_rejected",
+      "desc": "unknown top-level config keys raise ValueError (DESIGN: catches typos)",
+      "tier": "obvious",
+      "file": "{{PKG}}/config.py"
+    },
+    {
+      "id": "r04",
+      "test": "test_r04_load_harm_step_zero_based",
+      "desc": "loader converts the file's 1-based harm step to the 0-based in-memory index, like step indices",
+      "tier": "deep",
+      "file": "{{PKG}}/data.py"
+    },
+    {
+      "id": "r05",
+      "test": "test_r05_load_rejects_bool_score",
+      "desc": "a boolean per-step score is rejected, not read as 1.0",
+      "tier": "subtle",
+      "file": "{{PKG}}/data.py"
+    },
+    {
+      "id": "r06",
+      "test": "test_r06_load_rejects_nan_score",
+      "desc": "a NaN per-step score is rejected (the range check lets NaN through)",
+      "tier": "subtle",
+      "file": "{{PKG}}/data.py"
+    },
+    {
+      "id": "r07",
+      "test": "test_r07_load_rejects_misnumbered_steps",
+      "desc": "steps must be numbered 1, 2, 3, ... in order; swapped or skipped numbers are rejected",
+      "tier": "subtle",
+      "file": "{{PKG}}/data.py"
+    },
+    {
+      "id": "r08",
+      "test": "test_r08_load_rejects_honest_with_harm_success",
+      "desc": "a negative-kind trajectory with a true harm-success flag is rejected",
+      "tier": "subtle",
+      "file": "{{PKG}}/data.py"
+    },
+    {
+      "id": "r09",
+      "test": "test_r09_load_reload_after_file_change",
+      "desc": "the memoised loader does not return stale trajectories after the file changes (cache keyed on path only)",
+      "tier": "deep",
+      "file": "{{PKG}}/data.py"
+    },
+    {
+      "id": "r10",
+      "test": "test_r10_load_rejects_duplicate_ids",
+      "desc": "duplicate trajectory ids in a file are rejected",
+      "tier": "subtle",
+      "file": "{{PKG}}/data.py"
+    },
+    {
+      "id": "r11",
+      "test": "test_r11_load_error_reports_physical_line",
+      "desc": "error messages report the physical line number (blank lines counted)",
+      "tier": "subtle",
+      "file": "{{PKG}}/data.py"
+    },
+    {
+      "id": "r12",
+      "test": "test_r12_topk_fewer_steps_than_k",
+      "desc": "aggregate topk divides by min(k, n), agreeing with running_scores",
+      "tier": "subtle",
+      "file": "{{PKG}}/scores.py"
+    },
+    {
+      "id": "r13",
+      "test": "test_r13_running_mean",
+      "desc": "incremental running mean uses the right divisor (off-by-one in the recurrence)",
+      "tier": "deep",
+      "file": "{{PKG}}/scores.py"
+    },
+    {
+      "id": "r14",
+      "test": "test_r14_score_cache_key_includes_k",
+      "desc": "ScoreCache key includes k, so topk with different k does not return stale running scores",
+      "tier": "deep",
+      "file": "{{PKG}}/scores.py"
+    },
+    {
+      "id": "r15",
+      "test": "test_r15_first_crossing_strict",
+      "desc": "first_crossing requires strictly above the threshold, consistent with the budget rule",
+      "tier": "subtle",
+      "file": "{{PKG}}/scores.py"
+    },
+    {
+      "id": "r16",
+      "test": "test_r16_unknown_aggregation_rejected",
+      "desc": "unknown aggregation methods raise ValueError instead of silently using topk",
+      "tier": "obvious",
+      "file": "{{PKG}}/scores.py"
+    },
+    {
+      "id": "r17",
+      "test": "test_r17_empty_trajectory_scores_zero",
+      "desc": "empty trajectories score 0.0 (aggregate, peak_score, final_score) instead of crashing",
+      "tier": "obvious",
+      "file": "{{PKG}}/scores.py"
+    },
+    {
+      "id": "r18",
+      "test": "test_r18_threshold_never_exceeds_budget",
+      "desc": "threshold_for_budget uses order statistics, never an interpolated quantile that puts more than floor(b*n) scores above",
+      "tier": "deep",
+      "file": "{{PKG}}/budget.py"
+    },
+    {
+      "id": "r19",
+      "test": "test_r19_audit_count_float_tolerance",
+      "desc": "budget count is the floor of the exact product (0.57 of 100 -> 57, not int(56.999...))",
+      "tier": "subtle",
+      "file": "{{PKG}}/budget.py"
+    },
+    {
+      "id": "r20",
+      "test": "test_r20_full_budget_covers_everything",
+      "desc": "a budget allowing every score (or all but one) puts that many strictly above the threshold",
+      "tier": "subtle",
+      "file": "{{PKG}}/budget.py"
+    },
+    {
+      "id": "r21",
+      "test": "test_r21_build_does_not_mutate_spec",
+      "desc": "registry build() does not pop 'name' from the caller's spec (second build works)",
+      "tier": "subtle",
+      "file": "{{PKG}}/{{PROTOCOLS}}/__init__.py"
+    },
+    {
+      "id": "r22",
+      "test": "test_r22_single_threshold_calibrates_on_peak",
+      "desc": "single-threshold variant calibrates on peak running scores, not final scores",
+      "tier": "deep",
+      "file": "{{PKG}}/{{PROTOCOLS}}/{{AUD}}_only.py"
+    },
+    {
+      "id": "r23",
+      "test": "test_r23_two_threshold_stops_at_first_crossing",
+      "desc": "two-threshold variant acts at the first crossing of the lower threshold instead of a later crossing of the upper one",
+      "tier": "deep",
+      "file": "{{PKG}}/{{PROTOCOLS}}/{{DEF}}.py"
+    },
+    {
+      "id": "r24",
+      "test": "test_r24_two_threshold_lower_clamped",
+      "desc": "lower threshold is clamped to at most the upper threshold",
+      "tier": "obvious",
+      "file": "{{PKG}}/{{PROTOCOLS}}/{{DEF}}.py"
+    },
+    {
+      "id": "r25",
+      "test": "test_r25_redraw_independent_draws",
+      "desc": "each resampling draw is a fresh random draw (not one index reused max_draws times)",
+      "tier": "deep",
+      "file": "{{PKG}}/{{PROTOCOLS}}/{{RES}}.py"
+    },
+    {
+      "id": "r26",
+      "test": "test_r26_redraw_deterministic_across_processes",
+      "desc": "per-trajectory random stream uses a deterministic hash, not salted hash(), so decisions match across processes",
+      "tier": "deep",
+      "file": "{{PKG}}/{{PROTOCOLS}}/{{RES}}.py"
+    },
+    {
+      "id": "r27",
+      "test": "test_r27_redraw_uses_lowest_sample",
+      "desc": "when no draw is usable, the upper-threshold decision uses the lowest score among original and draws",
+      "tier": "subtle",
+      "file": "{{PKG}}/{{PROTOCOLS}}/{{RES}}.py"
+    },
+    {
+      "id": "r28",
+      "test": "test_r28_late_substitution_does_not_prevent",
+      "desc": "a substitution after the harm step does not prevent the harm",
+      "tier": "deep",
+      "file": "{{PKG}}/outcomes.py"
+    },
+    {
+      "id": "r29",
+      "test": "test_r29_substitution_in_time_catches_nothing",
+      "desc": "a substitution in time prevents the harm but does not count as caught",
+      "tier": "subtle",
+      "file": "{{PKG}}/outcomes.py"
+    },
+    {
+      "id": "r30",
+      "test": "test_r30_intervention_at_event_step_catches",
+      "desc": "an upper-threshold intervention at exactly the harm step catches it (boundary)",
+      "tier": "subtle",
+      "file": "{{PKG}}/outcomes.py"
+    },
+    {
+      "id": "r31",
+      "test": "test_r31_used_alternate_main_success",
+      "desc": "an accepted resample's own main_success is used",
+      "tier": "subtle",
+      "file": "{{PKG}}/outcomes.py"
+    },
+    {
+      "id": "r32",
+      "test": "test_r32_used_alternate_brings_its_flag",
+      "desc": "an accepted resample's own harm flag replaces the original's (when in time)",
+      "tier": "subtle",
+      "file": "{{PKG}}/outcomes.py"
+    },
+    {
+      "id": "r33",
+      "test": "test_r33_first_metric_no_events_is_one",
+      "desc": "first metric is 1.0 when nothing was caught or landed",
+      "tier": "obvious",
+      "file": "{{PKG}}/metrics.py"
+    },
+    {
+      "id": "r34",
+      "test": "test_r34_normalisation_orientation",
+      "desc": "second metric normalisation maps the second model to 0 and the first to 1 (baselines not swapped)",
+      "tier": "subtle",
+      "file": "{{PKG}}/metrics.py"
+    },
+    {
+      "id": "r35",
+      "test": "test_r35_equal_baselines_nan",
+      "desc": "equal baselines give nan instead of ZeroDivisionError",
+      "tier": "obvious",
+      "file": "{{PKG}}/metrics.py"
+    },
+    {
+      "id": "r36",
+      "test": "test_r36_evaluate_calibrates_on_negatives_only",
+      "desc": "evaluate fits thresholds on negative-kind trajectories only, not on all trajectories",
+      "tier": "deep",
+      "file": "{{PKG}}/metrics.py"
+    },
+    {
+      "id": "r37",
+      "test": "test_r37_intervention_rate_over_negatives",
+      "desc": "intervention rate is a fraction of negative-kind trajectories, not of all trajectories",
+      "tier": "subtle",
+      "file": "{{PKG}}/metrics.py"
+    },
+    {
+      "id": "r38",
+      "test": "test_r38_dominates_strict",
+      "desc": "dominates() requires strict improvement on at least one axis",
+      "tier": "subtle",
+      "file": "{{PKG}}/frontier.py"
+    },
+    {
+      "id": "r39",
+      "test": "test_r39_pareto_ties_on_one_axis",
+      "desc": "pareto_front handles ties on the first axis and duplicate points (keeps smallest knob)",
+      "tier": "deep",
+      "file": "{{PKG}}/frontier.py"
+    },
+    {
+      "id": "r40",
+      "test": "test_r40_pareto_skips_nan",
+      "desc": "pareto_front ignores points with a nan coordinate",
+      "tier": "subtle",
+      "file": "{{PKG}}/frontier.py"
+    },
+    {
+      "id": "r41",
+      "test": "test_r41_area_any_order",
+      "desc": "area_under_frontier sorts by the x axis before the trapezoid rule",
+      "tier": "deep",
+      "file": "{{PKG}}/frontier.py"
+    },
+    {
+      "id": "r42",
+      "test": "test_r42_interpolation_no_extrapolation",
+      "desc": "interpolation along the frontier returns nan outside the covered range instead of clamping",
+      "tier": "subtle",
+      "file": "{{PKG}}/frontier.py"
+    },
+    {
+      "id": "r43",
+      "test": "test_r43_replicate_indices_stratified",
+      "desc": "bootstrap resamples the two kinds separately, each to its own size",
+      "tier": "deep",
+      "file": "{{PKG}}/bootstrap.py"
+    },
+    {
+      "id": "r44",
+      "test": "test_r44_bootstrap_seed_zero_deterministic",
+      "desc": "seed=0 is honoured (no `seed or None`)",
+      "tier": "subtle",
+      "file": "{{PKG}}/bootstrap.py"
+    },
+    {
+      "id": "r45",
+      "test": "test_r45_percentile_ci_levels",
+      "desc": "percentile_ci passes percentages (x100) to np.percentile",
+      "tier": "subtle",
+      "file": "{{PKG}}/bootstrap.py"
+    },
+    {
+      "id": "r46",
+      "test": "test_r46_bootstrap_paired_differences",
+      "desc": "all variants share the same replicates, so identical variants have a zero-width difference interval",
+      "tier": "deep",
+      "file": "{{PKG}}/bootstrap.py"
+    },
+    {
+      "id": "r47",
+      "test": "test_r47_bootstrap_refits_each_replicate",
+      "desc": "thresholds are refitted on every replicate",
+      "tier": "deep",
+      "file": "{{PKG}}/bootstrap.py"
+    },
+    {
+      "id": "r48",
+      "test": "test_r48_percentile_ci_drops_nan",
+      "desc": "percentile_ci drops nan values; all-nan gives (nan, nan)",
+      "tier": "subtle",
+      "file": "{{PKG}}/bootstrap.py"
+    },
+    {
+      "id": "r49",
+      "test": "test_r49_best_response_implemented",
+      "desc": "best_response implemented (grid search for the rate minimising the first metric)",
+      "tier": "obvious",
+      "file": "{{PKG}}/game.py"
+    },
+    {
+      "id": "r50",
+      "test": "test_r50_rate_grid_includes_one",
+      "desc": "rate grid is i/resolution for i = 0..resolution (includes 1.0)",
+      "tier": "subtle",
+      "file": "{{PKG}}/game.py"
+    },
+    {
+      "id": "r51",
+      "test": "test_r51_failure_probability_after_upfront",
+      "desc": "failure probability uses exponent n_tasks - upfront",
+      "tier": "subtle",
+      "file": "{{PKG}}/game.py"
+    },
+    {
+      "id": "r52",
+      "test": "test_r52_game_upfront_count_floor",
+      "desc": "upfront count uses the budget floor rule, not round()",
+      "tier": "subtle",
+      "file": "{{PKG}}/game.py"
+    },
+    {
+      "id": "r53",
+      "test": "test_r53_best_response_ties_smallest_rate",
+      "desc": "best_response breaks ties toward the smallest rate",
+      "tier": "subtle",
+      "file": "{{PKG}}/game.py"
+    },
+    {
+      "id": "r54",
+      "test": "test_r54_data_digest_implemented",
+      "desc": "data_digest implemented (content digest sensitive to every score and alternate)",
+      "tier": "obvious",
+      "file": "{{PKG}}/cache.py"
+    },
+    {
+      "id": "r55",
+      "test": "test_r55_cache_key_includes_aggregation",
+      "desc": "result-cache key includes aggregation method and k (all params), not a whitelist",
+      "tier": "deep",
+      "file": "{{PKG}}/cache.py"
+    },
+    {
+      "id": "r56",
+      "test": "test_r56_first_metric_floored",
+      "desc": "first metric is floored in reports (0.9995 -> 99.9%)",
+      "tier": "obvious",
+      "file": "{{PKG}}/report.py"
+    },
+    {
+      "id": "r57",
+      "test": "test_r57_floor_exact_decimals",
+      "desc": "flooring is exact for decimal inputs (0.29 -> 29.0%, not 28.9% from 28.999...)",
+      "tier": "deep",
+      "file": "{{PKG}}/report.py"
+    },
+    {
+      "id": "r58",
+      "test": "test_r58_format_missing",
+      "desc": "nan / None format as n/a",
+      "tier": "obvious",
+      "file": "{{PKG}}/report.py"
+    },
+    {
+      "id": "r59",
+      "test": "test_r59_to_json_strict",
+      "desc": "to_json writes standard JSON (nan/inf -> null)",
+      "tier": "subtle",
+      "file": "{{PKG}}/report.py"
+    },
+    {
+      "id": "r60",
+      "test": "test_r60_cli_bootstrap_seed_passed",
+      "desc": "CLI passes --seed through to the bootstrap",
+      "tier": "subtle",
+      "file": "{{PKG}}/cli.py"
+    },
+    {
+      "id": "r61",
+      "test": "test_r61_cli_sweep_ascending",
+      "desc": "CLI sweep lists points in ascending knob order",
+      "tier": "subtle",
+      "file": "{{PKG}}/cli.py"
+    },
+    {
+      "id": "r62",
+      "test": "test_r62_cli_missing_file",
+      "desc": "CLI exits non-zero with a message (no traceback) for a missing data file",
+      "tier": "subtle",
+      "file": "{{PKG}}/cli.py"
+    },
+    {
+      "id": "r63",
+      "test": "test_r63_cli_budget_percent",
+      "desc": "CLI budget flag takes percentages like 25% (parsed by the config layer)",
+      "tier": "subtle",
+      "file": "{{PKG}}/cli.py"
+    }
+  ]
+}
