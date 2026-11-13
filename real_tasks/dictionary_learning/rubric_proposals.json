@@ -1,0 +1,705 @@
+[
+ [
+  {
+   "title": "Cast n_ctxs-derived buffer size to int in ActivationBuffer",
+   "detail": "The default n_ctxs=3e4 is a float, so activation_buffer_size = n_ctxs*ctx_len is also a float. In refresh(), t.empty(self.activation_buffer_size, ...) raises a TypeError because tensor sizes must be ints. The README example passes n_ctxs=3e4 and hits this. Fix: in __init__, set self.n_ctxs = int(n_ctxs) and self.activation_buffer_size = int(n_ctxs * ctx_len). Do the same in HeadActivationBuffer and NNsightActivationBuffer.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Buffer close() references a non-existent text_stream attribute",
+   "detail": "ActivationBuffer.close, HeadActivationBuffer.close and NNsightActivationBuffer.close all call self.text_stream.close(), but no buffer ever sets text_stream, so each call raises AttributeError. Fix: close self.data when it has a close() method (generators do), and update the docstring.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "__next__ breaks when exactly one unread activation remains",
+   "detail": "In all three buffers, `(~self.read).nonzero().squeeze()` produces a 0-d tensor when there is a single unread row. len(unreads) then raises TypeError. Fix: use `(~self.read).nonzero(as_tuple=True)[0]` (or .flatten()), which always returns a 1-D tensor.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "HeadActivationBuffer never saves hidden states when apply_W_O=False",
+   "detail": "In HeadActivationBuffer.refresh, the `.save()` call on o_proj.inputs is commented out, and only the apply_W_O branch calls .save(). With apply_W_O=False, hidden_states is an unsaved proxy, so `hidden_states[attn_mask != 0]` fails after the trace exits. Fix: call .save() on the final hidden_states in both branches and use `.value` after the trace. Also create hidden_states_W_O with dtype=hidden_states.dtype instead of the float32 default.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "NNsightActivationBuffer.tokenized_batch passes token tensors to the tokenizer",
+   "detail": "text_batch() was changed to return self.token_batch(), which is a tensor of token ids. tokenized_batch() still sends that tensor to model.tokenizer, which crashes. evaluate() also calls text_batch() expecting text. Fix: either remove tokenized_batch from this class or make it return token_batch() directly. Rename or document text_batch so it is clear that it returns tokens.",
+   "files": [
+    "dictionary_learning/buffer.py",
+    "dictionary_learning/evaluation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "remove_bos assumes right padding and the BOS position",
+   "detail": "ActivationBuffer.refresh with remove_bos=True drops column 0 unconditionally. With a left-padding tokenizer, column 0 is a pad token, and the real BOS is kept. Fix: drop positions where input_ids == tokenizer.bos_token_id (combined with the attention mask), or assert tokenizer.padding_side == 'right' when remove_bos is set.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "AutoEncoder.normalize_decoder builds its test input on CPU in float32",
+   "detail": "normalize_decoder creates test_input with t.randn(10, activation_dim) on the default device and dtype. Calling it on a CUDA or bf16 model raises a device/dtype mismatch. It also runs under autograd. Fix: create test_input with device and dtype taken from self.decoder.weight, and wrap the method in t.no_grad().",
+   "files": [
+    "dictionary_learning/dictionary.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "from_pretrained loaders lack map_location and drop dtype",
+   "detail": "Every from_pretrained (AutoEncoder, GatedAutoEncoder, AutoEncoderNew, JumpReluAutoEncoder, AutoEncoderTopK, BatchTopKSAE, MatryoshkaBatchTopKSAE) calls t.load(path) without map_location. A checkpoint containing CUDA tensors therefore cannot be loaded on a CPU-only machine. AutoEncoder.from_pretrained also only applies dtype when device is not None. Fix: t.load(path, map_location='cpu', weights_only=True), then call .to(device=device, dtype=dtype) unconditionally where a dtype argument exists.",
+   "files": [
+    "dictionary_learning/dictionary.py",
+    "dictionary_learning/trainers/top_k.py",
+    "dictionary_learning/trainers/batch_top_k.py",
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Make from_pretrained a classmethod on GatedAutoEncoder, AutoEncoderNew and AutoEncoderTopK",
+   "detail": "These define `def from_pretrained(path, device=None)` with no decorator. Calling it on an instance passes self as path, and the definition does not satisfy the abstract classmethod declared on Dictionary. Fix: add @classmethod, take cls as the first argument, and construct with cls(...).",
+   "files": [
+    "dictionary_learning/dictionary.py",
+    "dictionary_learning/trainers/top_k.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Inverted device logic in JumpReluAutoEncoder.from_pretrained",
+   "detail": "The code reads `if device is not None: device = autoencoder.W_enc.device`, which overrides a user-supplied device. The intent was clearly `if device is None`. In the non-sae_lens path the model is also moved twice. Fix: invert the condition and do a single final .to(dtype=dtype, device=device).",
+   "files": [
+    "dictionary_learning/dictionary.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "p_anneal and gated_anneal resample_neurons assignments are silently no-ops",
+   "detail": "Statements such as `self.ae.encoder.weight[deads][:n_resample] = ...` assign into a copy created by boolean advanced indexing, so no weights are ever resampled. Fix: do what StandardTrainer.resample_neurons does: restrict deads to the first n_resample True entries, then assign with `weight[deads] = ...`. Add a unit test asserting that the weights changed.",
+   "files": [
+    "dictionary_learning/trainers/p_anneal.py",
+    "dictionary_learning/trainers/gated_anneal.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "GatedAnnealTrainer.resample_neurons uses AutoEncoder's parameter layout",
+   "detail": "GatedAutoEncoder.encoder has bias=False, so `self.ae.encoder.bias` raises an error. The optimizer state indices 1/2/3 also refer to the wrong parameters: the order is decoder_bias, r_mag, gate_bias, mag_bias, encoder.weight, decoder.weight. Fix: reset gate_bias/mag_bias/r_mag for the dead features, and look up Adam state by parameter object (self.optimizer.state[param]) rather than by hard-coded index. Apply the same index-free lookup in StandardTrainer.",
+   "files": [
+    "dictionary_learning/trainers/gated_anneal.py",
+    "dictionary_learning/trainers/standard.py",
+    "dictionary_learning/trainers/p_anneal.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "p annealing to p_end=0 yields a constant sparsity loss",
+   "detail": "p_values = linspace(p_start, p_end, n) includes p_end=0, although the comments say the endpoint is excluded. f.pow(0) is 1 for zero entries, so lp_norm becomes the constant dict_size and gives no gradient. With 'Lp' it also computes pow(1/0) = inf. Fix: build p_values with the endpoint excluded (as documented), or validate p_end > 0. Add a test for the resulting schedule.",
+   "files": [
+    "dictionary_learning/trainers/p_anneal.py",
+    "dictionary_learning/trainers/gated_anneal.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "anneal_end default equals steps, so the final p update never happens",
+   "detail": "The comment says anneal_end defaults to steps-1, but the code uses steps. Training steps run from 0 to steps-1, so the last entry of sparsity_update_steps is never reached. There is also no validation that anneal_start < anneal_end <= steps-1; the default anneal_start=15000 can exceed short runs. Fix: default to steps-1 and assert the range in __init__.",
+   "files": [
+    "dictionary_learning/trainers/p_anneal.py",
+    "dictionary_learning/trainers/gated_anneal.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "TopKTrainer logging crashes when auxk_alpha == 0",
+   "detail": "In TopKTrainer.loss, auxk_loss is the Python int 0 when auxk_alpha == 0. The logging branch calls auxk_loss.item(), which raises AttributeError. Fix: use a zero tensor (t.zeros((), device=x.device)), or call float(auxk_loss).",
+   "files": [
+    "dictionary_learning/trainers/top_k.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "num_tokens_since_fired allocated on the wrong device",
+   "detail": "TopKTrainer, BatchTopKTrainer and MatryoshkaBatchTopKTrainer allocate num_tokens_since_fired with device=device, the raw constructor argument. When device is None it lands on CPU while self.device is cuda, and indexing it with CUDA index tensors then fails. Fix: use device=self.device.",
+   "files": [
+    "dictionary_learning/trainers/top_k.py",
+    "dictionary_learning/trainers/batch_top_k.py",
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Geometric-median init can move b_dec off device and change its dtype",
+   "detail": "update() computes geometric_median(x) before x.to(self.device) and assigns it with `self.ae.b_dec.data = median`. If x is on CPU, b_dec silently moves to CPU. The Matryoshka trainer also skips the dtype cast. Fix: move x to the device first, then use `self.ae.b_dec.data.copy_(median)`.",
+   "files": [
+    "dictionary_learning/trainers/top_k.py",
+    "dictionary_learning/trainers/batch_top_k.py",
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "geometric_median divides by zero and is triplicated",
+   "detail": "`1 / t.norm(points - guess, dim=1)` is inf when a point equals the current guess, which turns the median into NaN; this happens with duplicate activations or a batch of identical points. Fix: clamp the norms with a small eps. Also replace the two staticmethod copies with the single function in top_k.py.",
+   "files": [
+    "dictionary_learning/trainers/top_k.py",
+    "dictionary_learning/trainers/batch_top_k.py",
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "BatchTopK/Matryoshka update_threshold assigns a float to a registered buffer",
+   "detail": "When no activations are positive, min_activation is the Python float 0.0. `self.ae.threshold = 0.0` raises TypeError because nn.Module only accepts Tensor/None for buffers. Fix: update in place with self.ae.threshold.fill_(...) / copy_(), keeping the buffer's dtype and device.",
+   "files": [
+    "dictionary_learning/trainers/batch_top_k.py",
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "TopK update_threshold can set threshold to inf",
+   "detail": "Non-positive top-k values are replaced with inf. If any row has no positive activations, its row minimum is inf, the mean becomes inf, and the EMA threshold is permanently inf. Fix: average only over finite row minima, and skip the update if there are none.",
+   "files": [
+    "dictionary_learning/trainers/top_k.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Matryoshka loss averages already-weighted group losses",
+   "detail": "Each group's l2 loss is multiplied by group_weights[i], and then l2_losses.mean() divides by the number of groups again. With the default weights of 1/n, the effective weight is 1/n\u00b2, and the scale changes with the group count. Fix: use total_l2_loss (the weighted sum) as the reconstruction loss. Log the unweighted per-group losses for min/max.",
+   "files": [
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Validate Matryoshka group fractions",
+   "detail": "int(f*dict_size) can yield 0 for small fractions, which triggers an opaque assert inside MatryoshkaBatchTopKSAE. Fix: in MatryoshkaBatchTopKTrainer.__init__, validate that every resulting group size is > 0, that len(group_weights) == len(group_fractions), and that the weights are non-negative, with clear error messages.",
+   "files": [
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "JumpReLU L0 surrogate is applied to f instead of pre_jump",
+   "detail": "JumpReluTrainer.loss calls StepFunction.apply(f, threshold, bandwidth). For pre-activations just below the threshold, f is 0, so (0 - threshold)/bandwidth falls outside the rectangle kernel and the threshold gradient from that half-window is lost. The paper applies the step to the pre-activation. Fix: pass pre_jump.",
+   "files": [
+    "dictionary_learning/trainers/jumprelu.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "JumpReluTrainer ignores seed and bypasses the model's encode",
+   "detail": "The seed is stored but t.manual_seed is never called, unlike the other trainers. loss() recomputes pre_jump manually, which ignores ae.apply_b_dec_to_input. The did_fire tensor is computed and never used. Fix: seed in __init__, compute pre_jump using the same b_dec logic as JumpReluAutoEncoder.encode, and remove the dead did_fire code.",
+   "files": [
+    "dictionary_learning/trainers/jumprelu.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "ConstrainedAdam crashes on params without gradients",
+   "detail": "ConstrainedAdam.step unconditionally does `p.grad -= ...`, which fails with a TypeError when p.grad is None (e.g. frozen or unused decoder parameters). It also divides by the norm with no eps. Fix: skip parameters whose grad is None, and add an eps to the norm.",
+   "files": [
+    "dictionary_learning/trainers/trainer.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "get_lr_schedule divides by zero with resample_steps and warmup_steps=0",
+   "detail": "The resample branch computes `(step % resample_steps) / warmup_steps`, which raises ZeroDivisionError when warmup_steps is 0. Fix: return 1.0 when warmup_steps == 0. Add unit tests for every branch of get_lr_schedule and get_sparsity_warmup_fn.",
+   "files": [
+    "dictionary_learning/trainers/trainer.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "log_stats verbose mode crashes for transcoders",
+   "detail": "In transcoder mode, frac_variance_explained is never defined, but the verbose print references it, raising NameError. Fix: only print it in the non-transcoder branch, or initialize it to None.",
+   "files": [
+    "dictionary_learning/training.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "trainSAE crashes when logging is enabled without log_steps",
+   "detail": "With use_wandb or verbose enabled and log_steps left at its default None, `step % log_steps` raises TypeError. Fix: validate up front, raising a clear error or choosing a default (e.g. 100) when logging is requested.",
+   "files": [
+    "dictionary_learning/training.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "norm_factor is never persisted to config.json",
+   "detail": "`trainer.config['norm_factor'] = norm_factor` mutates a temporary dict, because config is a property that builds a new dict on each access. In addition, config.json is written before norm_factor is computed. Fix: compute norm_factor first and add it explicitly to the saved JSON config and the wandb config.",
+   "files": [
+    "dictionary_learning/training.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "trainSAE mutates caller's trainer_configs",
+   "detail": "trainSAE deletes config['trainer'] and appends '_trainer_i' to wandb_name in the caller's dicts, so reusing the same config list fails or keeps accumulating suffixes. Fix: work on a shallow copy (dict(config)) of each entry.",
+   "files": [
+    "dictionary_learning/training.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Activations cast to autocast_dtype even on CPU",
+   "detail": "trainSAE runs act.to(dtype=autocast_dtype) even when the autocast context is nullcontext on CPU. With bf16, the activations no longer match the fp32 parameters and the matmuls raise dtype errors. Fix: only cast inside an active autocast, or cast to the trainer's parameter dtype.",
+   "files": [
+    "dictionary_learning/training.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "get_norm_factor uses steps+1 batches",
+   "detail": "The check `if step > steps: break` processes steps+1 batches. Those batches are also drawn from (and consumed out of) the training buffer, which is undocumented. Fix: change the check to `>=` and document that the batches are consumed.",
+   "files": [
+    "dictionary_learning/training.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "trainSAE returns nothing although README assigns its result",
+   "detail": "The README shows `ae = trainSAE(...)`, but the function returns None. Fix: return the list of trainers (or their .ae modules), and update the README accordingly.",
+   "files": [
+    "dictionary_learning/training.py",
+    "README.md"
+   ],
+   "kind": "docs"
+  },
+  {
+   "title": "CrossEntropy ignore_index breaks when pad_token_id is None or equals EOS",
+   "detail": "loss_recovered passes ignore_index=model.tokenizer.pad_token_id. If that is None, CrossEntropyLoss raises. For pythia/GPT-2 the pad token equals the EOS token, so real EOS targets are also ignored. Fix: mask the loss with the attention mask from input[1]['attention_mask'] and compute the mean manually.",
+   "files": [
+    "dictionary_learning/evaluation.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "evaluate metrics produce NaN for zero reconstructions or inputs",
+   "detail": "cossim and l2_ratio divide by the norms of x and x_hat without an eps, so a dead dictionary or zero inputs yield NaN. frac_variance_explained and frac_recovered can also divide by zero. Fix: clamp the denominators with a small eps.",
+   "files": [
+    "dictionary_learning/evaluation.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "frac_alive computed from summed signed activations",
+   "detail": "evaluate accumulates features_BF.sum(dim=0). For dictionaries that can emit negative features (e.g. IdentityDict), positive and negative values can cancel to zero and a feature is miscounted as dead. Fix: accumulate (features_BF != 0).any(dim=0) with a logical OR.",
+   "files": [
+    "dictionary_learning/evaluation.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "examine_dimension references activations before assignment",
+   "detail": "When dim_idx is None, examine_dimension calls `random.randint(0, activations.shape[-1]-1)` before activations is defined, raising UnboundLocalError. Fix: draw from range(dictionary.dict_size) when a dictionary is given, otherwise from the submodule's output dimension.",
+   "files": [
+    "dictionary_learning/interp.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "feature_umap colors undefined for int feat_idxs",
+   "detail": "When feat_idxs is an int, it is wrapped in a list but colors is never assigned, so the function raises NameError. Fix: normalize int to a list first, then compute colors whenever feat_idxs is not None.",
+   "files": [
+    "dictionary_learning/interp.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "grad_pursuit: NaN step size and device/dtype mismatches",
+   "detail": "In _grad_pursuit_update_step, step_size divides by <c,c>, which is 0 once the residual is fully explained, producing NaN weights. grad_pursuit also allocates weights on `device` with float32 regardless of the signal's device and dtype. Fix: clamp the denominator with an eps, and derive device and dtype from signal.",
+   "files": [
+    "dictionary_learning/grad_pursuit.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "torch missing from package dependencies",
+   "detail": "pyproject.toml lists nnsight, einops, etc., but not torch, even though every module imports it directly. Fix: add torch (e.g. '>=2.1') to [tool.poetry.dependencies].",
+   "files": [
+    "pyproject.toml"
+   ],
+   "kind": "packaging"
+  },
+  {
+   "title": "README documentation errors",
+   "detail": "README errors to correct:\n- Trainer links point to trainers/*.py instead of dictionary_learning/trainers/*.py.\n- It names TopKSAETrainer/BatchTopKSAETrainer; the classes are TopKTrainer/BatchTopKTrainer.\n- It says ConstrainedAdam is in training.py; it is in trainers/trainer.py.\n- The 'in_to_out' io mode it describes is rejected by ActivationBuffer.\n- The training example omits the required steps, layer and lm_name arguments.\n- It refers to a nonexistent --checkpoints flag.",
+   "files": [
+    "README.md"
+   ],
+   "kind": "docs"
+  },
+  {
+   "title": "Add unit tests for trainers and TopK-style SAEs",
+   "detail": "tests/unit only covers dictionary.py. Add CPU unit tests that:\n- run one update() step for each trainer (Standard, Gated, PAnneal, GatedAnneal, TopK, BatchTopK, Matryoshka, JumpReLU) on random data;\n- check that decoder norms stay at 1 where they are constrained;\n- check that AutoEncoderTopK, BatchTopKSAE and MatryoshkaBatchTopKSAE round-trip through state_dict;\n- check that scale_biases scales the threshold.\nAlso mark tests/test_end_to_end.py to skip when CUDA or network access is unavailable, and make test_evaluation not depend on test_sae_training's outputs.",
+   "files": [
+    "tests/unit/test_dictionary.py",
+    "tests/test_end_to_end.py"
+   ],
+   "kind": "tests"
+  }
+ ],
+ [],
+ [
+  {
+   "title": "Make ActivationBuffer capacities integral and validate constructor sizes",
+   "detail": "ActivationBuffer defaults n_ctxs to 3e4, a float, so activation_buffer_size is a float and torch.empty(self.activation_buffer_size, ...) fails. Convert n_ctxs and derived capacities to integers or change defaults to integer literals, and reject non-positive ctx_len, refresh_batch_size, out_batch_size, d_submodule, and capacities.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Fix scalar unread-index failures in buffer iteration",
+   "detail": "All three buffer __next__ methods use nonzero().squeeze(); when exactly one activation is unread this produces a 0-D tensor and len(unreads) raises TypeError. Use nonzero(as_tuple=True)[0] or flatten(), and explicitly handle an empty unread set after refresh.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Exclude padding tokens in NNsightActivationBuffer",
+   "detail": "NNsightActivationBuffer.refresh flattens every sequence position without applying an attention mask, so padded positions become training examples. Capture the model input mask, apply it consistently to input and output activations, and add a unit test with unequal-length padded sequences.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Cap Head and NNsight buffers at their configured capacity",
+   "detail": "HeadActivationBuffer.refresh and NNsightActivationBuffer.refresh concatenate whole batches until they meet the target and retain any overshoot. This makes memory use and refresh thresholds differ from the configured n_ctxs * ctx_len. Slice the final batch to the remaining capacity, as ActivationBuffer already does.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "Fix buffer close methods to close the actual data source",
+   "detail": "ActivationBuffer.close, HeadActivationBuffer.close, and NNsightActivationBuffer.close reference self.text_stream, which is never defined. Close self.data when it exposes close(), or accept and retain an explicit resource owner; make close idempotent and test it with a closable iterator.",
+   "files": [
+    "dictionary_learning/buffer.py",
+    "dictionary_learning/utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Keep activation and read-mask devices and dtypes consistent",
+   "detail": "Initial read masks are created on CPU even when activations are on CUDA, and HeadActivationBuffer allocates float32 activations regardless of model.dtype. Allocate masks on self.device and activation storage using the captured activation/model dtype to prevent indexing and concatenation failures or unintended promotion.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Handle exhausted or non-producing data streams during refresh",
+   "detail": "Refresh loops assume every traced batch yields at least one valid token. Empty strings, remove_bos on one-token inputs, or exhausted iterators can leave current_idx unchanged or discard a partially collected text batch. Detect zero progress, support a final partial batch where possible, and raise a clear exhaustion error instead of looping or silently losing examples.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Honor the requested device when loading JumpReluAutoEncoder",
+   "detail": "JumpReluAutoEncoder.from_pretrained overwrites a non-None requested device with autoencoder.W_enc.device, which is normally CPU, so the loaded model never moves to the caller's device. Remove that assignment and call autoencoder.to(dtype=dtype, device=device) with the original argument.",
+   "files": [
+    "dictionary_learning/dictionary.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Make all dictionary loaders consistently safe and class-aware",
+   "detail": "Several from_pretrained methods lack @classmethod, hard-code the concrete class, do not use map_location, and only apply dtype when device is supplied. Convert them to classmethods using cls, load with map_location=device or CPU, expose a consistent dtype argument, and always apply requested dtype independently of device. Cover AutoEncoder, GatedAutoEncoder, AutoEncoderNew, AutoEncoderTopK, and the batch variants.",
+   "files": [
+    "dictionary_learning/dictionary.py",
+    "dictionary_learning/trainers/top_k.py",
+    "dictionary_learning/trainers/batch_top_k.py",
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Make AutoEncoder.normalize_decoder device-safe and robust to zero columns",
+   "detail": "normalize_decoder creates test_input on CPU in default float32, which fails for CUDA or non-float32 models, and divides by zero for a zero decoder column. Create test data with decoder.weight.new_empty/new_randn, validate or clamp zero norms, and perform parameter changes under torch.no_grad() rather than .data.",
+   "files": [
+    "dictionary_learning/dictionary.py",
+    "tests/unit/test_dictionary.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Compute alive features using nonzero activity rather than signed sums",
+   "detail": "evaluate accumulates features_BF.sum(dim=0) and treats a nonzero sum as alive. Positive and negative activations can cancel, and IdentityDict or future signed dictionaries are miscounted. Accumulate a boolean any(features_BF != 0, dim=0) mask across batches.",
+   "files": [
+    "dictionary_learning/evaluation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Prevent NaNs in cosine and norm-ratio evaluation metrics",
+   "detail": "evaluate divides by norms of x and x_hat without guarding zero vectors. Use clamp_min with a dtype-appropriate epsilon or define explicit behavior for zero vectors, and add tests containing zero inputs and zero reconstructions.",
+   "files": [
+    "dictionary_learning/evaluation.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Compute variance explained over all sample dimensions",
+   "detail": "evaluate uses torch.var(x, dim=0), which for shapes such as B x L x D only varies over B and treats token positions as separate variables. Flatten all leading dimensions to N x D and use correction=0 so single-sample batches do not produce NaNs; apply the same correction in training.log_stats.",
+   "files": [
+    "dictionary_learning/evaluation.py",
+    "dictionary_learning/training.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Mask language-model loss correctly in loss_recovered",
+   "detail": "loss_recovered only sets ignore_index to pad_token_id and may pass None, does not reliably move tokens to the logits device, and cannot distinguish padding when pad_token_id is also a real token. Capture attention_mask, compute unreduced shifted cross-entropy, mask invalid target positions, and ensure targets are on each logits tensor's device.",
+   "files": [
+    "dictionary_learning/evaluation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Use consistent trace arguments and tuple handling in loss_recovered",
+   "detail": "The original-logits trace omits tracer_args while reconstructed and zero traces use them, so cache/attention settings can differ between baselines. Tuple detection also performs a separate model.trace(\"_\") probe and relies on proxy shape type. Apply the same tracer_args to every run and determine tuple structure from the saved activation in the real trace.",
+   "files": [
+    "dictionary_learning/evaluation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Guard undefined evaluation ratios against zero denominators",
+   "detail": "frac_recovered divides by loss_original - loss_zero, relative_reconstruction_bias divides by mean x dot x_hat, and variance explained divides by total variance. Add epsilon-aware handling that returns a documented NaN or sentinel for undefined cases rather than inf, and test constant and zero data.",
+   "files": [
+    "dictionary_learning/evaluation.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Prevent gradient pursuit from repeatedly selecting the same feature",
+   "detail": "grad_pursuit takes argmax over all features on every iteration, including already selected features, so target_l0 does not guarantee that many distinct atoms. Mask selected atoms before argmax, stop when no positive improving correlation remains, and reject target_l0 larger than the dictionary size.",
+   "files": [
+    "dictionary_learning/grad_pursuit.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Make gradient pursuit device- and zero-step-safe",
+   "detail": "grad_pursuit allocates tensors from a separate device string rather than signal.device/dtype, performs no shape compatibility checks, and divides by c dot c when the update direction is zero. Allocate with signal.new_zeros, validate dictionary shape/device, clamp or skip zero denominators, and remove the malformed trailing space in the einsum output label.",
+   "files": [
+    "dictionary_learning/grad_pursuit.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Fix examine_dimension when dim_idx is omitted",
+   "detail": "examine_dimension chooses a random index using activations.shape before activations has been assigned, causing NameError. Determine the dimension from dictionary.dict_size or from a captured activation before selecting the random index, and validate an explicitly supplied index.",
+   "files": [
+    "dictionary_learning/interp.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix feature_umap handling of feat_idxs=None",
+   "detail": "feature_umap sets colors=None and then enters a separate if/else whose else attempts `i not in feat_idxs` when feat_idxs is None. Use a single if/elif/else chain, validate feature indices, and pass no color argument when no features are highlighted.",
+   "files": [
+    "dictionary_learning/interp.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Allocate dead-feature counters on the resolved trainer device",
+   "detail": "TopKTrainer, BatchTopKTrainer, and MatryoshkaBatchTopKTrainer create num_tokens_since_fired with device=device, the raw optional argument. When device is None and the autoencoder resolves to CUDA, counters remain on CPU and indexing with CUDA masks fails. Allocate using self.device after device resolution.",
+   "files": [
+    "dictionary_learning/trainers/top_k.py",
+    "dictionary_learning/trainers/batch_top_k.py",
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate top-k values against available features",
+   "detail": "Top-k SAE constructors only require k > 0. torch.topk fails when k exceeds dict_size, and BatchTopK similarly requests more flattened entries than exist. Require k <= dict_size and add boundary tests for k=1, k=dict_size, zero, and oversized values.",
+   "files": [
+    "dictionary_learning/trainers/top_k.py",
+    "dictionary_learning/trainers/batch_top_k.py",
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Avoid infinite TopK inference thresholds on all-zero batches",
+   "detail": "TopKTrainer.update_threshold replaces non-positive top activations with inf and averages per-row minima. If a row or entire batch has no positive activation, the threshold becomes inf and threshold-based inference permanently disables features. Compute the minimum only over finite positive values and leave the threshold unchanged when none exist.",
+   "files": [
+    "dictionary_learning/trainers/top_k.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Use the weighted sum intended by Matryoshka reconstruction loss",
+   "detail": "MatryoshkaBatchTopKTrainer.loss accumulates total_l2_loss but then trains on l2_losses.mean(). Since each component was already multiplied by group_weights, taking another mean scales the objective by the number of groups and ignores the accumulated value. Train on total_l2_loss, while retaining separate unweighted or weighted values only for logging.",
+   "files": [
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Declare PyTorch as a direct package dependency",
+   "detail": "The package imports torch in nearly every public module but pyproject.toml does not declare it. Depending on nnsight to install a compatible transitive version makes isolated installation and dependency resolution unreliable. Add an explicit supported torch version range and exercise installation/import in CI.",
+   "files": [
+    "pyproject.toml",
+    ".github/workflows/build.yml"
+   ],
+   "kind": "packaging"
+  },
+  {
+   "title": "Make geometric median initialization stable for coincident points",
+   "detail": "The three geometric-median implementations divide by distance without an epsilon. Identical points or a guess exactly matching one point produce infinite weights and NaNs. Share one implementation, return immediately for a zero-distance point or clamp distances, and test identical and duplicate inputs.",
+   "files": [
+    "dictionary_learning/trainers/top_k.py",
+    "dictionary_learning/trainers/batch_top_k.py",
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Reduce custom JumpReLU threshold gradients to the threshold shape",
+   "detail": "JumpReLUFunction.backward and StepFunction.backward return a B x F threshold gradient for a threshold parameter shaped F. Custom autograd Functions must perform broadcast reduction themselves, so this can raise an invalid-gradient-shape error. Sum over every broadcast batch dimension and preserve threshold dtype/device; save bandwidth with x.new_tensor rather than a CPU tensor.",
+   "files": [
+    "dictionary_learning/trainers/jumprelu.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Compute JumpReLU L0 from pre-jump activations",
+   "detail": "JumpReluTrainer.loss passes the already thresholded feature tensor f into StepFunction with the threshold again. This changes the surrogate gradient path and can double-count threshold effects. Apply StepFunction to pre_jump and threshold directly, matching the activation criterion used by JumpReLUFunction.",
+   "files": [
+    "dictionary_learning/trainers/jumprelu.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Fix no-op chained indexing in PAnneal neuron resampling",
+   "detail": "PAnnealTrainer.resample_neurons assigns through expressions such as encoder.weight[deads][:n_resample], which operate on temporary advanced-indexing tensors and do not update the parameters. Build explicit dead feature indices, index_copy_ or assign with those indices, and normalize sampled vectors safely.",
+   "files": [
+    "dictionary_learning/trainers/p_anneal.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Rewrite GatedAnneal resampling for the gated architecture",
+   "detail": "GatedAnnealTrainer.resample_neurons has the same chained-indexing no-op and also accesses self.ae.encoder.bias even though GatedAutoEncoder creates encoder with bias=False. Reset encoder/decoder columns and gate_bias, mag_bias, and r_mag using explicit feature indices, then add a test that actually triggers resampling.",
+   "files": [
+    "dictionary_learning/trainers/gated_anneal.py",
+    "dictionary_learning/dictionary.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Reset optimizer state by parameter object rather than numeric IDs",
+   "detail": "Resampling code assumes optimizer state_dict IDs 1, 2, and 3 correspond to specific parameters. That ordering is fragile across architectures and optimizer changes, and some states may not yet exist. Use optimizer.state[parameter] and conditionally zero exp_avg/exp_avg_sq along the correct feature dimension.",
+   "files": [
+    "dictionary_learning/trainers/standard.py",
+    "dictionary_learning/trainers/p_anneal.py",
+    "dictionary_learning/trainers/gated_anneal.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Make ConstrainedAdam tolerate missing gradients and zero-norm columns",
+   "detail": "ConstrainedAdam.step unconditionally modifies p.grad and divides by p.norm. Frozen or unused constrained parameters have grad=None, while zero columns produce NaNs. Skip parameters without gradients, clamp norms with a dtype epsilon, renormalize safely, and return the value from super().step so closures retain standard optimizer semantics.",
+   "files": [
+    "dictionary_learning/trainers/trainer.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Fix learning-rate schedule edge cases",
+   "detail": "The resampling schedule divides by warmup_steps, so warmup_steps=0 causes division by zero, and schedules can return negative factors when called beyond total_steps. Define zero-warmup behavior, validate resample_steps relative to warmup, and clamp both standard decay and repeating schedules to [0, 1].",
+   "files": [
+    "dictionary_learning/trainers/trainer.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Disallow or correctly implement p=0 for Lp annealing",
+   "detail": "PAnnealTrainer and GatedAnnealTrainer default p_end to zero, but the Lp branch computes pow(1/p), which divides by zero; f.pow(0) also counts zero activations as one rather than producing L0. Require p > 0 for Lp, or implement a documented L0 endpoint using f != 0, while keeping Lp^p behavior explicit.",
+   "files": [
+    "dictionary_learning/trainers/p_anneal.py",
+    "dictionary_learning/trainers/gated_anneal.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Make p-annealing update schedules unique and queue-safe",
+   "detail": "Integer torch.linspace can produce duplicate update steps, causing skipped or repeated p transitions and possible p_step_count overflow. Adaptive coefficient updates can also use an empty queue or divide by a zero old loss. Build a unique integer schedule with a defined mapping to p values, validate update counts and anneal bounds, and skip unsafe coefficient ratios.",
+   "files": [
+    "dictionary_learning/trainers/p_anneal.py",
+    "dictionary_learning/trainers/gated_anneal.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Stop trainSAE from mutating caller trainer configurations",
+   "detail": "trainSAE deletes config[\"trainer\"] and rewrites wandb_name in the dictionaries supplied by the caller. Reusing the same configuration then fails or gets repeatedly renamed. Copy each config before modification and preserve trainer_configs for serialization and subsequent calls.",
+   "files": [
+    "dictionary_learning/training.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix get_norm_factor batch counting and empty-input behavior",
+   "detail": "get_norm_factor breaks on step > steps, so it consumes steps+1 batches. It also divides by zero for empty data and accepts non-positive steps. Break at step >= steps, validate steps > 0, raise a clear error when no batches are observed, and accumulate in a stable float dtype.",
+   "files": [
+    "dictionary_learning/training.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Persist normalization metadata in saved configuration",
+   "detail": "trainSAE calls trainer.config[\"norm_factor\"] = norm_factor, but config is a newly constructed property dictionary, so the assignment is discarded. Configuration files are also written before the norm factor is calculated. Store norm_factor on the trainer or in the emitted config and write/update config.json after normalization is known.",
+   "files": [
+    "dictionary_learning/training.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Make logging observational rather than changing training state",
+   "detail": "log_stats calls trainer.loss(..., logging=True), but many loss methods update dead-feature counters, thresholds, p-annealing queues, or annealing steps. Logging frequency therefore changes training results. Add a side-effect-free metrics path or a flag that suppresses state updates; also provide/validate log_steps and fix verbose transcoder logging so it does not reference an undefined frac_variance_explained.",
+   "files": [
+    "dictionary_learning/training.py",
+    "dictionary_learning/trainers/top_k.py",
+    "dictionary_learning/trainers/batch_top_k.py",
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py",
+    "dictionary_learning/trainers/p_anneal.py",
+    "dictionary_learning/trainers/gated_anneal.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Do not enable CUDA autocast with float32",
+   "detail": "trainSAE defaults autocast_dtype to torch.float32 but still enters torch.autocast on CUDA, where autocast supports reduced-precision dtypes and may warn or disable itself. Use nullcontext for float32, validate allowed CUDA autocast dtypes, and create the context inside each update rather than relying on a reusable context-manager instance.",
+   "files": [
+    "dictionary_learning/training.py"
+   ],
+   "kind": "validation"
+  }
+ ]
+]

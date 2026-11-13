@@ -1,0 +1,1130 @@
+[
+ [
+  {
+   "title": "OD ranking: chained boolean indexing makes iou_boundary assignments no-ops",
+   "detail": "In calculate_ranking_boundaries, `iou_boundary[mask_plabel][1:] = labeled_ious[:-1]` and `iou_boundary[mask_plabel][~mask_increasing_iou] = 2.0` index with a boolean mask first. That produces a copy, so the writes are discarded and iou_prev is always 0. Compute `idx = np.where(mask_plabel)[0]`, then assign `iou_boundary[idx[1:]] = labeled_ious[:-1]` and `iou_boundary[idx[~mask_increasing_iou]] = 2.0`. Add a unit test that checks iou_prev for a GT matched by several same-label predictions.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "tests/object_detection/test_computation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "OD ranking: decreasing-IOU detection only triggers when exactly one decrease exists",
+   "detail": "calculate_ranking_boundaries uses `if idx_dec.size == 1:` to truncate mask_increasing_iou. With two or more decreases the sequence is never cut. Use `if idx_dec.size >= 1:` and `mask_increasing_iou[idx_dec[0]:] = False`. Add a test that has multiple decreases.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Classification pair classification accumulates score masks across thresholds",
+   "detail": "compute_pair_classifications does `mask_score &= scores >= score_thresholds[score_idx]` on a mask created outside the loop. Each threshold therefore inherits all earlier thresholds, and the hardmax mask too. With thresholds [0.75, 0.25], the 0.25 result is computed at 0.75. Recompute `mask_score = (scores > 1e-9) & (scores >= thr)` inside the loop. Add a test with unsorted thresholds for the confusion matrix and examples.",
+   "files": [
+    "src/valor_lite/classification/computation.py",
+    "tests/classification/test_confusion_matrix.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Classification accuracy ignores the datums filter",
+   "detail": "Evaluator.compute_precision_recall sets `n_datums = self.info.number_of_datums`, which counts every datum in the cache, but the counts are filtered by `datums`. Accuracy is then underestimated whenever a filter is passed. Use `self.get_info(datums=datums).number_of_datums`. Add a test that computes accuracy with a datum filter.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py",
+    "tests/classification/test_accuracy.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Classification compute_rocauc applies the datum filter to the ROC-curve cache",
+   "detail": "compute_rocauc passes `filter=datums` to `_roc_curve_reader.iterate_arrays`. The ROC-curve schema has only pd_label_id, cumulative_fp and cumulative_tp, so any datum expression either raises or is meaningless. The curve is also precomputed over all datums. Either raise NotImplementedError when datums is given, or recompute the curve from the main reader for the filtered subset. Add a test for either behaviour.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Classification compute_rocauc rescans the whole cache once per batch via self.info",
+   "detail": "`self.info` is a property that calls get_info. get_info does count_rows and extract_counts, which are full scans. compute_rocauc calls it inside the batch loop (`n_labels=self.info.number_of_labels`). Use `len(self._index_to_label)` computed once. Apply the same fix to the other methods that call self.info several times.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "Classification filter leaves stale `match` and `pd_winner` columns",
+   "detail": "Evaluator.filter sets gt_label_id or pd_label_id to -1 but writes `match` and `pd_winner` back unchanged. Rows whose GT or prediction was filtered out still count as TP in the ROC intermediate (`_create_rocauc_intermediate` uses `match`). Hardmax winners are also not recomputed among the remaining predictions. Recompute `match = (gt_id == pd_id) & (pd_id >= 0)` and recompute the per-datum argmax winner after filtering.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py",
+    "tests/classification/test_filtering.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Classification compute_counts can crash or miscount on rows with both labels = -1",
+   "detail": "After filtering, rows can have gt_label_id = pd_label_id = -1. `np.isclose(gt_labels, pd_labels)` is True for these rows and pd_score is still positive, so they enter mask_tp. `np.bincount(pd_labels[mask_tp])` then raises on the negative value. Mask mask_tp with mask_valid_gts & mask_valid_pds. Also replace isclose on integer ids with `==` here and in compute_pair_classifications.",
+   "files": [
+    "src/valor_lite/classification/computation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "ROCAUC negative count underflows uint64",
+   "detail": "compute_rocauc computes `negative_count = pd_count_per_label - gt_count_per_label` on uint64 arrays. This wraps to a huge value when the prediction count is smaller than the GT count, which happens with filtered predictions. FPR then collapses to about 0. Cast to int64 and clip at 0, or compute negatives from the datum count.",
+   "files": [
+    "src/valor_lite/classification/computation.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Suspicious index arithmetic in _create_rocauc_intermediate",
+   "detail": "`pd_scores` is already prefixed with running_max_scores[idx], and the code then prefixes it again in `np.diff(np.r_[running_max_scores[idx], pd_scores])` and subtracts 1. The resulting index can be -1, which wraps to the last element. Rewrite this to select the last cumulative row before each change in score, without the double prefix. Write a test that compares per-label ROCAUC with sklearn.roc_auc_score on random data, including tied scores and a batch_size smaller than the number of rows.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py",
+    "tests/classification/test_rocauc.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Batch ROC-curve row writes",
+   "detail": "_create_rocauc_intermediate calls `self._roc_curve_writer.write_rows([...])` once per row. Each call builds a RecordBatch from a single row, which is very slow for large datasets. Accumulate the arrays and call write_columns or write_batch once per label per table.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "OD loader duplicates unmatched-prediction rows once per ground truth",
+   "detail": "In Loader._add_data, the block that emits predictions with no overlap sits inside `for gidx, gann in enumerate(detection.groundtruths)`. Each unmatched prediction is therefore written n_gt times. Move the unmatched-prediction emission into its own loop over predictions after the GT loop. Add a test that asserts the row count for 2 GTs and 1 non-overlapping prediction.",
+   "files": [
+    "src/valor_lite/object_detection/loader.py",
+    "tests/object_detection/test_loader.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "_isin packing breaks for negative ids and large ids",
+   "detail": "_isin combines pairs as `(a.astype(int64) << 32) | b.astype(int32)`. A negative b (-1) is sign-extended, so every (x, -1) pair packs to -1 and collides. Ids of 2^31 or more overflow. Mask the low part with `b.astype(np.int64) & 0xFFFFFFFF`, or use a structured view / np.unique-based row matching. Add tests that include -1 entries.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Greedy matching ignores the IOU threshold",
+   "detail": "mask_pairs_greedily runs once before the threshold loops in compute_pair_classifications. A prediction whose best-scored pair has IOU below the threshold still consumes the GT and the prediction, which blocks a valid match at that threshold. Run the greedy matching per IOU threshold, on pairs filtered by `ious >= thr`. Add a test where the higher-score pair has low IOU.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate BoundingBox coordinates",
+   "detail": "BoundingBox.__post_init__ does not check that xmin <= xmax, ymin <= ymax, or that the values are finite. Inverted boxes produce negative areas and wrong IOU in compute_bbox_iou. Raise ValueError for invalid extrema and add tests.",
+   "files": [
+    "src/valor_lite/object_detection/annotation.py",
+    "tests/object_detection/test_schemas.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Detection does not validate ground truths",
+   "detail": "Detection.__post_init__ only checks predictions. A ground truth with scores or several labels is accepted, and the loader then uses gann.labels[0] while also iterating `for glabel in gann.labels`. Require ground truths to have no scores and exactly one label.",
+   "files": [
+    "src/valor_lite/object_detection/annotation.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "add_bitmasks gives an opaque error on mismatched mask shapes",
+   "detail": "Loader.add_bitmasks builds `np.array([[gt.mask, pd.mask] ...])`. Masks of different shapes produce a ragged object array that fails deep inside compute_bitmask_iou. Check that all masks in a Detection share a shape, and raise a clear ValueError naming the datum uid.",
+   "files": [
+    "src/valor_lite/object_detection/loader.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Validate score and IOU thresholds",
+   "detail": "Neither evaluator rejects thresholds outside [0, 1] or NaN. An IOU threshold of 0 treats every pair, including non-overlapping ones, as overlapping. Validate iou_thresholds in (0, 1] and score_thresholds in [0, 1] in compute_precision_recall, compute_confusion_matrix and compute_examples for both object detection and classification.",
+   "files": [
+    "src/valor_lite/object_detection/evaluator.py",
+    "src/valor_lite/classification/evaluator.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Validate Classification scores and duplicate labels",
+   "detail": "Classification.__post_init__ accepts NaN or out-of-range scores and duplicate prediction labels. Duplicate labels create two rows for the same (datum, label) pair and double count TP/FP. Reject non-finite scores, scores outside [0, 1], and duplicate entries in predictions.",
+   "files": [
+    "src/valor_lite/classification/annotation.py",
+    "tests/classification/test_schemas.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Segmentation overlap check doesn't accumulate after an overlap",
+   "detail": "In Segmentation._validate_bitmasks, the overlap branch never ORs the current mask into mask_accumulation. Overlaps between a later mask and earlier masks that themselves overlapped go undetected. The function also mutates the caller's arrays in place (`bitmasks[idx].mask[mask_overlap] = False`). Always update the accumulation, and copy masks before modifying them, or document the mutation.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/annotation.py",
+    "tests/semantic_segmentation/test_annotation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Semantic segmentation: duplicate labels per datum are silently miscounted",
+   "detail": "compute_intermediates assigns with `confusion_matrix[np.ix_(gt_labels+1, pd_labels+1)] = ...`. When two bitmasks share a label, the assignment overwrites rather than sums, so counts are lost. Either reject duplicate labels in Segmentation, or merge masks per label in Loader.add_data. Alternatively use np.add.at.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/loader.py",
+    "src/valor_lite/semantic_segmentation/computation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Semantic segmentation Bitmask lacks a type check",
+   "detail": "Bitmask.__post_init__ accesses `self.mask.dtype` directly, so a non-ndarray input raises AttributeError. Add an `isinstance(self.mask, np.ndarray)` check and require ndim == 2.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/annotation.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Semseg loader attaches GT metadata to unmatched-prediction rows",
+   "detail": "In Loader.add_data, the row with gt_label_id = -1 and pd_label_id = idx spreads `**gt_metadata.get(idx, {})` alongside the prediction metadata. Ground-truth filters can then match prediction-only rows. Drop the GT metadata from that row.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/loader.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Semseg loader writes zero-count rows for every known label on every datum",
+   "detail": "For each datum, add_data writes two unmatched rows for all n_labels seen so far, even when the count is 0. Cache size grows as O(datums \u00d7 labels). Skip rows whose count is 0, while keeping label discoverability via extract_labels or a label table.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/loader.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "Vectorize semseg confusion matrix accumulation",
+   "detail": "_compute_confusion_matrix_intermediate builds n_labels\u00b2 boolean masks per table. Replace this with `np.add.at(cm, (gt_ids + 1, pd_ids + 1), counts)`, which is O(rows) and also handles the -1 rows.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/evaluator.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "MemoryCacheWriter.write_table reorders buffered rows",
+   "detail": "FileCacheWriter.write_table flushes the buffer first. MemoryCacheWriter.write_table appends the table directly, so previously buffered batches end up after it. Call self.flush() at the start of MemoryCacheWriter.write_table.",
+   "files": [
+    "src/valor_lite/cache/ephemeral.py",
+    "tests/common/test_cache_in_memory.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "write_columns ignores the cache schema",
+   "detail": "Both writers call `pa.RecordBatch.from_pydict(columns)` without schema=..., so the types are inferred and can mismatch the cache schema, for example int64 vs uint64. The later concat or write then fails. Pass `schema=self.schema` and validate the column names.",
+   "files": [
+    "src/valor_lite/cache/ephemeral.py",
+    "src/valor_lite/cache/persistent.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "FileCacheWriter ignores the configured compression in write_table and sort_by",
+   "detail": "pq.write_table in write_table and sort_by uses pyarrow's default compression, not self._compression. Pass `compression=self._compression`. Also use one concatenation method consistently: write_batch uses pa.concat_batches, which requires a recent pyarrow, while flush uses concat_arrays. Either use the same approach in both or pin the minimum pyarrow version.",
+   "files": [
+    "src/valor_lite/cache/persistent.py",
+    "src/pyproject.toml"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "FileCacheReader.load rejects falsy config values",
+   "detail": "`_retrieve` uses `if value := config.get(key)`, so a legitimate falsy value raises KeyError. Examples are batch_size 0 or an empty compression string. Check `key in config` instead.",
+   "files": [
+    "src/valor_lite/cache/persistent.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "FileCacheWriter.delete fails on non-cache or partially populated directories",
+   "detail": "delete() calls FileCacheReader.load, which raises if .cfg is missing, and then path.rmdir(), which raises if other files exist. As a result, create(delete_if_exists=True) crashes on a stale or partial directory. Handle a missing config, and raise a clear error if foreign files are present.",
+   "files": [
+    "src/valor_lite/cache/persistent.py",
+    "tests/common/test_cache_file_based.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "External merge sort writes one row at a time",
+   "detail": "compute._merge pops one heap entry and calls `sink.write_batch(batches[i].slice(row_idx, 1))` per row. It also calls `.as_py()` on scalars for every key. For large caches this is extremely slow. Accumulate row indices into output chunks, using take or concatenation, and write in batch_size groups. Precompute the key columns as numpy arrays per batch.",
+   "files": [
+    "src/valor_lite/cache/compute.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "Context recall divides by zero when no statements are extracted",
+   "detail": "calculate_context_recall computes `sum(...) / len(verdicts)`. If generate_statements returns an empty list for a ground truth, len(verdicts) is 0 and this raises ZeroDivisionError. Skip or score that ground truth explicitly, and add a test.",
+   "files": [
+    "src/valor_lite/text_generation/computation.py",
+    "tests/text_generation/metrics/test_context_recall.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "ROUGE reloads the evaluate metric on every call",
+   "detail": "calculate_rouge_scores calls `evaluate.load('rouge')` per response. This is slow and may hit the network. Cache the loaded metric with functools.lru_cache at module level.",
+   "files": [
+    "src/valor_lite/text_generation/computation.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "BLEU and ROUGE crash on empty ground-truth lists",
+   "detail": "compute_rouge and compute_sentence_bleu only check `if not response.context`. An empty `context.groundtruth` is passed through and fails inside nltk or evaluate. Raise a clear ValueError when groundtruth is empty.",
+   "files": [
+    "src/valor_lite/text_generation/manager.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Docs reference a nonexistent classification DataLoader",
+   "detail": "docs/classification/documentation.md has `::: valor_lite.classification.DataLoader`, but the export is `Loader`, so the mkdocstrings build fails. Change it to `Loader`, and check the other module docs pages for the same mistake.",
+   "files": [
+    "docs/classification/documentation.md"
+   ],
+   "kind": "docs"
+  },
+  {
+   "title": "Fix misleading docstrings",
+   "detail": "Several docstrings are wrong: compute_bbox_iou claims input shape (N, 8) but the code uses (N, 2, 4); object detection compute_counts documents return values it doesn't return; classification compute_rocauc lists three returns; classification Metric.confusion_matrix and Metric.examples say 'object detection'. The Detection and Segmentation examples also omit the required uid and shape arguments. Correct all of them.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "src/valor_lite/classification/computation.py",
+    "src/valor_lite/classification/metric.py",
+    "src/valor_lite/object_detection/annotation.py",
+    "src/valor_lite/semantic_segmentation/annotation.py"
+   ],
+   "kind": "docs"
+  },
+  {
+   "title": "Benchmark reports evaluation time as examples time",
+   "detail": "In benchmark_classification.py, Benchmark.result sets `'examples': round(self.evaluation, 2)`. It should use self.examples_time. Also remove the duplicated `pds = []; scores = []` initialisation in _convert_valor_dicts_into_Classification.",
+   "files": [
+    "benchmarks/benchmark_classification.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Benchmark cleanup: unused params and redundant file rewrites",
+   "detail": "benchmark_objdet.download_data_if_not_exists re-sorts and rewrites the data file on every run. The commented-out calls pass a nonexistent `compute_detailed` argument. In benchmark_semantic_segmentation, `memory_limit`, `time_limit`, `verbose` and the computed `weights` are unused. Sort only after a download, and either remove the unused parameters or implement them.",
+   "files": [
+    "benchmarks/benchmark_objdet.py",
+    "benchmarks/synthetic/benchmark_semantic_segmentation.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Deduplicate shared helpers and remove dead code",
+   "detail": "extract_labels, encode_metadata_fields, decode_metadata_fields and create_mapping are copy-pasted across the classification, object_detection and semantic_segmentation modules. Move them into a common module. Remove unused code: EmptyEvaluatorError, object_detection generate_temporary_cache_path, and the unused `winners` parameter of classification _unpack_confusion_matrix_with_examples.",
+   "files": [
+    "src/valor_lite/classification/shared.py",
+    "src/valor_lite/object_detection/shared.py",
+    "src/valor_lite/semantic_segmentation/shared.py",
+    "src/valor_lite/exceptions.py",
+    "src/valor_lite/classification/utilities.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "LLM finish_reason errors bypass the retry logic",
+   "detail": "OpenAIWrapper and MistralWrapper raise ValueError on finish_reason 'length' or 'content_filter'. llm_guided_metric only catches InvalidLLMResponseError, so these errors neither retry nor return a Metric.error; they propagate to the caller. Raise InvalidLLMResponseError, or a subclass, instead.",
+   "files": [
+    "src/valor_lite/text_generation/llm/integrations.py",
+    "src/valor_lite/text_generation/manager.py"
+   ],
+   "kind": "bug"
+  }
+ ],
+ [
+  {
+   "title": "Fix order-dependent score thresholding in `classification.computation.compute_pair_classifications`",
+   "detail": "In `compute_pair_classifications`, `mask_score` is initialized outside the `for score_idx in range(n_scores):` loop (`mask_score = scores > 1e-9`) and mutated in-place inside the loop with `mask_score &= scores >= score_thresholds[score_idx]`. If `score_thresholds` is passed in descending or unsorted order (e.g., `[0.8, 0.2]`), all subsequent thresholds are constrained by the highest previous threshold. Compute `mask_score = (scores > 1e-9) & (scores >= score_thresholds[score_idx])` fresh inside each iteration.",
+   "files": [
+    "src/valor_lite/classification/computation.py",
+    "tests/classification/test_confusion_matrix.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `IndexError` in `_unpack_confusion_matrix_with_examples` when groundtruth or prediction is filtered out",
+   "detail": "In `src/valor_lite/classification/utilities.py`, `_unpack_confusion_matrix_with_examples` creates `valid_matches = ids[mask_valid_gts & mask_valid_pds]` and `valid_gts = ids[mask_valid_gts]`, which have fewer rows than `ids` when any `gt_label_id == -1` or `pd_label_id == -1` (after `Evaluator.filter`). It then indexes `valid_matches` and `valid_gts` using `mask_matched` and `mask_unmatched_fn`, which are boolean masks of length `len(ids)`, causing an `IndexError: boolean index did not match indexed array`. Apply `mask_valid_gts & mask_valid_pds` to `mask_matched` (and `mask_valid_gts` to `mask_unmatched_fn`) directly on `ids` instead of pre-slicing `ids`.",
+   "files": [
+    "src/valor_lite/classification/utilities.py",
+    "tests/classification/test_filtering.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix filtered groundtruth/prediction labels being included in classification `compute_confusion_matrix` and `compute_pair_classifications`",
+   "detail": "When `Evaluator.filter` masks out groundtruths or predictions, it sets `gt_label_id` or `pd_label_id` to `-1`. However, `compute_pair_classifications` does not check `gt_labels >= 0` or `pd_labels >= 0`, and `compute_confusion_matrix` indexes `confusion_matrices[score_idx, unique_labels[:, 0], unique_labels[:, 1]]` and `unmatched_groundtruths[score_idx, unique_labels]`. Negative label index `-1` silently wraps around in NumPy and increments the last label's count! Filter out rows with `gt_labels < 0` and `pd_labels < 0` in `compute_pair_classifications` and `compute_confusion_matrix`.",
+   "files": [
+    "src/valor_lite/classification/computation.py",
+    "tests/classification/test_filtering.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `KeyError: -1` in `classification.utilities.unpack_examples` on filtered evaluators",
+   "detail": "In `src/valor_lite/classification/utilities.py`, `unpack_examples` extracts `unique_tp`, `unique_fp`, and `unique_fn` without filtering out rows where `gt_label_id == -1` or `pd_label_id == -1` (produced by `Evaluator.filter`), and then looks up `index_to_label[row[1]]`, raising `KeyError: -1`. Mask out negative label IDs before looking up labels in `index_to_label`.",
+   "files": [
+    "src/valor_lite/classification/utilities.py",
+    "tests/classification/test_examples.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Pass `datums` filter to `get_info` in `classification.Evaluator.compute_precision_recall`",
+   "detail": "In `src/valor_lite/classification/evaluator.py`, `compute_precision_recall` accepts a `datums: pc.Expression | None = None` filter, but computes `n_datums = self.info.number_of_datums` (unfiltered total datums) instead of `self.get_info(datums=datums).number_of_datums`. As a result, `compute_accuracy(counts, n_datums=n_datums)` divides filtered true positives by the unfiltered datum count. Use `self.get_info(datums=datums).number_of_datums`.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py",
+    "tests/classification/test_accuracy.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `Evaluator.compute_rocauc(datums=...)` crashing with `ArrowInvalid` on `datums` filter",
+   "detail": "In `src/valor_lite/classification/evaluator.py`, `compute_rocauc` passes `filter=datums` to `self._roc_curve_reader.iterate_arrays(...)`. However, the ROC curve cache schema only has columns `pd_label_id`, `cumulative_fp`, and `cumulative_tp` (no `datum_uid`, `datum_id`, or metadata columns). Passing any datum or metadata expression raises `pyarrow.lib.ArrowInvalid: No match for FieldRef`. Either remove `datums` from `compute_rocauc` (since users can call `evaluator.filter(datums=...).compute_rocauc()`) or recompute the ROC curve intermediates from `self._reader` when `datums` is provided.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py",
+    "tests/classification/test_rocauc.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `ZeroDivisionError` in `calculate_context_recall` when groundtruth yields no statements",
+   "detail": "In `src/valor_lite/text_generation/computation.py`, `calculate_context_recall` calls `generate_statements` on each groundtruth and then `generate_context_recall_verdicts`. If `groundtruth` is empty or the LLM extracts 0 statements, `verdicts` is `[]` and `sum(...) / len(verdicts)` raises `ZeroDivisionError`. Guard against `len(verdicts) == 0` (e.g., append `0.0`), matching `calculate_answer_relevance`.",
+   "files": [
+    "src/valor_lite/text_generation/computation.py",
+    "tests/text_generation/metrics/test_context_recall.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `calculate_ranking_boundaries` in object detection failing to update `iou_boundary` and `mask_increasing_iou`",
+   "detail": "In `src/valor_lite/object_detection/computation.py`, `calculate_ranking_boundaries` has two bugs: (1) `iou_boundary[mask_plabel][1:] = labeled_ious[:-1]` and `iou_boundary[mask_plabel][~mask_increasing_iou] = 2.0` chain slice/boolean indexing after boolean indexing `iou_boundary[mask_plabel]`, which modifies a temporary copy in NumPy and leaves `iou_boundary` as all zeros! Use `plabel_indices = np.where(mask_plabel)[0]` to assign into `iou_boundary`. (2) `if idx_dec.size == 1:` only masks decreasing IOUs when there is *exactly one* decrease; if IOUs decrease multiple times, `idx_dec.size > 1` and nothing is masked. It should be `if idx_dec.size >= 1:`.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "tests/object_detection/test_evaluator.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `compute_average_precision` corrupting `pr_curve` scores across IoU thresholds",
+   "detail": "In `src/valor_lite/object_detection/computation.py`, `compute_average_precision` initializes `running_max_score = np.zeros((n_labels), dtype=np.float64)` with shape `(n_labels,)` instead of `(n_ious, n_labels)`. In the loop, `running_max_score = np.maximum(pr_curve[:, :, recall, 1], running_max_score)` broadcasts and takes the elementwise maximum across all IoU thresholds, overwriting `pr_curve[:, :, recall, 1]` so every IoU threshold gets identical score curves. Initialize `running_max_score = np.zeros((n_ious, n_labels), dtype=np.float64)`.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "tests/object_detection/test_pr_curve.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Fix `recall_index` out-of-bounds crash in `object_detection.computation.compute_counts` when filtered",
+   "detail": "In `src/valor_lite/object_detection/computation.py`, `compute_counts` computes `recall_index = np.floor(recall * 100.0).astype(np.int32)` and indexes `pr_curve` (which has size 101 along axis 2, valid indices 0..100). If `running_tp_count` ever exceeds `running_gt_count` (or due to floating-point rounding), `recall_index` can exceed 100, raising `IndexError`. Furthermore, `np.maximum.at` should be used when binning `pr_curve[iou_idx, pd_labels, recall_index[iou_idx], 0]` because standard fancy indexing `pr_curve[...] = np.maximum(pr_curve[...], precision[iou_idx])` drops duplicate `(pd_label, recall_index)` indices within the same batch rather than taking their maximum.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "tests/object_detection/test_pr_curve.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Fix bitwise packing bug in `object_detection.computation._isin` for negative IDs (`-1`)",
+   "detail": "In `src/valor_lite/object_detection/computation.py`, `_isin` packs two 32-bit integers into a 64-bit integer using `(data[:, 0].astype(np.int64) << 32) | data[:, 1].astype(np.int32)`. In NumPy, bitwise OR between `int64` and `int32` sign-extends the `int32` operand to `int64` before ORing! When `data[:, 1]` is `-1` (unmatched GT or PD), `(-1).astype(np.int32)` sign-extends to `0xFFFFFFFFFFFFFFFF`, clobbering the upper 32 bits (`data[:, 0]`) so all rows with `-1` in column 1 collide to `-1` regardless of `data[:, 0]`. Mask with `& 0xFFFFFFFF` or cast via `np.uint32` then `np.int64` before ORing.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "tests/object_detection/test_confusion_matrix.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `mask_pairs_greedily` crash on empty or all-unmatched batches in object detection",
+   "detail": "In `src/valor_lite/object_detection/computation.py`, `mask_pairs_greedily` computes `max_gt = groundtruths.max()` and `max_pd = predictions.max()` and allocates `np.zeros(max_gt + 1)`. If all predictions in a datum/batch are unmatched (`predictions` is all `-1`), `max_pd` is `-1` (`max_pd + 1 == 0`, which works only by accident because `pidx < 0` short-circuits), and if `pairs` is empty (`shape[0] == 0`), `.max()` raises `ValueError: zero-size array to reduction operation maximum`. Guard `if pairs.size == 0:` and clamp `max(0, groundtruths.max() + 1)`.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "tests/object_detection/test_confusion_matrix.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `mask_pairs_greedily` matching across different IoU/score thresholds in `compute_pair_classifications`",
+   "detail": "In `src/valor_lite/object_detection/computation.py`, `compute_pair_classifications` calls `mask_pairs_greedily(pairs=detailed_pairs)` once *before* the `iou_thresholds` and `score_thresholds` loops, and without filtering out pairs where `iou == 0`. Because `detailed_pairs` is sorted by `(pd_score, iou)` descending, a high-score low-IoU pair (e.g. IoU=0.2) greedily consumes both the GT and PD, preventing that GT from matching a slightly lower-score high-IoU pair (e.g. IoU=0.8) when evaluating at `iou_threshold=0.5`. Greedy matching must only consider pairs with `iou >= iou_threshold` and `score >= score_threshold` (or at least `iou > EPSILON`).",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "tests/object_detection/test_confusion_matrix.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Fix duplicate unmatched prediction rows in `object_detection.Loader._add_data`",
+   "detail": "In `src/valor_lite/object_detection/loader.py`, inside `for gidx, gann in enumerate(detection.groundtruths):`, there is an inner loop `for pidx, pann in enumerate(detection.predictions):` which checks `if (ious[pidx, :] < EPSILON).all():` and appends unmatched prediction rows. Because this check is inside the outer `groundtruths` loop, every unmatched prediction is duplicated `len(detection.groundtruths)` times in the cache! Move the `if (ious[pidx, :] < EPSILON).all():` loop outside the `for gidx, gann` loop so each unmatched prediction is written once.",
+   "files": [
+    "src/valor_lite/object_detection/loader.py",
+    "tests/object_detection/test_loader.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `ValueError` in `object_detection.Loader` when a `Detection` has empty `groundtruths` or `predictions`",
+   "detail": "In `src/valor_lite/object_detection/loader.py`, `add_bounding_boxes`, `add_polygons`, and `add_bitmasks` build an array `[ [gt, pd] for pd in detection.predictions for gt in detection.groundtruths ]`, pass it to `compute_*_iou`, and call `.reshape(len(detection.predictions), len(detection.groundtruths))`. For `add_polygons` and `add_bitmasks`, when either `predictions` or `groundtruths` is empty, `np.array([])` has shape `(0,)` and `compute_bitmask_iou` / `compute_polygon_iou` or `.reshape` can fail, or `add_bitmasks` fails if bitmasks across different datums have different image dimensions. Handle `len(predictions) == 0 or len(groundtruths) == 0` explicitly by creating `np.zeros((len(detection.predictions), len(detection.groundtruths)), dtype=np.float64)` without calling `compute_*_iou`.",
+   "files": [
+    "src/valor_lite/object_detection/loader.py",
+    "tests/object_detection/test_loader.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `Segmentation._validate_bitmasks` mutating caller's input `Bitmask.mask` in-place and missing overlap accumulation",
+   "detail": "In `src/valor_lite/semantic_segmentation/annotation.py`, `_validate_bitmasks` has two bugs when two masks overlap: (1) in the `elif np.logical_and(mask_accumulation, bitmask.mask).any():` branch, it mutates the user's array in-place (`bitmasks[idx].mask[mask_overlap] = False`) AND forgets to update `mask_accumulation = mask_accumulation | bitmask.mask`! Because `mask_accumulation` is only updated in the `else:` branch, a third mask overlapping the non-overlapping part of the second mask is never detected as overlapping! Always update `mask_accumulation |= bitmask.mask` and copy `bitmask.mask` before modifying it.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/annotation.py",
+    "tests/semantic_segmentation/test_annotation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix wrong metadata attached to unmatched prediction rows in `semantic_segmentation.Loader.add_data`",
+   "detail": "In `src/valor_lite/semantic_segmentation/loader.py` (around line 142), when appending the unmatched prediction row (`gt_label=None, gt_label_id=-1, pd_label=label, pd_label_id=idx`), the dictionary unpacks `**gt_metadata.get(idx, {})` as well as `**pd_metadata.get(idx, {})`. An unmatched prediction row has no groundtruth (`gt_label_id: -1`) and must not inherit groundtruth metadata for label `idx`. Remove `**gt_metadata.get(idx, {})` from that row dict.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/loader.py",
+    "tests/semantic_segmentation/test_filtering.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `semantic_segmentation.computation.compute_intermediates` when a datum has multiple bitmasks with the same label",
+   "detail": "In `src/valor_lite/semantic_segmentation/computation.py`, `compute_intermediates` assigns `confusion_matrix[np.ix_(groundtruth_labels + 1, prediction_labels + 1)] = intersection_counts`. If a `Segmentation` contains two `Bitmask` objects with the same `label` in `groundtruths` or `predictions`, `groundtruth_labels` has duplicate indices, so `np.ix_` overwrites instead of summing, and `intersected_groundtruth_counts` / `groundtruth_counts` mismatch. Either validate/merge duplicate labels in `Segmentation.__post_init__` or use `np.add.at` in `compute_intermediates`.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/annotation.py",
+    "src/valor_lite/semantic_segmentation/computation.py",
+    "tests/semantic_segmentation/test_annotation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `semantic_segmentation.Evaluator.compute_precision_recall_iou` returning `NaN` for `mIOU` when `n_labels == 0`",
+   "detail": "In `src/valor_lite/semantic_segmentation/utilities.py`, `unpack_precision_recall_iou_into_metric_lists` computes `float(ious.diagonal().mean())`. If `n_labels == 0`, `ious.diagonal()` is empty and `.mean()` returns `NaN` with a RuntimeWarning. Similarly in `object_detection/computation.py`, `compute_average_recall` calls `recall.mean(axis=0)` which warns/NaNs if `n_ious == 0` or `n_labels == 0`. Guard `.mean()` with `if ious.size > 0 else 0.0`.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/utilities.py",
+    "src/valor_lite/object_detection/computation.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Fix `classification.Builder._create_rocauc_intermediate` failing when all scores for a label are `0.0` or equal across table boundaries",
+   "detail": "In `src/valor_lite/classification/evaluator.py`, `_create_rocauc_intermediate` initializes `running_max_scores = np.zeros(n_labels, dtype=np.float64)`. For the first table, it prepends `running_max_scores[idx]` (`0.0`) to `scores[mask]` (which is sorted descending, e.g. `[0.9, 0.5, 0.0]`) and computes `np.diff(np.r_[running_max_scores[idx], pd_scores])`. If a label only has predictions with score `0.0`, `np.diff` is all zeros, `indices` is empty, and `running_max_fp`/`running_max_tp` are only flushed at the very end without intermediate points. Worse, prepending `0.0` twice (`pd_scores = np.r_[running_max_scores[idx], scores[mask]]` and then `np.r_[running_max_scores[idx], pd_scores]`) shifts `np.where(np.diff(...))[0] - 1` so index `0` is always selected (emitting `(0, 0)`) and the actual score-change boundaries are off-by-one! Fix the score-change boundary indexing so `cumulative_fp` and `cumulative_tp` are recorded at the end of each tied-score group.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py",
+    "tests/classification/test_rocauc.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Fix `classification.computation.compute_rocauc` dividing by `pd_count - gt_count` instead of actual negative count",
+   "detail": "In `src/valor_lite/classification/computation.py`, `compute_rocauc` sets `negative_count = pd_count_per_label - gt_count_per_label`. However, in `extract_groundtruth_count_per_label` (`src/valor_lite/classification/shared.py`), `label_counts[:, 0]` is the total number of datums whose ground truth is label `L` (even if label `L` was not in `predictions` for that datum), while `label_counts[:, 1]` is the number of datums that predicted label `L`. If a datum has groundtruth `L` but did not include `L` in its `predictions`, `gt_count_per_label[L]` can be *greater* than `pd_count_per_label[L]`, causing unsigned integer underflow (`uint64` wraps to `2**64 - 1`) in `pd_count_per_label - gt_count_per_label`! Even without underflow, the number of negative predictions for label `L` is the number of predictions for label `L` where `gt != L` (i.e. `fps[-1]`), not `pd_count - gt_count`. Compute negative count directly as the count of `pd_label_id == L` where `gt_label_id != L` (or `int64` safe subtraction).",
+   "files": [
+    "src/valor_lite/classification/computation.py",
+    "src/valor_lite/classification/shared.py",
+    "tests/classification/test_rocauc.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Fix `extract_counts` across all modules overcounting `number_of_datums`, `gt_id`, and `pd_id` across multiple cache fragments",
+   "detail": "In `src/valor_lite/classification/shared.py`, `src/valor_lite/object_detection/shared.py`, and `src/valor_lite/semantic_segmentation/shared.py`, `extract_counts` iterates over `reader.iterate_tables(filter=datums)` and does `n_dts += int(np.unique(tbl['datum_id'].to_numpy()).shape[0])` (and similarly for `gt_id`, `pd_id`, and `extract_groundtruth_count_per_label`). Because `Builder.finalize()` sorts tables by `pd_score` descending before writing/reading, rows for the same `datum_id` (and same `gt_id`) are scattered across multiple Parquet fragment files! Summing `len(np.unique(...))` per fragment counts the same datum or groundtruth once per file it appears in. Accumulate unique IDs in a `set` or `np.unique` across fragments before counting.",
+   "files": [
+    "src/valor_lite/classification/shared.py",
+    "src/valor_lite/object_detection/shared.py",
+    "src/valor_lite/semantic_segmentation/shared.py",
+    "tests/classification/test_evaluator.py",
+    "tests/object_detection/test_evaluator.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `cache.compute._merge` row-by-row `write_batch` causing severe performance degradation and broken string/bool descending sort",
+   "detail": "In `src/valor_lite/cache/compute.py`, `_merge` has two issues: (1) `create_sort_key` negates descending columns with `-batches[batch_idx][name][row_idx].as_py()`, which fails for `bool` (`-True == -1`, which works in Python, but fails if any non-numeric or `None` value is used) and calls `.as_py()` per cell per row; (2) inside `while heap:`, it slices 1 row (`batches[batch_idx].slice(row_idx, 1)`) and calls `sink.write_batch(row_table)`, where `write_batch` does `sum([b.num_rows for b in self._buffer])` on every single row, making merge $O(N \\cdot \\text{batch\\_size})$ in Python! Accumulate rows or indices and concatenate in chunks of `batch_size` instead of 1-row `RecordBatch` slices.",
+   "files": [
+    "src/valor_lite/cache/compute.py",
+    "src/valor_lite/cache/ephemeral.py",
+    "src/valor_lite/cache/persistent.py",
+    "tests/common/test_cache_sorting.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "Fix `FileCacheReader._retrieve` rejecting valid `0` or `\"\"` config values",
+   "detail": "In `src/valor_lite/cache/persistent.py`, `FileCacheReader.load` defines `def _retrieve(config: dict, key: str): if value := config.get(key, None): return value; raise KeyError(...)`. Using truthiness `if value := ...` raises `KeyError` if a config value is `0` or `False` (for example `rows_per_file=0` or `compression=\"NONE\"` if falsy). Check `if (value := config.get(key, None)) is not None:` instead.",
+   "files": [
+    "src/valor_lite/cache/persistent.py",
+    "tests/common/test_cache_file_based.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `MemoryCacheReader.iterate_arrays` and `FileCacheReader.iterate_arrays` crashing on empty tables (`0` columns)",
+   "detail": "In `src/valor_lite/cache/ephemeral.py` and `src/valor_lite/cache/persistent.py`, `iterate_arrays` yields `np.column_stack([tbl.column(i).to_numpy() for i in range(tbl.num_columns)])`. If `tbl.num_columns == 0`, `np.column_stack([])` raises `ValueError: need at least one array to concatenate`. Similarly in `iterate_tables_with_arrays`, `_columns.union(_numeric_columns)` converts `columns` to a `set`, scrambling the column order of `tbl`! Preserve column order using `dict.fromkeys` and handle empty columns gracefully.",
+   "files": [
+    "src/valor_lite/cache/ephemeral.py",
+    "src/valor_lite/cache/persistent.py",
+    "tests/common/test_cache_reader.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Prevent metadata keys from overwriting reserved cache columns in `Loader.add_data`",
+   "detail": "In `src/valor_lite/classification/loader.py`, `src/valor_lite/object_detection/loader.py`, and `src/valor_lite/semantic_segmentation/loader.py`, datum/annotation `metadata` is unpacked into row dicts (`{**datum_metadata, 'datum_uid': ...}`). While `generate_schema` checks `metadata_fields` against reserved field names, if a user passes an undeclared or reserved key in `classification.metadata` when `metadata_fields` is not set or in `object_detection` where `pann_metadata` is unpacked after `gann_metadata`, conflicting metadata keys between datum, groundtruth, and prediction annotations silently overwrite each other. Validate that `metadata` keys are declared in `self._metadata_fields` (or raise a `ValueError` on conflicting keys between datum/gt/pd metadata).",
+   "files": [
+    "src/valor_lite/classification/loader.py",
+    "src/valor_lite/object_detection/loader.py",
+    "src/valor_lite/semantic_segmentation/loader.py",
+    "tests/classification/test_loader.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Fix `decode_metadata_fields` failing to round-trip complex PyArrow `DataType`s in `Evaluator.filter`",
+   "detail": "In `src/valor_lite/classification/shared.py`, `object_detection/shared.py`, and `semantic_segmentation/shared.py`, `encode_metadata_fields` converts `(name, pa.DataType)` to `{name: str(v)}` in `metadata.json`. When `Evaluator.load` reads `metadata.json`, `decode_metadata_fields` returns `[(k, v)]` where `v` is a `str` (e.g. `'double'` or `'timestamp[us]'`). If a user subsequently calls `evaluator.filter(...)`, `generate_schema` calls `pa.schema(reserved_fields + metadata_fields)`, which fails with `TypeError` or `ArrowKeyError` if `str(pa.DataType)` is not a valid PyArrow type alias (for instance `pa.list_(pa.int64())` whose `str()` is `'list<item: int64>'`). Encode metadata fields using `pa.schema(metadata_fields).serialize()` (like `FileCache._encode_schema`) so any PyArrow `DataType` round-trips losslessly.",
+   "files": [
+    "src/valor_lite/classification/shared.py",
+    "src/valor_lite/object_detection/shared.py",
+    "src/valor_lite/semantic_segmentation/shared.py",
+    "tests/classification/test_evaluator.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate `BoundingBox` coordinates (`xmin <= xmax` and `ymin <= ymax`) in `object_detection.annotation`",
+   "detail": "In `src/valor_lite/object_detection/annotation.py`, `BoundingBox.__post_init__` validates `scores` and `labels`, but does not check that `xmin < xmax` and `ymin < ymax`. If a user passes inverted coordinates (`xmin > xmax` or `ymin > ymax`), `compute_bbox_iou` computes a negative `area1 = (xmax1 - xmin1) * (ymax1 - ymin1)` (or positive area if both width and height are negative!), leading to nonsensical IoU values. Add validation in `BoundingBox.__post_init__` raising `ValueError` when `self.xmin >= self.xmax` or `self.ymin >= self.ymax`.",
+   "files": [
+    "src/valor_lite/object_detection/annotation.py",
+    "tests/object_detection/test_schemas.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Validate `Detection` groundtruth annotations have no scores and single label in `Detection.__post_init__`",
+   "detail": "In `src/valor_lite/object_detection/annotation.py`, `Detection.__post_init__` checks `for prediction in self.predictions: if len(prediction.scores) != len(prediction.labels): raise ValueError(...)`, which also allows a prediction with `scores=[]` and `labels=[]` if constructed dynamically, and does not check `self.groundtruths` at all! A `BoundingBox` created with `scores=[0.9]` (valid as a prediction) can be passed inside `Detection(groundtruths=[bbox], ...)` without error, causing `Loader._add_data` to only use `gann.labels[0]` or expand multiple `gann.labels` inconsistently. Validate in `Detection.__post_init__` that every groundtruth has `len(gt.scores) == 0` and `len(gt.labels) == 1`, and every prediction has `len(pd.scores) > 0`.",
+   "files": [
+    "src/valor_lite/object_detection/annotation.py",
+    "tests/object_detection/test_schemas.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Validate score and IoU thresholds are within `[0.0, 1.0]` and scores are non-negative",
+   "detail": "Across `classification` and `object_detection`, `compute_precision_recall`, `compute_confusion_matrix`, `compute_examples`, and `compute_confusion_matrix_with_examples` only check `if not score_thresholds:` (and `if not iou_thresholds:`), allowing out-of-range thresholds like `-0.5` or `1.5`. In `object_detection.computation.compute_counts`, `prev_ious` is initialized to `0.0` for top-ranked pairs and `2.0` for non-monotonic pairs; passing an `iou_threshold <= 0.0` causes `prev_ious < iou_thresholds[iou_idx]` (`0.0 < 0.0`) to evaluate to `False`, resulting in `0` true positives at `iou_threshold = 0.0`! Validate that `0.0 <= score_threshold <= 1.0` and `0.0 < iou_threshold <= 1.0` (or fix `prev_ious` initialization to `-1.0` so `iou_threshold = 0.0` works).",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "src/valor_lite/object_detection/evaluator.py",
+    "src/valor_lite/classification/evaluator.py",
+    "tests/object_detection/test_evaluator.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Fix `trim_and_load_json` failing when LLM response contains curly braces outside the JSON object",
+   "detail": "In `src/valor_lite/text_generation/llm/utilities.py`, `trim_and_load_json` uses greedy regex `r\"\\{[\\s\\S]*\\}\"`. If the LLM includes curly braces in prose before or after the JSON block (e.g., `Here is the result for {query}: {\"verdicts\": [...]}`), the greedy regex captures from the first `{` in prose to the last `}` in the JSON, producing invalid JSON and raising `InvalidLLMResponseError`. Use `json.JSONDecoder().raw_decode` scanning for `{` positions or strip markdown code fences first before falling back to brace matching.",
+   "files": [
+    "src/valor_lite/text_generation/llm/utilities.py",
+    "tests/text_generation/llm/test_utilities.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix inconsistent key names (`\"reason\"` vs `\"analysis\"`) in LLM instruction examples in `instructions.py`",
+   "detail": "In `src/valor_lite/text_generation/llm/instructions.py`, `format_context_precision_verdicts_instruction` and `format_context_recall_verdicts_instruction` instruct the LLM: `The 'analysis' key should provide a brief analysis...`, and `validate_verdicts` strictly requires `set(value.keys()) == {'verdict', 'analysis'}`. However, the few-shot `Example JSON` inside both `format_context_precision_verdicts_instruction` and `format_context_recall_verdicts_instruction` uses `\"reason\": \"...\"` instead of `\"analysis\": \"...\"` on the 2nd, 3rd, and 4th verdict objects! This causes LLMs following the few-shot example to output `\"reason\"`, which then fails `validate_verdicts` with `InvalidLLMResponseError`. Replace `\"reason\"` with `\"analysis\"` in both prompt templates and docstrings.",
+   "files": [
+    "src/valor_lite/text_generation/llm/instructions.py",
+    "src/valor_lite/text_generation/llm/generation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `text_generation.Metric` storing `MetricType` enum instead of `str` for `Metric.type`",
+   "detail": "In `src/valor_lite/text_generation/metric.py`, factory methods like `Metric.answer_correctness`, `Metric.bleu`, `Metric.rouge`, etc. pass `type=MetricType.AnswerCorrectness` (an `Enum` instance, which passes `isinstance(self.type, str)` only because `MetricType` subclasses `str, Enum`) instead of `MetricType.AnswerCorrectness.value`. Consequently, `metric.type` and `metric.to_dict()['type']` are `MetricType` enum objects rather than plain `str`s, unlike `classification`, `object_detection`, and `semantic_segmentation` which all pass `.value`. Use `.value` in all `text_generation.Metric` classmethods.",
+   "files": [
+    "src/valor_lite/text_generation/metric.py",
+    "tests/text_generation/metrics/test_metric.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Avoid mutable default arguments in `Evaluator` methods across `classification` and `text_generation`",
+   "detail": "In `src/valor_lite/classification/evaluator.py` (`compute_precision_recall`, `compute_confusion_matrix`, `compute_examples`, `compute_confusion_matrix_with_examples`) and `src/valor_lite/text_generation/manager.py` (`compute_rouge`, `compute_sentence_bleu`, `compute_all`), list parameters use mutable defaults like `score_thresholds: list[float] = [0.0]`, `weights: list[float] = [0.25, 0.25, 0.25, 0.25]`, and `rouge_types: list[str] = [...]`. Moreover, `Metric.bleu` stores `weights` directly in `parameters['weights']`, so mutating the returned metric parameters mutates the function's default argument! Use `tuple` or `None` defaults and convert to `list` inside the function.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py",
+    "src/valor_lite/text_generation/manager.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Cache `evaluate.load('rouge')` in `calculate_rouge_scores` instead of reloading on every call",
+   "detail": "In `src/valor_lite/text_generation/computation.py`, `calculate_rouge_scores` executes `rouge = evaluate.load('rouge')` on every single call. `evaluate.load('rouge')` inspects/copies the HuggingFace evaluate module script and initializes the metric object each time (and can fail or be very slow on offline machines or in loops over many datums). Cache the loaded `rouge` evaluator with `functools.lru_cache(maxsize=1)`.",
+   "files": [
+    "src/valor_lite/text_generation/computation.py",
+    "tests/text_generation/metrics/test_rouge.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "Fix `OpenAIWrapper` and `MistralWrapper` crashing with `IndexError` when `choices` is empty",
+   "detail": "In `src/valor_lite/text_generation/llm/integrations.py`, `OpenAIWrapper.__call__` accesses `openai_response.choices[0]` without checking if `openai_response.choices` is empty, and `MistralWrapper.__call__` checks `mistral_response.choices is None` before accessing `mistral_response.choices[0]`, which still raises `IndexError` if `choices == []`. Also, `MistralWrapper` does not handle `finish_reason == 'model_length'` or `'error'`. Check `if not response.choices:` in both wrappers and handle `model_length`/`error` in `MistralWrapper`.",
+   "files": [
+    "src/valor_lite/text_generation/llm/integrations.py",
+    "tests/text_generation/llm/test_integrations.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Fix typo `iou_threhsold` in `object_detection.utilities.create_empty_confusion_matrix_with_examples`",
+   "detail": "In `src/valor_lite/object_detection/utilities.py` (line 262) and its call site in `src/valor_lite/object_detection/evaluator.py`, the parameter of `create_empty_confusion_matrix_with_examples` is misspelled `iou_threhsold: float`. Rename it to `iou_threshold: float` in both files.",
+   "files": [
+    "src/valor_lite/object_detection/utilities.py",
+    "src/valor_lite/object_detection/evaluator.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Fix `Benchmark.result()` in `benchmarks/benchmark_classification.py` reporting `self.evaluation` instead of `self.examples_time`",
+   "detail": "In `benchmarks/benchmark_classification.py` (line 138), `Benchmark.result()` sets `'examples': f'{round(self.evaluation, 2)} seconds'` instead of `f'{round(self.examples_time, 2)} seconds'`, so the benchmark output never records `examples_time`.",
+   "files": [
+    "benchmarks/benchmark_classification.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix broken class reference `valor_lite.classification.DataLoader` in `docs/classification/documentation.md`",
+   "detail": "In `docs/classification/documentation.md`, the mkdocstrings directive references `::: valor_lite.classification.DataLoader`, which does not exist; the class is named `valor_lite.classification.Loader`. Update the directive to `::: valor_lite.classification.Loader` so documentation builds render the `Loader` API.",
+   "files": [
+    "docs/classification/documentation.md"
+   ],
+   "kind": "docs"
+  },
+  {
+   "title": "Deduplicate identical cache helper functions across `classification`, `object_detection`, and `semantic_segmentation` `shared.py`",
+   "detail": "`encode_metadata_fields`, `decode_metadata_fields`, `extract_labels`, and `create_mapping` are copy-pasted verbatim across `src/valor_lite/classification/shared.py` (and `utilities.py`), `src/valor_lite/object_detection/shared.py` (and `utilities.py`), and `src/valor_lite/semantic_segmentation/shared.py`. Also `EmptyEvaluatorError`, `EmptyFilterError`, and `InternalCacheError` in `src/valor_lite/exceptions.py`, `MismatchingTextGenerationDatumError` in `src/valor_lite/text_generation/llm/exceptions.py`, and `generate_temporary_cache_path` in `src/valor_lite/object_detection/shared.py` are dead code never referenced anywhere. Move the shared helpers into a common module and remove unused exceptions/functions.",
+   "files": [
+    "src/valor_lite/classification/shared.py",
+    "src/valor_lite/object_detection/shared.py",
+    "src/valor_lite/semantic_segmentation/shared.py",
+    "src/valor_lite/exceptions.py",
+    "src/valor_lite/text_generation/llm/exceptions.py"
+   ],
+   "kind": "cleanup"
+  }
+ ],
+ [
+  {
+   "title": "Fix chained NumPy assignments when computing object-detection IoU boundaries",
+   "detail": "`calculate_ranking_boundaries` assigns through `iou_boundary[mask_plabel][...]`, which writes to a temporary array, leaving every boundary at zero. Compute the integer indices for `mask_plabel` and assign directly into `iou_boundary`; add a regression test with multiple predictions for one ground truth.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "tests/object_detection/test_computation.py",
+    "tests/object_detection/test_stability.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Stop duplicating unmatched predictions once per ground truth",
+   "detail": "In `Loader._add_data`, the branch that emits a prediction with no overlapping ground truth is inside the ground-truth loop. A prediction with zero IoU against several ground truths is therefore written repeatedly, inflating false positives. Emit unmatched predictions once per prediction, outside the `gidx` loop, and add a multi-ground-truth regression test.",
+   "files": [
+    "src/valor_lite/object_detection/loader.py",
+    "tests/object_detection/test_loader.py",
+    "tests/object_detection/test_counts.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Compute cumulative true positives correctly for object-detection AP",
+   "detail": "`compute_counts` only writes cumulative TP values at rows that are true positives; false-positive rows remain zero instead of retaining the preceding TP count. This corrupts precision-recall curves and AP. Build a per-label cumulative sum over every score-ordered prediction, seeded from `running_counts`, and test against a known AP implementation.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "tests/object_detection/test_average_precision.py",
+    "tests/object_detection/test_pr_curve.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Use an indexed reduction when binning repeated precision-recall points",
+   "detail": "`compute_counts` assigns to `pr_curve[iou_idx, pd_labels, recall_index, ...]` with repeated advanced indices. NumPy does not reliably apply the intended maximum reduction for duplicate bins, so results depend on row order. Replace it with `np.maximum.at` or an explicit grouped maximum and add repeated-bin tests.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "tests/object_detection/test_pr_curve.py",
+    "tests/object_detection/test_stability.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Do not mix score envelopes across IoU thresholds",
+   "detail": "`compute_average_precision` declares `running_max_score` with shape `(n_labels,)`, so score interpolation for one IoU threshold leaks into every other threshold. Make it `(n_ious, n_labels)` and test that changing one IoU slice cannot alter another slice's precision-recall curve.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "tests/object_detection/test_pr_curve.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Make object-detection metrics invariant to cache fragment boundaries",
+   "detail": "Ranking and TP de-duplication are performed independently for each table returned by the ranked cache. If a datum or a ground truth spans fragments, it can receive multiple matches and AP/counts change with `batch_size` or `rows_per_file`. Preserve datum-aligned fragments or carry matching state across fragments, then add tests comparing tiny and large cache settings.",
+   "files": [
+    "src/valor_lite/object_detection/evaluator.py",
+    "src/valor_lite/object_detection/computation.py",
+    "src/valor_lite/cache/persistent.py",
+    "tests/object_detection/test_stability.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Exclude labels without ground truths from object-detection mean metrics",
+   "detail": "`compute_average_precision`, `compute_average_recall`, and the unpacking helpers average zeros for prediction-only labels. Standard mAP/mAR should average over evaluable labels with at least one ground truth, otherwise adding an irrelevant predicted class lowers every mean metric. Apply a valid-label mask and document/test the behavior.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "src/valor_lite/object_detection/evaluator.py",
+    "src/valor_lite/object_detection/utilities.py",
+    "tests/object_detection/test_average_precision.py",
+    "tests/object_detection/test_average_recall.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Represent detections containing neither annotations nor predictions",
+   "detail": "`Loader._add_data` writes no row for a `Detection` with empty ground truths and predictions, so the datum silently disappears from `EvaluatorInfo`. Write a null/null sentinel row, ensure it does not affect annotation metrics, and test that datum counts include empty images.",
+   "files": [
+    "src/valor_lite/object_detection/loader.py",
+    "src/valor_lite/object_detection/shared.py",
+    "tests/object_detection/test_loader.py",
+    "tests/object_detection/test_evaluator.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate bounding-box geometry and numeric values",
+   "detail": "`BoundingBox.__post_init__` accepts inverted coordinates, zero-area boxes, NaN, and infinity. Reject non-finite coordinates and require `xmin < xmax` and `ymin < ymax`; add tests showing invalid boxes cannot produce negative or undefined IoU values.",
+   "files": [
+    "src/valor_lite/object_detection/annotation.py",
+    "tests/object_detection/test_schemas.py",
+    "tests/object_detection/test_iou.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Reject invalid or zero-area polygons",
+   "detail": "`Polygon.__post_init__` only checks type and emptiness. Self-intersecting polygons and zero-area geometries can make Shapely intersection/union fail or produce misleading IoU values. Require `shape.is_valid`, finite bounds, and positive area, with focused annotation and IoU tests.",
+   "files": [
+    "src/valor_lite/object_detection/annotation.py",
+    "tests/object_detection/test_schemas.py",
+    "tests/object_detection/test_iou.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Validate object-detection bitmask dimensionality and shape compatibility",
+   "detail": "`Bitmask` accepts boolean arrays of any dimensionality, while `compute_bitmask_iou` assumes two-dimensional masks. `Detection` also permits ground truths and predictions with different shapes or mixed annotation classes. Require 2-D masks and homogeneous, shape-compatible annotation collections before loading.",
+   "files": [
+    "src/valor_lite/object_detection/annotation.py",
+    "src/valor_lite/object_detection/loader.py",
+    "tests/object_detection/test_schemas.py",
+    "tests/object_detection/test_loader.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Require prediction annotations to contain scores",
+   "detail": "A one-label annotation with an empty score list is accepted as a ground truth, and `Detection.__post_init__` also accepts it in `predictions` because both list lengths are zero. Explicitly require every prediction to have at least one score and every ground truth to have none, and reject annotations placed in the wrong role.",
+   "files": [
+    "src/valor_lite/object_detection/annotation.py",
+    "tests/object_detection/test_schemas.py",
+    "tests/object_detection/test_loader.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Make classification threshold calculations independent of threshold order",
+   "detail": "`compute_pair_classifications` mutates `mask_score` with `&=` inside the threshold loop. A lower threshold following a higher threshold cannot re-enable rows, so results depend on input ordering. Recompute the mask from the immutable nonzero-score mask on every iteration and test ascending, descending, and shuffled thresholds.",
+   "files": [
+    "src/valor_lite/classification/computation.py",
+    "tests/classification/test_computation.py",
+    "tests/classification/test_confusion_matrix.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Use the filtered datum count when calculating classification accuracy",
+   "detail": "`Evaluator.compute_precision_recall` always uses `self.info.number_of_datums`, ignoring its `datums` expression. Counts are filtered but the accuracy denominator is not. Use `get_info(datums=datums).number_of_datums` and add a test where a filter selects a strict subset.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py",
+    "tests/classification/test_filtering.py",
+    "tests/classification/test_accuracy.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Recompute classification ROC AUC when datums are filtered",
+   "detail": "`compute_rocauc(datums=...)` applies the datum expression to the ROC cache, but that cache contains no datum or metadata columns, causing an Arrow field error or making filtering impossible. Rebuild ROC intermediates from filtered main-cache rows, or store sufficient datum fields in the ROC cache, and test metadata filtering.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py",
+    "src/valor_lite/classification/shared.py",
+    "tests/classification/test_rocauc.py",
+    "tests/classification/test_filtering.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Correct the one-vs-rest denominator and degenerate cases for classification ROC AUC",
+   "detail": "`compute_rocauc` calculates negatives as `pd_count_per_label - gt_count_per_label`, which is not the number of negative datums and can underflow as unsigned arithmetic when labels are omitted from predictions. Use `number_of_datums - positive_count`, account for missing class scores, add curve endpoints, and define behavior for all-positive or all-negative labels. Compare tests with scikit-learn fixtures.",
+   "files": [
+    "src/valor_lite/classification/computation.py",
+    "src/valor_lite/classification/evaluator.py",
+    "src/valor_lite/classification/shared.py",
+    "tests/classification/test_rocauc.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Validate classification labels, UIDs, and confidence scores",
+   "detail": "`Classification.__post_init__` only validates the ground-truth type and list lengths. Reject non-string or empty UIDs and labels, non-numeric/non-finite scores, and scores outside the documented confidence range. Add annotation tests for NaN, infinity, booleans, and malformed labels.",
+   "files": [
+    "src/valor_lite/classification/annotation.py",
+    "tests/classification/test_schemas.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Reject duplicate classification prediction labels and datum UIDs",
+   "detail": "Repeated prediction labels create duplicate cache rows and inflate TP/FP counts, while repeated datum UIDs violate the advertised uniqueness but are silently assigned separate internal IDs. Validate prediction-label uniqueness in `Classification` and track/reject duplicate UIDs across `Loader.add_data` calls.",
+   "files": [
+    "src/valor_lite/classification/annotation.py",
+    "src/valor_lite/classification/loader.py",
+    "tests/classification/test_loader.py",
+    "tests/classification/test_counts.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Validate score and IoU threshold values consistently",
+   "detail": "Evaluator methods only reject empty threshold lists. NaN, infinity, non-numeric values, and values outside `[0, 1]` can silently produce nonsensical masks and metrics. Add shared validation for classification score thresholds and object-detection score/IoU thresholds, including tests for every public compute method.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py",
+    "src/valor_lite/object_detection/evaluator.py",
+    "tests/classification/test_evaluator.py",
+    "tests/object_detection/test_evaluator.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Fix classification confusion-matrix example masking after null rows are removed",
+   "detail": "`_unpack_confusion_matrix_with_examples` creates `valid_matches` and `valid_gts`, then indexes those shortened arrays with masks sized for the original `ids` array. Filter the masks at the same time as the arrays, or apply them before shortening, and add examples tests containing filtered/null ground truths and predictions.",
+   "files": [
+    "src/valor_lite/classification/utilities.py",
+    "tests/classification/test_confusion_matrix_with_examples.py",
+    "tests/classification/test_filtering.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Stop mutating semantic-segmentation input masks while resolving overlap",
+   "detail": "`Segmentation._validate_bitmasks` clears overlapping pixels directly in caller-owned masks. It also fails to update `mask_accumulation` in the overlap branch, so later overlaps can be missed. Either reject overlaps or create normalized copies; in either case update accumulation correctly and test three-way overlap without modifying inputs.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/annotation.py",
+    "tests/semantic_segmentation/test_annotation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Handle duplicate semantic-segmentation labels correctly",
+   "detail": "Multiple `Bitmask` objects with the same label are accepted, but `compute_intermediates` uses repeated advanced indices with assignment, causing intersections to overwrite rather than sum. Merge same-label masks before computation or reject duplicate labels, and test duplicate labels on both ground-truth and prediction sides.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/annotation.py",
+    "src/valor_lite/semantic_segmentation/computation.py",
+    "src/valor_lite/semantic_segmentation/loader.py",
+    "tests/semantic_segmentation/test_annotation.py",
+    "tests/semantic_segmentation/test_confusion_matrix.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate semantic bitmask type before reading its dtype",
+   "detail": "`semantic_segmentation.Bitmask.__post_init__` accesses `self.mask.dtype` directly, so lists and other invalid objects raise `AttributeError` instead of a clear validation error. Check `isinstance(mask, np.ndarray)`, require two dimensions and a non-empty shape, and add malformed-input tests.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/annotation.py",
+    "tests/semantic_segmentation/test_annotation.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Fix cache iteration with arrays when numeric columns are omitted",
+   "detail": "Both `iterate_tables_with_arrays` implementations set `table_columns = tbl.columns` and then call `tbl[col]`; those values are `ChunkedArray` objects, not valid column keys. Use column names or indices, define the expected behavior for nonnumeric columns, and test the public method without `numeric_columns`.",
+   "files": [
+    "src/valor_lite/cache/ephemeral.py",
+    "src/valor_lite/cache/persistent.py",
+    "tests/common/test_cache_reader.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Preserve requested cache-column order and distinguish None from an empty list",
+   "detail": "`iterate_tables_with_arrays` converts column lists to sets, producing nondeterministic order, and converts two omitted arguments into `columns=[]`, which selects no columns rather than all columns. Preserve insertion order, treat `None` separately from `[]`, and add deterministic-order and empty-selection tests.",
+   "files": [
+    "src/valor_lite/cache/ephemeral.py",
+    "src/valor_lite/cache/persistent.py",
+    "tests/common/test_cache_reader.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Enforce cache schemas on every write API",
+   "detail": "`write_columns` constructs a schema-inferred record batch, and `write_batch`/`write_table` accept incompatible schemas until concatenation or Parquet writing fails later. Construct with the configured schema or explicitly validate/cast field names, order, nullability, and types in both cache implementations; add immediate-failure tests.",
+   "files": [
+    "src/valor_lite/cache/ephemeral.py",
+    "src/valor_lite/cache/persistent.py",
+    "tests/common/test_cache_in_memory.py",
+    "tests/common/test_cache_file_based.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Honor compression and schema in FileCacheWriter.write_table",
+   "detail": "`write_table` calls `pq.write_table` without the writer's configured compression and bypasses schema normalization. This makes output behavior differ between table and batch writes. Pass `compression=self._compression`, validate/cast to `self._schema`, and test Parquet metadata for compressed direct writes.",
+   "files": [
+    "src/valor_lite/cache/persistent.py",
+    "tests/common/test_cache_file_based.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Split oversized writes at rows_per_file boundaries",
+   "detail": "`FileCacheWriter.write_batch` writes an entire combined batch before checking `rows_per_file`, so files can exceed the configured limit by an arbitrary amount. Slice batches across remaining file capacity while preserving schema and row order, and test batches larger than several files.",
+   "files": [
+    "src/valor_lite/cache/persistent.py",
+    "tests/common/test_cache_file_based.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "Batch rows during external merge sort",
+   "detail": "`cache.compute._merge` slices and writes one row at a time, causing excessive Python, Arrow, and Parquet overhead for large caches. Accumulate merged rows into record batches up to `batch_size` before calling the sink, while retaining stable ordering; extend sorting tests across many fragments.",
+   "files": [
+    "src/valor_lite/cache/compute.py",
+    "tests/common/test_cache_sorting.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "Validate cache sizing and compression configuration at creation time",
+   "detail": "Cache constructors accept zero or negative `batch_size` and `rows_per_file`, and invalid compression names fail only during a later write. Validate positive integer sizes and supported Parquet compression in `MemoryCacheWriter.create` and `FileCacheWriter.create`, with clear error tests.",
+   "files": [
+    "src/valor_lite/cache/ephemeral.py",
+    "src/valor_lite/cache/persistent.py",
+    "tests/common/test_cache_in_memory.py",
+    "tests/common/test_cache_file_based.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Reject duplicate and invalid metadata field definitions",
+   "detail": "Schema generators only detect conflicts with reserved names. Duplicate metadata names, empty/non-string names, and invalid type specifications can create ambiguous Arrow schemas or fail far from the API call. Centralize metadata validation and use it for classification, detection, and segmentation schemas.",
+   "files": [
+    "src/valor_lite/classification/shared.py",
+    "src/valor_lite/object_detection/shared.py",
+    "src/valor_lite/semantic_segmentation/shared.py",
+    "tests/classification/test_schemas.py",
+    "tests/object_detection/test_schemas.py",
+    "tests/semantic_segmentation/test_shared.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Handle empty ground-truth statement lists in context recall",
+   "detail": "`calculate_context_recall` divides by `len(verdicts)` for each ground truth. If statement extraction returns an empty list, the enforced response is also empty and a `ZeroDivisionError` follows. Define the vacuous-case score explicitly and add a mocked-client test.",
+   "files": [
+    "src/valor_lite/text_generation/computation.py",
+    "tests/text_generation/metrics/test_context_recall.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate verdict field types, not only verdict keys",
+   "detail": "`validate_verdicts` verifies exact keys and allowed membership but never checks that `analysis` and `verdict` are strings. Non-string analyses are accepted, and non-string verdicts can produce confusing membership behavior. Require both values to be strings and add malformed-response tests.",
+   "files": [
+    "src/valor_lite/text_generation/llm/validators.py",
+    "tests/text_generation/llm/test_validators.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Verify answer-correctness verdicts are a real partition of input statements",
+   "detail": "`generate_answer_correctness_verdicts` checks only TP+FP length and an upper bound on FN length. An LLM can duplicate, omit, or invent statements while satisfying those counts. Verify TP and FP form a duplicate-free partition of prediction statements and FN is a duplicate-free subset of ground-truth statements.",
+   "files": [
+    "src/valor_lite/text_generation/llm/generation.py",
+    "tests/text_generation/llm/test_generation.py",
+    "tests/text_generation/metrics/test_answer_correctness.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Parse the first valid JSON object without greedy brace matching",
+   "detail": "`trim_and_load_json` uses the greedy regex `\\{[\\s\\S]*\\}`, so explanatory text containing braces or multiple JSON objects is combined into invalid JSON. Use `json.JSONDecoder.raw_decode` while scanning candidate object starts, preserve useful error messages, and add fenced/multiple-brace tests.",
+   "files": [
+    "src/valor_lite/text_generation/llm/utilities.py",
+    "tests/text_generation/llm/test_utilities.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate evaluator retry configuration",
+   "detail": "`Evaluator` accepts negative, boolean, or non-integer `retries`. A negative value makes the retry loop empty and the decorated metric silently return `None`. Require a nonnegative integer in `__init__` and factory methods, and add tests for invalid values and return-type stability.",
+   "files": [
+    "src/valor_lite/text_generation/manager.py",
+    "tests/text_generation/test_evaluator.py",
+    "tests/text_generation/test_manager.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Validate QueryResponse and Context payload types",
+   "detail": "The text-generation dataclasses accept non-string queries/responses, non-list contexts, and context entries that are not strings. These failures surface later in tokenizers, prompt formatting, or API clients. Add `__post_init__` checks, including clear handling of empty strings and optional context.",
+   "files": [
+    "src/valor_lite/text_generation/annotation.py",
+    "tests/text_generation/test_evaluator.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Validate sentence-BLEU references and weights",
+   "detail": "`calculate_sentence_bleu` only rejects an empty weight sequence. Empty references, negative or non-finite weights, and weights that do not sum to one lead to exceptions or meaningless scores. Validate references and normalized nonnegative weights before calling NLTK and add edge-case tests.",
+   "files": [
+    "src/valor_lite/text_generation/computation.py",
+    "src/valor_lite/text_generation/manager.py",
+    "tests/text_generation/metrics/test_sentence_bleu.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Report the actual examples benchmark duration",
+   "detail": "`Benchmark.result` in the classification benchmark writes the evaluation duration into the `examples` field instead of `self.examples_time`, making published benchmark results incorrect. Use the correct field and add a small unit test for result serialization.",
+   "files": [
+    "benchmarks/benchmark_classification.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix the classification API documentation reference to DataLoader",
+   "detail": "The generated documentation references `valor_lite.classification.DataLoader`, but the public class is named `Loader`. MkDocs therefore cannot render that API section. Change the directive to `valor_lite.classification.Loader` and verify the documentation build.",
+   "files": [
+    "docs/classification/documentation.md"
+   ],
+   "kind": "docs"
+  }
+ ]
+]

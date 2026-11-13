@@ -1,5 +1,5 @@
 """OpenAI Responses API helper: replay a chat-format transcript prefix and get reasoning SUMMARIES, which OpenRouter does
-not return for OpenAI models. Billed to the OpenAI account in ~/Code/.env (OPENAI_API_KEY), flex tier.
+not return for OpenAI models. Billed to the OpenAI account in .env (OPENAI_API_KEY), flex tier.
 """
 from __future__ import annotations
 

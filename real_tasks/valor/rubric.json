@@ -1,0 +1,1109 @@
+{
+ "task": "valor",
+ "pin": "b09ae4472c3ec959a6dfa478d8ccc8e1bc7e9cdb",
+ "reviewers": [
+  "opus",
+  "argon",
+  "sol"
+ ],
+ "merger": "opus",
+ "n_proposed": [
+  40,
+  40,
+  40
+ ],
+ "items": [
+  {
+   "title": "Fix chained boolean indexing in OD calculate_ranking_boundaries",
+   "criterion": "Writes to iou_boundary must go through integer indices (or the function is rewritten) so the values actually persist. A test must show non-default boundaries for a ground truth matched by several predictions.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "tests/object_detection/test_computation.py"
+   ],
+   "kind": "bug",
+   "source": "both",
+   "n_reviewers": 3,
+   "id": "i01"
+  },
+  {
+   "title": "Handle multiple IOU decreases in ranking boundary computation",
+   "criterion": "The decreasing-IOU truncation must trigger when there are one or more decreases, not only exactly one. A test must cover a sequence with several decreases.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py"
+   ],
+   "kind": "bug",
+   "source": "both",
+   "n_reviewers": 2,
+   "id": "i02"
+  },
+  {
+   "title": "Restrict ranking boundaries to label-matching pairs per ground truth",
+   "criterion": "calculate_ranking_boundaries must group pairs by (datum, gt, gt_label) and consider only pairs whose predicted label equals the GT label. The default boundary must be an impossible bound (2.0).",
+   "files": [
+    "src/valor_lite/object_detection/computation.py"
+   ],
+   "kind": "bug",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i03"
+  },
+  {
+   "title": "rank_pairs keeps one pair per (datum, prediction, predicted label)",
+   "criterion": "Deduplication in rank_pairs must key on datum id, prediction id and prediction label id. Multi-label predictions must then keep their best pair for each label.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py"
+   ],
+   "kind": "bug",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i04"
+  },
+  {
+   "title": "Cumulative TP counts correct for every score-ordered prediction",
+   "criterion": "The cumulative TP used for precision must be correct at every prediction row, including FP rows. TP counting must use the proper TP mask, seeded from the running counts.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "tests/object_detection/test_pr_curve.py"
+   ],
+   "kind": "numerics",
+   "source": "both",
+   "n_reviewers": 1,
+   "id": "i05"
+  },
+  {
+   "title": "Max-reduce precision and score per (label, recall) PR bin",
+   "criterion": "Repeated (label, recall_index) bins must take the maximum precision and score, via np.maximum.at or a unique-per-bin reduction, instead of a duplicate-index assignment. Tests must cover repeated bins.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "tests/object_detection/test_computation.py"
+   ],
+   "kind": "numerics",
+   "source": "both",
+   "n_reviewers": 2,
+   "id": "i06"
+  },
+  {
+   "title": "COCO-based regression test for AP and PR curves",
+   "criterion": "Add fixture input/output JSON taken from a reference COCO evaluation. Add a test asserting that valor_lite AP and PR-curve metrics match it.",
+   "files": [
+    "tests/object_detection/test_regression.py",
+    "tests/object_detection/fixtures/coco_input.json",
+    "tests/object_detection/fixtures/coco_output.json"
+   ],
+   "kind": "tests",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i07"
+  },
+  {
+   "title": "Classification score mask recomputed per threshold",
+   "criterion": "compute_pair_classifications must build the score mask fresh for each threshold, so results do not depend on threshold order. A test must use descending or unsorted thresholds.",
+   "files": [
+    "src/valor_lite/classification/computation.py",
+    "tests/classification/test_confusion_matrix.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i08"
+  },
+  {
+   "title": "Remove datum filter from classification compute_rocauc",
+   "criterion": "compute_rocauc must no longer apply a datums expression to the ROC-curve cache: either remove the parameter or recompute from filtered data. Passing datums must give a clear error, and a test must cover this.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py",
+    "tests/classification/test_rocauc.py",
+    "tests/classification/test_filtering.py"
+   ],
+   "kind": "bug",
+   "source": "both",
+   "n_reviewers": 3,
+   "id": "i09"
+  },
+  {
+   "title": "Classification accuracy uses filtered datum count",
+   "criterion": "compute_precision_recall must use get_info(datums=datums).number_of_datums as the accuracy denominator. A test must filter to a strict subset.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py",
+    "tests/classification/test_accuracy.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i10"
+  },
+  {
+   "title": "Classification filter drops unpaired rows instead of stale -1 rows",
+   "criterion": "Evaluator.filter must not leave rows with stale match/pd_winner values or -1 label ids. For example, it can keep only rows where both the GT and the prediction pass the filter. Updated filtering tests must reflect this.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py",
+    "tests/classification/test_filtering.py"
+   ],
+   "kind": "bug",
+   "source": "both",
+   "n_reviewers": 1,
+   "id": "i11"
+  },
+  {
+   "title": "Guard classification computations against -1 label ids",
+   "criterion": "compute_counts, compute_pair_classifications and compute_confusion_matrix must exclude rows with negative gt or pd label ids. This prevents bincount crashes and negative-index wraparound. Integer ids must be compared with == rather than isclose.",
+   "files": [
+    "src/valor_lite/classification/computation.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i12"
+  },
+  {
+   "title": "Fix mask length mismatch in _unpack_confusion_matrix_with_examples",
+   "criterion": "Masks must be applied to arrays of the same length, with no indexing of shortened arrays by full-length masks. A test with null ground truths or predictions must not raise IndexError.",
+   "files": [
+    "src/valor_lite/classification/utilities.py",
+    "tests/classification/test_filtering.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i13"
+  },
+  {
+   "title": "unpack_examples skips negative label ids",
+   "criterion": "unpack_examples must mask out rows with -1 gt or pd ids before looking them up in index_to_label, so no KeyError is raised.",
+   "files": [
+    "src/valor_lite/classification/utilities.py",
+    "tests/classification/test_examples.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i14"
+  },
+  {
+   "title": "Correct ROCAUC negative count without uint64 underflow",
+   "criterion": "The negative count must be computed correctly, for example as datums minus positives or as predictions with gt != label, using signed arithmetic. A test where the GT count exceeds the prediction count must give a sane AUC.",
+   "files": [
+    "src/valor_lite/classification/computation.py",
+    "tests/classification/test_rocauc.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i15"
+  },
+  {
+   "title": "Fix score-change index arithmetic in ROC intermediate",
+   "criterion": "_create_rocauc_intermediate must record cumulative fp/tp at the end of each tied-score group, without the double prefix or a -1 index. A test must compare per-label AUC to sklearn on random data with ties and small batches.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py",
+    "tests/classification/test_rocauc.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i16"
+  },
+  {
+   "title": "OD loader writes unmatched predictions once",
+   "criterion": "Emission of unmatched predictions must be moved outside the ground-truth loop. A test with 2 GTs and 1 non-overlapping prediction must assert a single prediction row.",
+   "files": [
+    "src/valor_lite/object_detection/loader.py",
+    "tests/object_detection/test_loader.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i17"
+  },
+  {
+   "title": "Greedy matching applies the IOU threshold",
+   "criterion": "Greedy GT/prediction matching must run per IOU threshold, on pairs with iou >= threshold. A test must cover a high-score low-IOU pair that previously blocked a valid match.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "tests/object_detection/test_confusion_matrix.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i18"
+  },
+  {
+   "title": "Fix _isin pair packing for negative and large ids",
+   "criterion": "Packing must mask the low 32 bits, or use row matching, so pairs containing -1 do not collide. Tests must include -1 entries.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i19"
+  },
+  {
+   "title": "Per-IOU running_max_score in compute_average_precision",
+   "criterion": "running_max_score must have shape (n_ious, n_labels) so score envelopes do not leak across IOU thresholds. A test must show IOU slices are independent.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "tests/object_detection/test_pr_curve.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i20"
+  },
+  {
+   "title": "OD metrics invariant to cache fragment boundaries",
+   "criterion": "Matching state must be correct when a datum or GT spans fragments, so AP and counts do not change with batch_size or rows_per_file. Tests must compare small and large cache settings.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "src/valor_lite/object_detection/evaluator.py"
+   ],
+   "kind": "bug",
+   "source": "both",
+   "n_reviewers": 1,
+   "id": "i21"
+  },
+  {
+   "title": "OD filter matches ground truths and predictions by label id too",
+   "criterion": "Evaluator.filter must identify GTs by (datum, gt_id, gt_label_id) and predictions by (datum, pd_id, pd_label_id), so label filters on multi-label predictions work. A confusion-matrix label-filter test must be added.",
+   "files": [
+    "src/valor_lite/object_detection/evaluator.py",
+    "tests/object_detection/test_filtering.py"
+   ],
+   "kind": "bug",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i22"
+  },
+  {
+   "title": "extract_counts counts unique ids across fragments",
+   "criterion": "Datum, GT and prediction counts must be deduplicated across all fragments, not summed per fragment. A test with ids spread over several files must pass.",
+   "files": [
+    "src/valor_lite/classification/shared.py",
+    "src/valor_lite/object_detection/shared.py",
+    "src/valor_lite/semantic_segmentation/shared.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i23"
+  },
+  {
+   "title": "Clamp recall index to PR curve bounds",
+   "criterion": "recall_index must be clipped to [0, 100] before indexing pr_curve, so it cannot raise IndexError.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i24"
+  },
+  {
+   "title": "mask_pairs_greedily handles empty or all-unmatched input",
+   "criterion": "Empty pairs arrays, or arrays where all ids are -1, must return an empty or valid mask without a zero-size reduction error.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i25"
+  },
+  {
+   "title": "OD loader handles detections with no GTs or no predictions",
+   "criterion": "add_bounding_boxes/add_polygons/add_bitmasks must produce a zeros IOU matrix of the correct shape when either side is empty, without calling compute_*_iou. A test must cover this.",
+   "files": [
+    "src/valor_lite/object_detection/loader.py",
+    "tests/object_detection/test_loader.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i26"
+  },
+  {
+   "title": "Represent fully empty detections in the cache",
+   "criterion": "A Detection with no GTs and no predictions must still contribute a datum, for example via a sentinel row, without affecting annotation metrics. A test must check the datum count.",
+   "files": [
+    "src/valor_lite/object_detection/loader.py",
+    "tests/object_detection/test_loader.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i27"
+  },
+  {
+   "title": "Exclude labels without ground truths from mAP/mAR",
+   "criterion": "Mean AP and AR must average only over labels that have at least one GT. A test must show that an extra prediction-only label does not lower the means.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "tests/object_detection/test_average_precision.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i28"
+  },
+  {
+   "title": "Avoid NaN means when no labels or thresholds exist",
+   "criterion": "Semseg mIOU and OD average recall must return a defined value instead of NaN with a warning when the arrays are empty.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/utilities.py",
+    "src/valor_lite/object_detection/computation.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i29"
+  },
+  {
+   "title": "Validate BoundingBox coordinates",
+   "criterion": "BoundingBox must raise ValueError for non-finite values or inverted extrema (xmin > xmax or ymin > ymax). Tests must cover these cases.",
+   "files": [
+    "src/valor_lite/object_detection/annotation.py",
+    "tests/object_detection/test_schemas.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i30"
+  },
+  {
+   "title": "Validate Detection ground truth and prediction roles",
+   "criterion": "Detection must require every ground truth to have no scores and exactly one label, and every prediction to have at least one score. Tests must cover each case.",
+   "files": [
+    "src/valor_lite/object_detection/annotation.py",
+    "tests/object_detection/test_schemas.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i31"
+  },
+  {
+   "title": "Validate score and IOU thresholds range",
+   "criterion": "Classification and OD compute methods must reject NaN thresholds, score thresholds outside [0, 1], and IOU thresholds outside (0, 1], with clear errors. Tests must cover this.",
+   "files": [
+    "src/valor_lite/object_detection/evaluator.py",
+    "src/valor_lite/classification/evaluator.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i32"
+  },
+  {
+   "title": "Validate OD bitmask dimensionality and shape compatibility",
+   "criterion": "OD Bitmask must require 2-D masks. A Detection whose masks have mismatched shapes must raise a clear ValueError naming the datum, instead of failing in IOU computation.",
+   "files": [
+    "src/valor_lite/object_detection/annotation.py",
+    "src/valor_lite/object_detection/loader.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i33"
+  },
+  {
+   "title": "Reject invalid or zero-area polygons",
+   "criterion": "Polygon must require a valid shapely geometry, finite bounds and positive area. Tests must cover invalid inputs.",
+   "files": [
+    "src/valor_lite/object_detection/annotation.py",
+    "tests/object_detection/test_schemas.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i34"
+  },
+  {
+   "title": "Validate classification scores",
+   "criterion": "Classification must reject non-numeric, non-finite and out-of-range [0, 1] prediction scores. Tests must cover NaN and infinity.",
+   "files": [
+    "src/valor_lite/classification/annotation.py",
+    "tests/classification/test_schemas.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i35"
+  },
+  {
+   "title": "Reject duplicate classification prediction labels",
+   "criterion": "Classification must raise when the predictions list contains the same label twice. A test must cover this.",
+   "files": [
+    "src/valor_lite/classification/annotation.py",
+    "tests/classification/test_schemas.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i36"
+  },
+  {
+   "title": "Reject duplicate datum UIDs across classification add_data",
+   "criterion": "Loader must track datum uids across add_data calls and raise on repeats. A test must cover this.",
+   "files": [
+    "src/valor_lite/classification/loader.py",
+    "tests/classification/test_loader.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i37"
+  },
+  {
+   "title": "Validate classification uid and label types",
+   "criterion": "Classification must reject empty or non-string uids and labels with a clear error.",
+   "files": [
+    "src/valor_lite/classification/annotation.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i38"
+  },
+  {
+   "title": "Semseg ingests 2-D integer label arrays",
+   "criterion": "Segmentation must accept a labels list plus 2-D integer GT and prediction arrays, where 0 is background and i maps to labels[i-1]. This replaces per-label Bitmasks, with loader, tests and README updated.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/annotation.py",
+    "src/valor_lite/semantic_segmentation/loader.py",
+    "README.md"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i39"
+  },
+  {
+   "title": "Semseg background counts toward accuracy but not mean IOU",
+   "criterion": "Metric computation must treat pixel value 0 as background: it is included in accuracy and excluded from mIOU. Tests must cover this.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/utilities.py",
+    "tests/semantic_segmentation/test_evaluator.py"
+   ],
+   "kind": "numerics",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i40"
+  },
+  {
+   "title": "Semseg overlap check accumulates masks and does not mutate inputs",
+   "criterion": "Overlap validation must always update the accumulated mask and must not modify caller-owned arrays. A three-way overlap test must pass with inputs left unchanged.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/annotation.py",
+    "tests/semantic_segmentation/test_annotation.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i41"
+  },
+  {
+   "title": "Handle duplicate semseg labels per datum",
+   "criterion": "Duplicate labels must be rejected or merged, or intersections must be summed with np.add.at, so counts are not overwritten. Tests must cover duplicates on the GT side and the prediction side.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/computation.py",
+    "src/valor_lite/semantic_segmentation/annotation.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i42"
+  },
+  {
+   "title": "Semseg Bitmask type and dimensionality check",
+   "criterion": "Bitmask must check isinstance(mask, np.ndarray) and ndim == 2 before accessing dtype, and raise a clear error otherwise.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/annotation.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i43"
+  },
+  {
+   "title": "No GT metadata on semseg unmatched-prediction rows",
+   "criterion": "Rows with gt_label_id = -1 must not include ground-truth metadata. A filtering test must cover this.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/loader.py",
+    "tests/semantic_segmentation/test_filtering.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i44"
+  },
+  {
+   "title": "Skip zero-count semseg rows",
+   "criterion": "The loader must not write unmatched rows with count 0 for every known label on every datum, while label discovery still works.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/loader.py"
+   ],
+   "kind": "performance",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i45"
+  },
+  {
+   "title": "Vectorize semseg confusion matrix accumulation",
+   "criterion": "Replace the per-label-pair masks with a single np.add.at (or equivalent O(rows)) accumulation that also handles -1 rows.",
+   "files": [
+    "src/valor_lite/semantic_segmentation/evaluator.py"
+   ],
+   "kind": "performance",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i46"
+  },
+  {
+   "title": "Filtering tests for object detection and semantic segmentation",
+   "criterion": "Add tests that exercise annotation and datum filters on OD and semseg evaluators, including filters that remove all data.",
+   "files": [
+    "tests/object_detection/test_filtering.py",
+    "tests/semantic_segmentation/test_filtering.py"
+   ],
+   "kind": "tests",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i47"
+  },
+  {
+   "title": "Paginate examples metrics with limit and offset",
+   "criterion": "compute_examples for classification and OD must accept limit/offset that page over datums. Tests must check page boundaries.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py",
+    "src/valor_lite/object_detection/evaluator.py",
+    "tests/object_detection/test_examples.py",
+    "tests/classification/test_examples.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i48"
+  },
+  {
+   "title": "Add paginate_index cache helper",
+   "criterion": "Add a cache function that yields tables restricted to an offset/limit window over unique key values in fragment-aligned data, with tests.",
+   "files": [
+    "src/valor_lite/cache/compute.py",
+    "tests/common/test_cache_pagination.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i49"
+  },
+  {
+   "title": "Merge sort writes batched output instead of single rows",
+   "criterion": "cache.compute._merge must accumulate merged rows into chunks of up to batch_size before writing, without per-cell .as_py(). The sorting tests must still pass.",
+   "files": [
+    "src/valor_lite/cache/compute.py",
+    "tests/common/test_cache_sorting.py"
+   ],
+   "kind": "performance",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i50"
+  },
+  {
+   "title": "Track buffered row count instead of re-summing",
+   "criterion": "Cache writers must keep a running buffered row count rather than summing all buffered batch sizes on each write. A buffer-count test must verify it.",
+   "files": [
+    "src/valor_lite/cache/ephemeral.py",
+    "src/valor_lite/cache/persistent.py",
+    "tests/common/test_cache_buffer_counts.py"
+   ],
+   "kind": "performance",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i51"
+  },
+  {
+   "title": "Optimized OD computation with equivalence tests",
+   "criterion": "Object detection loader and shared computation must be optimized, and tests must show the outputs match the prior implementation.",
+   "files": [
+    "src/valor_lite/object_detection/shared.py",
+    "src/valor_lite/object_detection/loader.py",
+    "tests/object_detection/test_computation_optimization.py"
+   ],
+   "kind": "performance",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i52"
+  },
+  {
+   "title": "Enforce cache schema on write_columns and write_table",
+   "criterion": "Writers must build record batches with the configured schema, or validate and cast to it, so type mismatches fail immediately. Tests must cover this.",
+   "files": [
+    "src/valor_lite/cache/ephemeral.py",
+    "src/valor_lite/cache/persistent.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i53"
+  },
+  {
+   "title": "FileCacheWriter honors compression in write_table and sort_by",
+   "criterion": "Every pq.write_table call must pass compression=self._compression. A test must check the Parquet metadata.",
+   "files": [
+    "src/valor_lite/cache/persistent.py",
+    "tests/common/test_cache_file_based.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i54"
+  },
+  {
+   "title": "MemoryCacheWriter.write_table flushes the buffer first",
+   "criterion": "Buffered batches must be flushed before the table is appended, so row order is preserved. A test must cover this.",
+   "files": [
+    "src/valor_lite/cache/ephemeral.py",
+    "tests/common/test_cache_in_memory.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i55"
+  },
+  {
+   "title": "FileCacheReader.load accepts falsy config values",
+   "criterion": "_retrieve must check that the key is present or the value is not None, not truthiness. A test must use a falsy value.",
+   "files": [
+    "src/valor_lite/cache/persistent.py",
+    "tests/common/test_cache_file_based.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i56"
+  },
+  {
+   "title": "FileCacheWriter.delete handles partial or foreign directories",
+   "criterion": "delete must handle a missing .cfg and raise a clear error when foreign files exist. create(delete_if_exists=True) must work on stale directories.",
+   "files": [
+    "src/valor_lite/cache/persistent.py",
+    "tests/common/test_cache_file_based.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i57"
+  },
+  {
+   "title": "Preserve column order and distinguish None vs [] in iterate_tables_with_arrays",
+   "criterion": "Column selection must keep insertion order rather than using a set, and None must mean all columns while [] means none. Tests must cover this.",
+   "files": [
+    "src/valor_lite/cache/ephemeral.py",
+    "src/valor_lite/cache/persistent.py",
+    "tests/common/test_cache_reader.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i58"
+  },
+  {
+   "title": "Use column names, not ChunkedArrays, when numeric columns omitted",
+   "criterion": "iterate_tables_with_arrays must index the table by column names or indices when numeric_columns is not provided. A test must call it without numeric_columns.",
+   "files": [
+    "src/valor_lite/cache/ephemeral.py",
+    "src/valor_lite/cache/persistent.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i59"
+  },
+  {
+   "title": "iterate_arrays handles zero-column tables",
+   "criterion": "iterate_arrays must not call np.column_stack on an empty list, and must yield an empty array instead.",
+   "files": [
+    "src/valor_lite/cache/ephemeral.py",
+    "src/valor_lite/cache/persistent.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i60"
+  },
+  {
+   "title": "Split oversized writes at rows_per_file",
+   "criterion": "FileCacheWriter.write_batch must slice batches so no file exceeds rows_per_file. A test must write a batch larger than several files.",
+   "files": [
+    "src/valor_lite/cache/persistent.py",
+    "tests/common/test_cache_file_based.py"
+   ],
+   "kind": "performance",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i61"
+  },
+  {
+   "title": "Validate cache batch size, rows_per_file and compression at creation",
+   "criterion": "create() must reject non-positive sizes and unsupported compression names immediately. Tests must cover this.",
+   "files": [
+    "src/valor_lite/cache/ephemeral.py",
+    "src/valor_lite/cache/persistent.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i62"
+  },
+  {
+   "title": "Expose evaluator reader, metadata_fields and reserved_fields",
+   "criterion": "Classification, OD and semseg evaluators must expose properties for the primary cache reader, metadata column names and reserved column names, with tests.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py",
+    "src/valor_lite/object_detection/evaluator.py",
+    "src/valor_lite/semantic_segmentation/evaluator.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i63"
+  },
+  {
+   "title": "Avoid rescanning cache via self.info in loops",
+   "criterion": "compute_rocauc and the other methods must compute label counts once, for example len(self._index_to_label), instead of calling the self.info property repeatedly.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py"
+   ],
+   "kind": "performance",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i64"
+  },
+  {
+   "title": "Batch ROC-curve cache writes",
+   "criterion": "_create_rocauc_intermediate must write accumulated columns once per label per table, not one write_rows call per row.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py"
+   ],
+   "kind": "performance",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i65"
+  },
+  {
+   "title": "Prevent metadata keys clobbering reserved or other annotation columns",
+   "criterion": "Loaders must reject undeclared or reserved metadata keys, or conflicting keys between datum, GT and prediction metadata, with a ValueError.",
+   "files": [
+    "src/valor_lite/classification/loader.py",
+    "src/valor_lite/object_detection/loader.py",
+    "src/valor_lite/semantic_segmentation/loader.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i66"
+  },
+  {
+   "title": "Reject duplicate or invalid metadata field definitions",
+   "criterion": "Schema generation must reject duplicate names, empty or non-string names and invalid types through shared validation.",
+   "files": [
+    "src/valor_lite/classification/shared.py",
+    "src/valor_lite/object_detection/shared.py",
+    "src/valor_lite/semantic_segmentation/shared.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i67"
+  },
+  {
+   "title": "Lossless metadata field type round-trip",
+   "criterion": "Metadata field types must be encoded so that complex pyarrow types (for example list<int64>) survive save, load and filter. A test must cover this.",
+   "files": [
+    "src/valor_lite/classification/shared.py",
+    "src/valor_lite/object_detection/shared.py",
+    "src/valor_lite/semantic_segmentation/shared.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i68"
+  },
+  {
+   "title": "Context recall handles empty statement lists",
+   "criterion": "calculate_context_recall must not divide by zero when no statements are extracted and must define the score for that case. A mocked test must cover it.",
+   "files": [
+    "src/valor_lite/text_generation/computation.py",
+    "tests/text_generation/metrics/test_context_recall.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i69"
+  },
+  {
+   "title": "LLM finish_reason errors use InvalidLLMResponseError",
+   "criterion": "Wrapper errors for length or content_filter must raise InvalidLLMResponseError (or a subclass), so the retry and Metric.error logic applies.",
+   "files": [
+    "src/valor_lite/text_generation/llm/integrations.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i70"
+  },
+  {
+   "title": "Handle empty choices and extra finish reasons in LLM wrappers",
+   "criterion": "OpenAI and Mistral wrappers must check for empty choices, and Mistral must handle model_length/error finish reasons. Tests must cover this.",
+   "files": [
+    "src/valor_lite/text_generation/llm/integrations.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i71"
+  },
+  {
+   "title": "Non-greedy JSON extraction in trim_and_load_json",
+   "criterion": "Parse the first valid JSON object, for example with raw_decode, so braces in surrounding prose do not break parsing. Tests must cover this.",
+   "files": [
+    "src/valor_lite/text_generation/llm/utilities.py",
+    "tests/text_generation/llm/test_utilities.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i72"
+  },
+  {
+   "title": "Fix 'reason' vs 'analysis' keys in verdict prompt examples",
+   "criterion": "The few-shot examples in the context precision and recall instructions must use the 'analysis' key, consistent with validate_verdicts.",
+   "files": [
+    "src/valor_lite/text_generation/llm/instructions.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i73"
+  },
+  {
+   "title": "Validate verdict field value types",
+   "criterion": "validate_verdicts must require that the verdict and analysis values are strings. Tests must cover malformed values.",
+   "files": [
+    "src/valor_lite/text_generation/llm/validators.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i74"
+  },
+  {
+   "title": "Verify answer-correctness verdicts partition statements",
+   "criterion": "TP and FP must form a duplicate-free partition of the prediction statements, and FN must be a duplicate-free subset of the GT statements; otherwise the response is rejected.",
+   "files": [
+    "src/valor_lite/text_generation/llm/generation.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i75"
+  },
+  {
+   "title": "Cache the loaded ROUGE metric",
+   "criterion": "evaluate.load('rouge') must be cached, for example with lru_cache, instead of reloaded on every call.",
+   "files": [
+    "src/valor_lite/text_generation/computation.py"
+   ],
+   "kind": "performance",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i76"
+  },
+  {
+   "title": "BLEU/ROUGE reject empty ground-truth lists",
+   "criterion": "compute_rouge and compute_sentence_bleu must raise a clear ValueError when context.groundtruth is empty.",
+   "files": [
+    "src/valor_lite/text_generation/manager.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i77"
+  },
+  {
+   "title": "Validate sentence-BLEU weights",
+   "criterion": "Negative, non-finite or non-normalized BLEU weights must be rejected before NLTK is called. Tests must cover this.",
+   "files": [
+    "src/valor_lite/text_generation/computation.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i78"
+  },
+  {
+   "title": "Validate text-generation evaluator retries",
+   "criterion": "Evaluator must require retries to be a non-negative int (not a bool), so metrics never silently return None.",
+   "files": [
+    "src/valor_lite/text_generation/manager.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i79"
+  },
+  {
+   "title": "Validate QueryResponse and Context payload types",
+   "criterion": "Add __post_init__ checks requiring string query and response and lists of strings for the context fields.",
+   "files": [
+    "src/valor_lite/text_generation/annotation.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i80"
+  },
+  {
+   "title": "text_generation Metric.type stores plain strings",
+   "criterion": "Metric factory methods must pass MetricType.X.value so to_dict yields a str, consistent with the other modules.",
+   "files": [
+    "src/valor_lite/text_generation/metric.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i81"
+  },
+  {
+   "title": "Replace mutable default list arguments",
+   "criterion": "Evaluator/manager methods must use None or tuple defaults for threshold, weight and rouge_types parameters.",
+   "files": [
+    "src/valor_lite/classification/evaluator.py",
+    "src/valor_lite/text_generation/manager.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i82"
+  },
+  {
+   "title": "Benchmark reports examples time correctly",
+   "criterion": "Benchmark.result must use self.examples_time for the 'examples' field. The duplicate pds/scores initialization must be removed.",
+   "files": [
+    "benchmarks/benchmark_classification.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i83"
+  },
+  {
+   "title": "Fix classification docs DataLoader reference",
+   "criterion": "The mkdocstrings directive must reference valor_lite.classification.Loader.",
+   "files": [
+    "docs/classification/documentation.md"
+   ],
+   "kind": "docs",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i84"
+  },
+  {
+   "title": "Correct misleading docstrings",
+   "criterion": "Fix the compute_bbox_iou shape description, the compute_counts and compute_rocauc return descriptions, and the classification Metric docstrings that say 'object detection'. Add the missing uid/shape arguments to the examples.",
+   "files": [
+    "src/valor_lite/object_detection/computation.py",
+    "src/valor_lite/classification/computation.py",
+    "src/valor_lite/classification/metric.py"
+   ],
+   "kind": "docs",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i85"
+  },
+  {
+   "title": "Deduplicate shared cache helpers into a common module",
+   "criterion": "extract_labels, encode/decode_metadata_fields and create_mapping must live in one shared module imported by all three task modules.",
+   "files": [
+    "src/valor_lite/classification/shared.py",
+    "src/valor_lite/object_detection/shared.py",
+    "src/valor_lite/semantic_segmentation/shared.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i86"
+  },
+  {
+   "title": "Remove dead exceptions and helpers",
+   "criterion": "Remove unused EmptyEvaluatorError and other unreferenced exceptions, OD generate_temporary_cache_path, and the unused winners parameter.",
+   "files": [
+    "src/valor_lite/exceptions.py",
+    "src/valor_lite/object_detection/shared.py",
+    "src/valor_lite/classification/utilities.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i87"
+  },
+  {
+   "title": "Rename misspelled iou_threhsold parameter",
+   "criterion": "The create_empty_confusion_matrix_with_examples parameter must be renamed to iou_threshold, with call sites updated.",
+   "files": [
+    "src/valor_lite/object_detection/utilities.py",
+    "src/valor_lite/object_detection/evaluator.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i88"
+  },
+  {
+   "title": "Benchmark cleanup of unused params and redundant rewrites",
+   "criterion": "benchmark_objdet must sort and rewrite data only after a download. Unused semseg benchmark params and weights must be removed or implemented.",
+   "files": [
+    "benchmarks/benchmark_objdet.py",
+    "benchmarks/synthetic/benchmark_semantic_segmentation.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i89"
+  },
+  {
+   "title": "Add OD computation-only benchmark script",
+   "criterion": "Add a benchmark script that loads an existing evaluator and times metric computation over repeats and thresholds.",
+   "files": [
+    "benchmarks/benchmark_objdet_computation.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i90"
+  },
+  {
+   "title": "Consistent pyarrow concat or pinned minimum version",
+   "criterion": "write_batch and flush must use the same concatenation approach, or pyproject must pin a pyarrow version that supports concat_batches.",
+   "files": [
+    "src/valor_lite/cache/persistent.py",
+    "src/pyproject.toml"
+   ],
+   "kind": "packaging",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i91"
+  },
+  {
+   "title": "Add pyarrow-stubs to dev dependencies",
+   "criterion": "The dev extra in pyproject must include pyarrow-stubs for type checking.",
+   "files": [
+    "src/pyproject.toml"
+   ],
+   "kind": "packaging",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i92"
+  }
+ ]
+}

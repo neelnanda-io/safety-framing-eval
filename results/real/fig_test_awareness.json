@@ -1,0 +1,100 @@
+{
+ "GPT-6 Astra": {
+  "stated_chance": 60.78947368421053,
+  "volunteers": [
+   0,
+   57
+  ]
+ },
+ "GPT-6.1 Sol": {
+  "stated_chance": 62.5,
+  "volunteers": [
+   0,
+   66
+  ]
+ },
+ "GPT-5.6 Sol": {
+  "stated_chance": 82.41666666666667,
+  "volunteers": [
+   1,
+   36
+  ]
+ },
+ "Claude Fable 5.2": {
+  "stated_chance": 79.26470588235294,
+  "volunteers": [
+   27,
+   51
+  ]
+ },
+ "Claude Opus 5.5": {
+  "stated_chance": 73.61111111111111,
+  "volunteers": [
+   36,
+   36
+  ]
+ },
+ "Gemini 4 Carbon": {
+  "stated_chance": 97.15151515151516,
+  "volunteers": [
+   33,
+   33
+  ]
+ },
+ "Gemini 4 Argon": {
+  "stated_chance": 96.10606060606061,
+  "volunteers": [
+   33,
+   33
+  ]
+ },
+ "Gemini 3.1 Pro": {
+  "stated_chance": 99.26388888888889,
+  "volunteers": [
+   1,
+   36
+  ]
+ },
+ "Gemini 3.5 Flash": {
+  "stated_chance": 93.63888888888889,
+  "volunteers": [
+   0,
+   36
+  ]
+ },
+ "Gemini 3.8 Flash": {
+  "stated_chance": 97.30555555555556,
+  "volunteers": [
+   36,
+   36
+  ]
+ },
+ "Muse Wonder": {
+  "stated_chance": 87.25,
+  "volunteers": [
+   12,
+   36
+  ]
+ },
+ "Grok 4.7": {
+  "stated_chance": 88.88888888888889,
+  "volunteers": [
+   19,
+   36
+  ]
+ },
+ "Kimi K3": {
+  "stated_chance": 82.01388888888889,
+  "volunteers": [
+   14,
+   36
+  ]
+ },
+ "DeepSeek V4.1 Flash": {
+  "stated_chance": 74.30555555555556,
+  "volunteers": [
+   27,
+   36
+  ]
+ }
+}

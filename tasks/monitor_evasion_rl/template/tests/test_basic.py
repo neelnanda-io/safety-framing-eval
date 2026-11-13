@@ -1,7 +1,4 @@
-"""Public smoke tests: shapes and basic invariants that hold for both the baseline and the solution.
-
-These deliberately avoid the planted items (they do not assert any behaviour that a bug changes).
-"""
+"""Smoke tests: shapes and basic invariants."""
 import numpy as np
 
 from {{PKG}} import features as feats

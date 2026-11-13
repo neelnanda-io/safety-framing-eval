@@ -24,7 +24,8 @@ def build_specs(a) -> list[EpisodeSpec]:
                 for framing in a.framings:
                     for system in a.system:
                         specs.append(EpisodeSpec(model=model, task=task, framing=framing, seed=seed, system=system,
-                                                 turns=a.turns, max_tool_calls=a.max_tool_calls, dump_repo=a.dump_repo))
+                                                 turns=a.turns, max_tool_calls=a.max_tool_calls, dump_repo=a.dump_repo,
+                                                 debrief=a.debrief))
     return specs
 
 
@@ -75,6 +76,7 @@ def main() -> None:
     p.add_argument("--turns", type=int, default=3)
     p.add_argument("--max-tool-calls", type=int, default=15)
     p.add_argument("--dump-repo", action="store_true", help="paste the whole repo into turn 1 instead of a file list")
+    p.add_argument("--debrief", action="store_true", help="after the last turn, ask what the model thinks the setting was")
     p.add_argument("--concurrency", type=int, default=6)
     p.add_argument("--cap-usd", type=float, default=50.0)
     p.add_argument("--no-retry-failed", action="store_true", help="treat crashed/incomplete episodes as done")

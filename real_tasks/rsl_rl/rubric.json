@@ -1,0 +1,1066 @@
+{
+ "task": "rsl_rl",
+ "pin": "857de6165c5fd479726ec8ac5c9303a497766f30",
+ "reviewers": [
+  "opus",
+  "argon",
+  "sol"
+ ],
+ "merger": "opus",
+ "n_proposed": [
+  40,
+  40,
+  41
+ ],
+ "items": [
+  {
+   "title": "Distillation update must not corrupt the recurrent teacher's hidden state",
+   "criterion": "Distillation.update no longer resets, restores or saves the teacher's hidden state. Only the student's last hidden state is kept between updates. A test with an RNNModel teacher shows its hidden state is unchanged by update().",
+   "files": [
+    "rsl_rl/algorithms/distillation.py",
+    "tests/algorithms/test_distillation.py"
+   ],
+   "kind": "bug",
+   "source": "both",
+   "n_reviewers": 3,
+   "id": "i01"
+  },
+  {
+   "title": "Runner and logger handle deterministic policies without a distribution",
+   "criterion": "OnPolicyRunner.learn reads output_std only when policy.distribution is not None. Logger.log accepts action_std=None and skips the Policy/mean_std entry in that case. A deterministic distillation student trains without AttributeError.",
+   "files": [
+    "rsl_rl/runners/on_policy_runner.py",
+    "rsl_rl/utils/logger.py",
+    "rsl_rl/models/mlp_model.py",
+    "tests/runners/test_on_policy_runner.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i02"
+  },
+  {
+   "title": "Fix off-by-one learning iteration counter on resume",
+   "criterion": "After each iteration, current_learning_iteration becomes it + 1, so a resumed or repeated learn() starts at the next iteration. It must not repeat an iteration or overwrite model_{it}.pt. Tests are updated to match.",
+   "files": [
+    "rsl_rl/runners/on_policy_runner.py",
+    "tests/runners/test_on_policy_runner.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i03"
+  },
+  {
+   "title": "Deduplicate shared actor/critic CNN parameters in the PPO optimizer",
+   "criterion": "The PPO optimizer is built from a parameter list deduplicated by identity, so shared CNN encoder parameters appear once and get a single Adam step. A test with shared cnns checks for no duplicate parameters.",
+   "files": [
+    "rsl_rl/algorithms/ppo.py",
+    "tests/algorithms/test_ppo.py"
+   ],
+   "kind": "bug",
+   "source": "both",
+   "n_reviewers": 2,
+   "id": "i04"
+  },
+  {
+   "title": "Recurrent PPO surrogate loss keeps the environment dimension",
+   "criterion": "The ratio and surrogate terms use squeeze(-1) on old_actions_log_prob and advantages instead of a bare torch.squeeze. Shapes then pair per transition for recurrent and size-1 batches. A regression test compares against a per-transition objective.",
+   "files": [
+    "rsl_rl/algorithms/ppo.py",
+    "tests/algorithms/test_ppo.py"
+   ],
+   "kind": "bug",
+   "source": "both",
+   "n_reviewers": 1,
+   "id": "i05"
+  },
+  {
+   "title": "Feed-forward mini-batch generator yields every sample per epoch",
+   "criterion": "mini_batch_generator permutes the full batch_size and splits it into balanced chunks (i*B//n to (i+1)*B//n). No remainder samples are dropped. A test with a non-divisible batch size checks full coverage.",
+   "files": [
+    "rsl_rl/storage/rollout_storage.py",
+    "tests/storage/test_rollout_storage.py"
+   ],
+   "kind": "bug",
+   "source": "both",
+   "n_reviewers": 2,
+   "id": "i06"
+  },
+  {
+   "title": "Recurrent mini-batch generator covers all environments",
+   "criterion": "recurrent_mini_batch_generator uses balanced environment ranges, so trailing envs are not dropped when num_envs is not divisible by num_mini_batches. A test covers the non-divisible case.",
+   "files": [
+    "rsl_rl/storage/rollout_storage.py",
+    "tests/storage/test_rollout_storage.py"
+   ],
+   "kind": "bug",
+   "source": "both",
+   "n_reviewers": 3,
+   "id": "i07"
+  },
+  {
+   "title": "Reject out-of-range num_mini_batches in storage generators",
+   "criterion": "Both generators raise ValueError when num_mini_batches < 1 or exceeds the batch size (feed-forward) or num_envs (recurrent). Empty mini-batches can no longer be produced.",
+   "files": [
+    "rsl_rl/storage/rollout_storage.py",
+    "tests/storage/test_rollout_storage.py"
+   ],
+   "kind": "validation",
+   "source": "both",
+   "n_reviewers": 3,
+   "id": "i08"
+  },
+  {
+   "title": "Reshuffle feed-forward mini-batch indices every epoch",
+   "criterion": "A new torch.randperm is drawn inside the epoch loop of mini_batch_generator while keeping full coverage. A test shows that mini-batch composition differs between epochs.",
+   "files": [
+    "rsl_rl/storage/rollout_storage.py",
+    "tests/storage/test_rollout_storage.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i09"
+  },
+  {
+   "title": "Persist RND update_counter in PPO checkpoints",
+   "criterion": "PPO.save stores the RND update_counter and PPO.load restores it, defaulting to 0 for legacy checkpoints, so the weight schedule resumes where it stopped. Tests cover resume and legacy load.",
+   "files": [
+    "rsl_rl/algorithms/ppo.py",
+    "rsl_rl/extensions/rnd.py",
+    "tests/algorithms/test_ppo.py"
+   ],
+   "kind": "bug",
+   "source": "both",
+   "n_reviewers": 2,
+   "id": "i10"
+  },
+  {
+   "title": "Persist discounted reward average in normalization state_dict",
+   "criterion": "_DiscountedAverage.avg is a registered buffer or is otherwise included in the state_dict and moved by .to(). A save/load round trip preserves it.",
+   "files": [
+    "rsl_rl/modules/normalization.py",
+    "tests/modules/test_normalization.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i11"
+  },
+  {
+   "title": "Discounted variation normalization works for non-scalar shapes",
+   "criterion": "EmpiricalDiscountedVariationNormalization.forward removes the tensor-valued `if std > 0` and divides elementwise using eps or torch.where. A multi-element shape no longer raises, and a test covers it.",
+   "files": [
+    "rsl_rl/modules/normalization.py",
+    "tests/modules/test_normalization.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i12"
+  },
+  {
+   "title": "check_nan also detects infinite values",
+   "criterion": "check_nan uses torch.isfinite on obs, rewards and dones and raises ValueError naming NaN, Inf or both. Docs and comments are updated, and tests cover NaN, +Inf and -Inf.",
+   "files": [
+    "rsl_rl/utils/utils.py",
+    "rsl_rl/runners/on_policy_runner.py",
+    "docs/guide/configuration.rst",
+    "tests/utils/test_check_nan.py"
+   ],
+   "kind": "validation",
+   "source": "both",
+   "n_reviewers": 2,
+   "id": "i13"
+  },
+  {
+   "title": "Advantage normalization does not produce NaN for a single sample",
+   "criterion": "Global and per-mini-batch advantage normalization is skipped or uses population std when there is only one element, so a singleton advantage stays finite and keeps its value. Tests cover both modes.",
+   "files": [
+    "rsl_rl/algorithms/ppo.py",
+    "tests/algorithms/test_ppo.py"
+   ],
+   "kind": "numerics",
+   "source": "both",
+   "n_reviewers": 1,
+   "id": "i14"
+  },
+  {
+   "title": "Close and flush all logging writers including TensorBoard",
+   "criterion": "Logger.stop_logging_writer closes a plain SummaryWriter as well as LogWriter subclasses. W&B and Neptune writers also close their inherited TensorBoard writer, and duplicate file uploads are avoided.",
+   "files": [
+    "rsl_rl/utils/logger.py",
+    "rsl_rl/utils/log_writer.py",
+    "rsl_rl/utils/wandb_log_writer.py",
+    "rsl_rl/utils/neptune_log_writer.py",
+    "tests/utils/test_logger.py"
+   ],
+   "kind": "bug",
+   "source": "both",
+   "n_reviewers": 2,
+   "id": "i15"
+  },
+  {
+   "title": "Stop the logging writer even when training raises",
+   "criterion": "OnPolicyRunner.learn wraps the training loop in try/finally (or equivalent), so the writer is stopped or closed on exceptions. A runner test verifies this.",
+   "files": [
+    "rsl_rl/runners/on_policy_runner.py",
+    "tests/runners/test_on_policy_runner.py"
+   ],
+   "kind": "bug",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i16"
+  },
+  {
+   "title": "Discounted reward history independent of caller's tensor",
+   "criterion": "_DiscountedAverage.update clones the first reward instead of aliasing it, so in-place edits of the returned value do not change avg. A test covers in-place scaling.",
+   "files": [
+    "rsl_rl/modules/normalization.py",
+    "tests/modules/test_normalization.py"
+   ],
+   "kind": "bug",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i17"
+  },
+  {
+   "title": "Skip obs-normalizer updates for image-only CNN models",
+   "criterion": "MLPModel.update_normalization does nothing when obs_groups is empty, as for CNN models with only 2D inputs, instead of concatenating an empty list.",
+   "files": [
+    "rsl_rl/models/mlp_model.py"
+   ],
+   "kind": "bug",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i18"
+  },
+  {
+   "title": "RND loss excludes padded steps for recurrent policies",
+   "criterion": "When batch.masks is not None, observations are unpadded (e.g. obs[masks] or unpad_trajectories) before rnd.compute_loss, so the predictor never trains on padding zeros.",
+   "files": [
+    "rsl_rl/algorithms/ppo.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i19"
+  },
+  {
+   "title": "Make RNN reset and selective detach autograd-safe",
+   "criterion": "RNN.reset(dones) and detach_hidden_state(dones) replace in-place slice edits with functional masking (torch.where or a mask multiply) for GRU and both LSTM states. A backward pass with dones inside an accumulation window succeeds in a test.",
+   "files": [
+    "rsl_rl/modules/rnn.py",
+    "tests/models/test_rnn_model.py",
+    "tests/algorithms/test_distillation.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i20"
+  },
+  {
+   "title": "W&B/Neptune store_config handles plain dict env configs",
+   "criterion": "store_config uses env_cfg directly when it is a dict, asdict only for dataclasses, and to_dict when available, with a final fallback. Each form is tested.",
+   "files": [
+    "rsl_rl/utils/wandb_log_writer.py",
+    "rsl_rl/utils/neptune_log_writer.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i21"
+  },
+  {
+   "title": "resolve_callable does not mask transitive import errors",
+   "criterion": "In the dotted branch, a ModuleNotFoundError is re-raised unless e.name is the module path being probed. A test uses a module whose own import of a dependency fails.",
+   "files": [
+    "rsl_rl/utils/utils.py",
+    "tests/utils/test_resolve_callable.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i22"
+  },
+  {
+   "title": "Validate symmetry augmentation batch sizes",
+   "criterion": "augment_batch computes num_aug with divmod and raises ValueError on a remainder, mismatched obs/action counts, or None outputs, instead of truncating silently.",
+   "files": [
+    "rsl_rl/extensions/symmetry.py",
+    "tests/extensions/test_symmetry.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i23"
+  },
+  {
+   "title": "Reject unknown RNN types instead of defaulting to LSTM",
+   "criterion": "RNN.__init__ accepts only 'gru' and 'lstm' (case-insensitive) and raises ValueError otherwise. A constructor test covers this.",
+   "files": [
+    "rsl_rl/modules/rnn.py",
+    "tests/models/test_rnn_model.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i24"
+  },
+  {
+   "title": "Validate distribution init_std, std_range and Beta action_range",
+   "criterion": "The Gaussian distributions raise ValueError for init_std <= 0 or std_range min >= max. BetaDistribution raises for action_range[1] <= action_range[0]. Failure tests are added.",
+   "files": [
+    "rsl_rl/modules/distribution.py",
+    "tests/modules/test_distribution.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i25"
+  },
+  {
+   "title": "Stop globally disabling torch distribution argument validation",
+   "criterion": "The Normal/Beta set_default_validate_args(False) calls are removed. Internal distributions are constructed with validate_args=False locally, so global PyTorch defaults are unchanged.",
+   "files": [
+    "rsl_rl/modules/distribution.py",
+    "tests/modules/test_distribution.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i26"
+  },
+  {
+   "title": "Include action-range Jacobian in Beta entropy",
+   "criterion": "BetaDistribution.entropy adds log(range_scale) per action dimension before summing, consistent with log_prob. Tests compare ranges (0,1) and (-1,1).",
+   "files": [
+    "rsl_rl/modules/distribution.py",
+    "tests/modules/test_distribution.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i27"
+  },
+  {
+   "title": "Clip PPO gradients over one deduplicated parameter set",
+   "criterion": "Gradient clipping runs once over the unique union of actor and critic parameters, not separately per module. Shared params are clipped once and the global norm is bounded.",
+   "files": [
+    "rsl_rl/algorithms/ppo.py",
+    "tests/algorithms/test_ppo.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i28"
+  },
+  {
+   "title": "resolve_rnd_config works for envs without unwrapped.step_dt",
+   "criterion": "resolve_rnd_config uses getattr fallbacks for unwrapped and step_dt, with a documented fallback or warning, so a plain VecEnv with RND does not raise AttributeError.",
+   "files": [
+    "rsl_rl/extensions/rnd.py",
+    "rsl_rl/env/vec_env.py",
+    "tests/extensions/test_rnd.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i29"
+  },
+  {
+   "title": "Validate RND weight_schedule configuration eagerly",
+   "criterion": "RandomNetworkDistillation.__init__ checks that mode is in {constant, step, linear} and that required keys exist per mode, with final_step > initial_step for linear. It raises descriptive ValueErrors.",
+   "files": [
+    "rsl_rl/extensions/rnd.py",
+    "tests/extensions/test_rnd.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i30"
+  },
+  {
+   "title": "Default checkpoint map_location to runner device",
+   "criterion": "OnPolicyRunner.load uses self.device when map_location is not given, so GPU checkpoints load on CPU runners.",
+   "files": [
+    "rsl_rl/runners/on_policy_runner.py",
+    "tests/runners/test_on_policy_runner.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i31"
+  },
+  {
+   "title": "Support tensor max_episode_length in random episode init",
+   "criterion": "With init_at_random_ep_len=True, learn() draws random lengths using per-env bounds when max_episode_length is a multi-element tensor, instead of calling int().",
+   "files": [
+    "rsl_rl/runners/on_policy_runner.py",
+    "tests/runners/test_on_policy_runner.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i32"
+  },
+  {
+   "title": "JIT export wrappers are device-consistent",
+   "criterion": "The GRU and LSTM (and other) _Torch* export wrappers no longer leave submodules on different devices: either all are moved to CPU or none are. A device-consistency test is added.",
+   "files": [
+    "rsl_rl/models/rnn_model.py",
+    "rsl_rl/models/mlp_model.py",
+    "rsl_rl/models/cnn_model.py",
+    "tests/models/test_rnn_model.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i33"
+  },
+  {
+   "title": "Pass Python scalars to writer.add_scalar for episode extras",
+   "criterion": "Logger.log converts reduced episode-extra values with .item() before passing them to add_scalar.",
+   "files": [
+    "rsl_rl/utils/logger.py",
+    "tests/utils/test_logger.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i34"
+  },
+  {
+   "title": "Logger does not mutate env extras dicts",
+   "criterion": "Logger.log builds local tensors (e.g. torch.as_tensor(...).reshape(-1)) instead of writing converted values back into ep_info.",
+   "files": [
+    "rsl_rl/utils/logger.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i35"
+  },
+  {
+   "title": "Neptune save_file derives names portably",
+   "criterion": "save_file derives the name with pathlib.Path(path).stem or os.path.splitext, so Windows paths and multi-dot filenames work.",
+   "files": [
+    "rsl_rl/utils/neptune_log_writer.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i36"
+  },
+  {
+   "title": "Validate PPO hyperparameters at construction",
+   "criterion": "PPO.__init__ raises ValueError when schedule is not in {adaptive, fixed}, epochs or mini-batches are non-positive, clip_param <= 0, or gamma or lam is outside [0,1].",
+   "files": [
+    "rsl_rl/algorithms/ppo.py",
+    "tests/algorithms/test_ppo.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i37"
+  },
+  {
+   "title": "MLP rejects empty or invalid hidden_dims clearly",
+   "criterion": "MLP.__init__ raises a clear ValueError for an empty hidden_dims or non-positive dims other than -1, or supports a single linear layer, instead of raising IndexError.",
+   "files": [
+    "rsl_rl/modules/mlp.py",
+    "tests/modules/test_mlp.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i38"
+  },
+  {
+   "title": "Validate CNN per-layer parameter list lengths",
+   "criterion": "CNN.__init__ checks that kernel_size, stride, dilation, norm and max_pool sequences have length equal to len(output_channels), and raises ValueError otherwise.",
+   "files": [
+    "rsl_rl/modules/cnn.py",
+    "tests/models/test_cnn_model.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i39"
+  },
+  {
+   "title": "Validate CNN padding mode names",
+   "criterion": "CNN.__init__ raises ValueError for padding values outside none/zeros/reflect/replicate/circular instead of silently using no padding.",
+   "files": [
+    "rsl_rl/modules/cnn.py",
+    "tests/models/test_cnn_model.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i40"
+  },
+  {
+   "title": "EmpiricalNormalization rejects empty or mis-shaped batches",
+   "criterion": "update() returns early or raises on an empty batch, and validates that trailing dims match the configured shape, so NaN moments and broadcast corruption cannot occur.",
+   "files": [
+    "rsl_rl/modules/normalization.py",
+    "tests/modules/test_normalization.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i41"
+  },
+  {
+   "title": "Validate RolloutStorage training_type and sizes",
+   "criterion": "RolloutStorage.__init__ raises ValueError when training_type is not 'rl' or 'distillation' or when env/transition counts are non-positive.",
+   "files": [
+    "rsl_rl/storage/rollout_storage.py",
+    "tests/storage/test_rollout_storage.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i42"
+  },
+  {
+   "title": "Hoist loop-invariant work out of recurrent generator loops",
+   "criterion": "dones squeeze, last_was_done, its permute and per-env trajectory offsets are computed once before the epoch and mini-batch loops, not per mini-batch.",
+   "files": [
+    "rsl_rl/storage/rollout_storage.py"
+   ],
+   "kind": "performance",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i43"
+  },
+  {
+   "title": "Reset discounted RND reward accumulator at episode ends",
+   "criterion": "Done masks are passed into intrinsic reward normalization, or a reset method is exposed, and the accumulator is zeroed for done envs. A test with known short episodes is added.",
+   "files": [
+    "rsl_rl/modules/normalization.py",
+    "rsl_rl/extensions/rnd.py",
+    "rsl_rl/algorithms/ppo.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i44"
+  },
+  {
+   "title": "Distribution output properties fail clearly when unavailable",
+   "criterion": "output_mean, output_std, output_entropy and output_distribution_params raise a clear error or return None when there is no distribution, or when it has not yet been populated, instead of raising a NoneType AttributeError.",
+   "files": [
+    "rsl_rl/models/mlp_model.py",
+    "rsl_rl/modules/distribution.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i45"
+  },
+  {
+   "title": "RNNModel keeps the time dimension when T == 1 in batch mode",
+   "criterion": "The RNN output is squeezed only in rollout mode (masks is None). Batch mode with num_steps_per_env == 1 keeps shape [1, N, H].",
+   "files": [
+    "rsl_rl/models/rnn_model.py",
+    "rsl_rl/modules/rnn.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i46"
+  },
+  {
+   "title": "split_and_pad_trajectories preserves input dtype",
+   "criterion": "The padding zeros tensor uses the input tensor's dtype, so uint8 observations pad correctly. A test with a uint8 tensor is added.",
+   "files": [
+    "rsl_rl/utils/utils.py",
+    "tests/utils/test_trajectory_utils.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i47"
+  },
+  {
+   "title": "JIT export puts the model in eval mode",
+   "criterion": "export_policy_to_jit calls .eval() on the as_jit() copy before torch.jit.script.",
+   "files": [
+    "rsl_rl/runners/on_policy_runner.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i48"
+  },
+  {
+   "title": "PPO.load tolerates checkpoints lacking RND state",
+   "criterion": "RND state and optimizer are loaded only if their keys exist in the checkpoint. Otherwise a warning is emitted instead of a KeyError.",
+   "files": [
+    "rsl_rl/algorithms/ppo.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i49"
+  },
+  {
+   "title": "Runner load tolerates checkpoints without infos",
+   "criterion": "OnPolicyRunner.load returns loaded_dict.get('infos') rather than indexing the key directly.",
+   "files": [
+    "rsl_rl/runners/on_policy_runner.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i50"
+  },
+  {
+   "title": "Logger ETA correct across multiple learn() calls",
+   "criterion": "The ETA uses elapsed time from the current learn() call only, not the logger's lifetime total time.",
+   "files": [
+    "rsl_rl/utils/logger.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i51"
+  },
+  {
+   "title": "Symmetry compute_loss does not overwrite batch.observations",
+   "criterion": "When use_data_augmentation is False, augmented observations are stored in a local variable instead of replacing batch.observations.",
+   "files": [
+    "rsl_rl/extensions/symmetry.py",
+    "tests/extensions/test_symmetry.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i52"
+  },
+  {
+   "title": "Symmetry logging-only mode runs without autograd",
+   "criterion": "When use_mirror_loss is False, the mirrored forward pass and loss run under torch.no_grad().",
+   "files": [
+    "rsl_rl/extensions/symmetry.py"
+   ],
+   "kind": "performance",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i53"
+  },
+  {
+   "title": "Distillation rejects unknown config keys",
+   "criterion": "Distillation.__init__ pops known no-op keys (rnd_cfg, symmetry_cfg) explicitly and warns or raises for any remaining kwargs.",
+   "files": [
+    "rsl_rl/algorithms/distillation.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i54"
+  },
+  {
+   "title": "Distillation steps on the final partial gradient accumulation",
+   "criterion": "A remainder accumulation that does not fill gradient_length gets a final backward and optimizer step instead of being discarded. Tests are updated.",
+   "files": [
+    "rsl_rl/algorithms/distillation.py",
+    "tests/algorithms/test_distillation.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i55"
+  },
+  {
+   "title": "Normalize distillation accumulated loss by accumulation length",
+   "criterion": "The accumulated loss is divided by the actual number of summed timesteps, including the partial group, so gradient scale does not grow with gradient_length.",
+   "files": [
+    "rsl_rl/algorithms/distillation.py",
+    "tests/algorithms/test_distillation.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i56"
+  },
+  {
+   "title": "Validate distillation optimization parameters",
+   "criterion": "Distillation.__init__ raises ValueError for non-positive gradient_length, epochs, learning rate, bucket size, or max_grad_norm.",
+   "files": [
+    "rsl_rl/algorithms/distillation.py",
+    "tests/algorithms/test_distillation.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i57"
+  },
+  {
+   "title": "Freeze distillation teacher parameters",
+   "criterion": "Teacher parameters are set to requires_grad=False while the teacher stays in eval mode. Teacher forward passes and checkpoint loading still work.",
+   "files": [
+    "rsl_rl/algorithms/distillation.py",
+    "tests/algorithms/test_distillation.py"
+   ],
+   "kind": "performance",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i58"
+  },
+  {
+   "title": "Freeze RND target network parameters",
+   "criterion": "All RND target parameters have requires_grad_(False), and a test checks that the target receives no gradients.",
+   "files": [
+    "rsl_rl/extensions/rnd.py",
+    "tests/extensions/test_rnd.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i59"
+  },
+  {
+   "title": "Initialize RND weight attribute in constructor",
+   "criterion": "RandomNetworkDistillation.__init__ sets self.weight, so it is accessible before get_intrinsic_reward is called.",
+   "files": [
+    "rsl_rl/extensions/rnd.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i60"
+  },
+  {
+   "title": "Heteroscedastic scalar std keeps gradients below the floor",
+   "criterion": "For std_type='scalar', a softplus (plus floor) is applied before clamping, and init uses the inverse-softplus of init_std as the bias.",
+   "files": [
+    "rsl_rl/modules/distribution.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i61"
+  },
+  {
+   "title": "Heteroscedastic log-std init exactly matches init_std",
+   "criterion": "init_mlp_weights uses log(init_std) without adding 1e-7, so the initial std equals init_std, consistent with GaussianDistribution.",
+   "files": [
+    "rsl_rl/modules/distribution.py",
+    "tests/modules/test_distribution.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i62"
+  },
+  {
+   "title": "Distribution init_mlp_weights locates the last Linear layer dynamically",
+   "criterion": "Heteroscedastic and Beta init_mlp_weights find the final nn.Linear instead of hardcoding mlp[-2], so they work when last_activation is set.",
+   "files": [
+    "rsl_rl/modules/distribution.py",
+    "tests/modules/test_distribution.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i63"
+  },
+  {
+   "title": "Create a fresh activation module per layer in MLP and CNN",
+   "criterion": "MLP and CNN instantiate a new activation module for each layer instead of reusing one instance.",
+   "files": [
+    "rsl_rl/modules/mlp.py",
+    "rsl_rl/modules/cnn.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i64"
+  },
+  {
+   "title": "CNNModel JIT/ONNX export works without 1D observations",
+   "criterion": "_TorchCNNModel and _OnnxCNNModel handle obs_dim == 0 by skipping 1D normalization and concatenation. A test exports a vision-only policy.",
+   "files": [
+    "rsl_rl/models/cnn_model.py",
+    "tests/models/test_cnn_model.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i65"
+  },
+  {
+   "title": "Correct CNN same-padding for odd sizes and strides",
+   "criterion": "_compute_padding never returns negative padding and applies asymmetric padding where needed to reach ceil(input/stride). A test checks odd rectangular inputs.",
+   "files": [
+    "rsl_rl/modules/cnn.py",
+    "tests/models/test_cnn_model.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i66"
+  },
+  {
+   "title": "Timeout bootstrapping robust to time_outs shape",
+   "criterion": "process_env_step reshapes time_outs with view(-1) and squeezes values with squeeze(-1), so the bootstrap term matches the rewards shape regardless of input shape.",
+   "files": [
+    "rsl_rl/algorithms/ppo.py",
+    "tests/algorithms/test_ppo.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i67"
+  },
+  {
+   "title": "learn() with zero iterations does not overwrite a checkpoint",
+   "criterion": "When num_learning_iterations <= 0, learn() returns early or skips the post-loop save.",
+   "files": [
+    "rsl_rl/runners/on_policy_runner.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i68"
+  },
+  {
+   "title": "Guard FPS computation against zero elapsed time",
+   "criterion": "Logger.log guards the collect_time + learn_time denominator against zero.",
+   "files": [
+    "rsl_rl/utils/logger.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i69"
+  },
+  {
+   "title": "resolve_obs_groups rejects string group values",
+   "criterion": "A str (or other non-list) value in obs_groups raises a clear error or is wrapped in a list, instead of being iterated per character.",
+   "files": [
+    "rsl_rl/utils/utils.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i70"
+  },
+  {
+   "title": "resolve_obs_groups does not mutate the caller's dict",
+   "criterion": "resolve_obs_groups copies its input before filling defaults, leaving the caller's dict unchanged.",
+   "files": [
+    "rsl_rl/utils/utils.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i71"
+  },
+  {
+   "title": "Rollout storage preserves distribution-param dtype",
+   "criterion": "Lazily allocated distribution_params buffers use the incoming tensor's dtype and device. A test with a non-default dtype is added.",
+   "files": [
+    "rsl_rl/storage/rollout_storage.py",
+    "tests/storage/test_rollout_storage.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i72"
+  },
+  {
+   "title": "Validate transitions and refuse generating from incomplete rollouts",
+   "criterion": "add_transition validates required fields for the training mode. Generators raise on, or limit themselves to, partially filled storage (step < capacity).",
+   "files": [
+    "rsl_rl/storage/rollout_storage.py",
+    "tests/storage/test_rollout_storage.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i73"
+  },
+  {
+   "title": "Validate reduce_gradients_in_buckets arguments",
+   "criterion": "Non-positive bucket size or world size raises ValueError before any processing.",
+   "files": [
+    "rsl_rl/utils/utils.py",
+    "tests/algorithms/test_distributed.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i74"
+  },
+  {
+   "title": "CNN.init_weights handles Conv2d without bias",
+   "criterion": "Bias is zero-initialized only if module.bias is not None.",
+   "files": [
+    "rsl_rl/modules/cnn.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i75"
+  },
+  {
+   "title": "MLP.init_weights indexes scales per Linear layer",
+   "criterion": "A separate counter for Linear layers selects per-layer scales, instead of the Sequential index.",
+   "files": [
+    "rsl_rl/modules/mlp.py",
+    "tests/models/test_mlp_model.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i76"
+  },
+  {
+   "title": "Remove redundant MLP/CNN forward overrides and dead init_weights",
+   "criterion": "The forward overrides identical to nn.Sequential.forward are deleted. Unused init_weights is either removed or wired to a config option with a test.",
+   "files": [
+    "rsl_rl/modules/mlp.py",
+    "rsl_rl/modules/cnn.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i77"
+  },
+  {
+   "title": "Keep symmetry-augmented batch fields consistently sized",
+   "criterion": "augment_batch repeats or documents old_distribution_params consistently with the other repeated batch fields.",
+   "files": [
+    "rsl_rl/extensions/symmetry.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i78"
+  },
+  {
+   "title": "Avoid rescanning the log directory for videos every iteration",
+   "criterion": "Logger.log scans only a dedicated videos subdirectory, or throttles the scan, instead of running rglob over the whole log dir each iteration.",
+   "files": [
+    "rsl_rl/utils/logger.py"
+   ],
+   "kind": "performance",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i79"
+  },
+  {
+   "title": "Adaptive-LR and loss tests exercise real PPO.update",
+   "criterion": "The tests call ppo.update() with schedule='adaptive' and a monkeypatched KL, then assert on ppo.learning_rate and the optimizer lr, instead of re-implementing the logic in the test.",
+   "files": [
+    "tests/algorithms/test_ppo.py"
+   ],
+   "kind": "tests",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i80"
+  },
+  {
+   "title": "Strengthen zero-std discounted normalization test",
+   "criterion": "test_zero_std_returns_raw_reward asserts that the output equals the input reward under fresh statistics, and a multi-element shape test is added.",
+   "files": [
+    "tests/modules/test_normalization.py"
+   ],
+   "kind": "tests",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i81"
+  },
+  {
+   "title": "Add tests for DistillationRunner, Logger and resolve_obs_groups",
+   "criterion": "New tests cover the DistillationRunner teacher-loaded guard and learn loop, Logger aggregation, and resolve_obs_groups defaults and errors.",
+   "files": [
+    "tests/runners/test_on_policy_runner.py",
+    "tests/utils/test_logger.py"
+   ],
+   "kind": "tests",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i82"
+  },
+  {
+   "title": "Fix BetaDistribution init docstring or make init near-uniform",
+   "criterion": "Either both alpha and beta halves of the last layer are initialized for a near-uniform distribution, or the docstring is corrected.",
+   "files": [
+    "rsl_rl/modules/distribution.py"
+   ],
+   "kind": "docs",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i83"
+  },
+  {
+   "title": "Symmetry keys documented as optional with their defaults",
+   "criterion": "configuration.rst no longer marks use_data_augmentation, use_mirror_loss and mirror_loss_coeff as required, and lists their defaults.",
+   "files": [
+    "docs/guide/configuration.rst"
+   ],
+   "kind": "docs",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i84"
+  },
+  {
+   "title": "Resolve misleading 'crelu' activation mapping to CELU",
+   "criterion": "The 'crelu' activation name is renamed or remapped correctly, or its mapping to CELU is documented explicitly.",
+   "files": [
+    "rsl_rl/utils/utils.py"
+   ],
+   "kind": "docs",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i85"
+  },
+  {
+   "title": "Document VecEnv observation buffer lifetime requirement",
+   "criterion": "VecEnv get_observations and step docstrings state that returned observation tensors must not be modified in place until process_env_step has copied them into storage.",
+   "files": [
+    "rsl_rl/env/vec_env.py"
+   ],
+   "kind": "docs",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i86"
+  },
+  {
+   "title": "Remove unused verbose argument from ONNX export wrappers",
+   "criterion": "as_onnx and the _Onnx*Model constructors for the MLP, CNN and RNN models drop the unused verbose parameter, and callers are updated.",
+   "files": [
+    "rsl_rl/models/mlp_model.py",
+    "rsl_rl/models/cnn_model.py",
+    "rsl_rl/models/rnn_model.py",
+    "rsl_rl/runners/on_policy_runner.py",
+    "rsl_rl/runners/distillation_runner.py"
+   ],
+   "kind": "cleanup",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i87"
+  },
+  {
+   "title": "CI and docs support the extras branch",
+   "criterion": "The lint, test and docs workflows run on the extras branch. The docs build publishes main and extras sites. Contribution docs explain targeting main for fixes and extras for features.",
+   "files": [
+    ".github/workflows/docs.yml",
+    ".github/workflows/lint.yml",
+    ".github/workflows/tests.yml",
+    "CONTRIBUTING.md",
+    "docs/guide/contribution.rst"
+   ],
+   "kind": "packaging",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i88"
+  }
+ ]
+}

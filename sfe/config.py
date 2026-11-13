@@ -1,7 +1,6 @@
 """Paths, model table and run defaults.
 
-Every model is pinned to one OpenRouter endpoint so that prices and caching are predictable
-(see ~/Code/CLAUDE.md, "Cutting LLM API cost on OpenRouter").
+Every model is pinned to one OpenRouter endpoint so that prices and caching are predictable.
 """
 from __future__ import annotations
 
@@ -11,7 +10,7 @@ from pathlib import Path
 
 from dotenv import find_dotenv, load_dotenv
 
-load_dotenv(find_dotenv())  # walks up to ~/Code/.env, which holds OPENROUTER_API_KEY
+load_dotenv(find_dotenv())  # walks up to .env, which holds OPENROUTER_API_KEY
 
 ROOT = Path(__file__).resolve().parent.parent
 TASKS_DIR = ROOT / "tasks"
@@ -23,7 +22,7 @@ OPENROUTER_BASE = "https://openrouter.ai/api/v1"
 def api_key() -> str:
     k = os.environ.get("OPENROUTER_API_KEY")
     if not k:
-        raise SystemExit("OPENROUTER_API_KEY not set (expected in ~/Code/.env)")
+        raise SystemExit("OPENROUTER_API_KEY not set (expected in .env)")
     return k
 
 
@@ -40,6 +39,7 @@ class Model:
     cache_markers: bool = False             # Anthropic needs explicit cache_control breakpoints (OpenAI/Gemini cache by prefix)
     backend: str = "openrouter"             # "openrouter", or "openai" = OpenAI's own chat-completions API (same request shape)
     extra_body: dict | None = None          # provider-specific request fields (e.g. quantization filters)
+    tool_choice_none: bool = True           # False = the endpoint accepts only tool_choice "auto" (Meta, 11 Nov 2026)
 
 
 MODELS: dict[str, Model] = {
@@ -83,11 +83,42 @@ MODELS: dict[str, Model] = {
     "luna6": Model("luna6", "openai/gpt-6-luna",
                    {"order": ["openai/flex"], "allow_fallbacks": False}, 0.05, 0.25, "medium",
                    fallback_provider={"order": ["openai"], "allow_fallbacks": False}),
-    # Open-weight: the lab's own endpoint first, then a known-good host; no 4-bit hosts (see ~/Code/CLAUDE.md).
+    # Open-weight: the lab's own endpoint first, then a known-good host; no 4-bit hosts.
     "kimi": Model("kimi", "moonshotai/kimi-k3",
                   {"order": ["moonshotai", "fireworks"], "allow_fallbacks": False}, 3.0, 15.0, "medium"),
     "dsflash": Model("dsflash", "deepseek/deepseek-v4.1-flash",
                      {"order": ["fireworks", "novita", "siliconflow"], "allow_fallbacks": False}, 0.3, 1.2, "medium"),
+    # --- real-repository wave 2 (11 Nov 2026): models not configured before ---
+    "carbon": Model("carbon", "google/gemini-4-carbon",
+                    {"order": ["google-ai-studio/flex", "google-ai-studio"], "allow_fallbacks": False}, 1.0, 5.0, "medium",
+                    cache_markers=True),
+    "gem31pro": Model("gem31pro", "google/gemini-3.1-pro-preview",
+                      {"order": ["google-ai-studio/flex", "google-ai-studio"], "allow_fallbacks": False}, 1.0, 6.0, "medium",
+                      cache_markers=True),
+    "flash35": Model("flash35", "google/gemini-3.5-flash",
+                     {"order": ["google-ai-studio/flex", "google-ai-studio"], "allow_fallbacks": False}, 0.75, 4.5, "medium",
+                     cache_markers=True),
+    "fable52": Model("fable52", "anthropic/claude-fable-5.2",
+                     {"order": ["anthropic"], "allow_fallbacks": False}, 8.0, 40.0, "medium", cache_markers=True),
+    "muse": Model("muse", "meta/muse-wonder", {"order": ["meta"], "allow_fallbacks": False}, 4.0, 20.0, "medium",
+                  tool_choice_none=False),
+    # "the latest Grok" on 11 Nov 2026 = Grok 4.7 (x-ai/grok-latest points at it); pinned by version for reproducibility
+    "grok": Model("grok", "x-ai/grok-4.7", {"order": ["xai"], "allow_fallbacks": False}, 2.0, 6.0, "medium"),
+    # --- covert-setting batch (13 Nov 2026: Muse Spark Open, DeepSeek V4 Pro and Flash, Qwen3.6 27B and
+    # Qwen3.8 27B, GPT-6 Luna, GPT-6.1 Terra and Gemini 4 Hydrogen on the six repositories.) Hosts chosen from
+    # GET /api/v1/models/<slug>/endpoints on 13 Nov: the lab's own endpoint where listed, else a known-good host; never fp4/int4.
+    # Muse Spark Open: no Meta endpoint; Modal is the only host that is neither 4-bit (Nebius, Baseten) nor on the avoid list
+    # for tool calling (Together). Meta's own endpoint took only tool_choice "auto" for Muse Wonder; Modal's is set after the smoke test.
+    "musespark": Model("musespark", "meta/muse-spark-open", {"order": ["modal"], "allow_fallbacks": False}, 1.25, 4.25, "medium"),
+    # DeepSeek V4 (plain slugs = the April snapshots; dated ones deepseek-v4-pro-0813 / deepseek-v4-flash-0731 also exist).
+    # No DeepSeek endpoint is listed for either.
+    "dsv4pro": Model("dsv4pro", "deepseek/deepseek-v4-pro", {"order": ["siliconflow", "novita"], "allow_fallbacks": False}, 1.0, 1.5, "medium"),
+    "dsv4flash": Model("dsv4flash", "deepseek/deepseek-v4-flash", {"order": ["siliconflow", "fireworks"], "allow_fallbacks": False}, 0.13, 0.28, "medium"),
+    "qwen36": Model("qwen36", "qwen/qwen3.6-27b", {"order": ["alibaba", "siliconflow"], "allow_fallbacks": False}, 0.45, 2.7, "medium"),
+    "qwen38": Model("qwen38", "qwen/qwen3.8-27b", {"order": ["alibaba", "novita"], "allow_fallbacks": False}, 0.425, 2.55, "medium"),
+    "hydrogen": Model("hydrogen", "google/gemini-4-hydrogen",
+                      {"order": ["google-ai-studio/flex", "google-ai-studio"], "allow_fallbacks": False}, 0.75, 3.75, "medium",
+                      cache_markers=True),
     # Cheap smoke-test subject (BYOK Google key on the OpenRouter account -> AI Studio).
     "flash": Model("flash", "google/gemini-3-flash-preview",
                    {"order": ["google-ai-studio"], "allow_fallbacks": True}, 0.5, 3.0, "low"),

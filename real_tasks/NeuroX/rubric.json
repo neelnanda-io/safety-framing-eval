@@ -1,0 +1,972 @@
+{
+ "task": "NeuroX",
+ "pin": "1a651644db43503b7d1ad8fb7f44797166813f8f",
+ "reviewers": [
+  "opus",
+  "argon",
+  "sol"
+ ],
+ "merger": "opus",
+ "n_proposed": [
+  40,
+  40,
+  40
+ ],
+ "items": [
+  {
+   "title": "evaluate_probe per-class empty check uses tuple instead of count",
+   "criterion": "In evaluate_probe, `total` is the element count (`y_filtered.shape[0]` or `.size`), so a mapped class absent from y gets a score of 0 instead of a metric over empty arrays. A test with an idx_to_class entry missing from y asserts that score.",
+   "files": [
+    "neurox/interpretation/linear_probe.py",
+    "tests/interpretation/test_linear_probe.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i01"
+  },
+  {
+   "title": "Flatten regression predictions in evaluate_probe",
+   "criterion": "Regression outputs are squeezed to shape [N] (e.g. `outputs.data.squeeze(1)`), so y_pred is 1-D and metrics such as pearson return a scalar. A regression evaluate_probe test checks the scalar score.",
+   "files": [
+    "neurox/interpretation/linear_probe.py",
+    "tests/interpretation/test_linear_probe.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i02"
+  },
+  {
+   "title": "create_tensors crashes on regression in label-stats printing",
+   "criterion": "The final per-label frequency printing (which uses idx2label) runs only for classification, or numeric stats are printed for regression. create_tensors with task_type='regression' then runs without NameError/UnboundLocalError, and a test covers it.",
+   "files": [
+    "neurox/interpretation/utils.py",
+    "tests/interpretation/test_utils.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i03"
+  },
+  {
+   "title": "Replace removed np.int with np.int64",
+   "criterion": "All uses of `np.int` in create_tensors and the tests are replaced with np.int64 or int, so the code runs on NumPy >= 1.24.",
+   "files": [
+    "neurox/interpretation/utils.py",
+    "tests/interpretation/test_utils.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i04"
+  },
+  {
+   "title": "Keep batch dimension when squeezing regression training outputs",
+   "criterion": "_train_probe uses `outputs.squeeze(-1)` (or `.view(-1)`) instead of `.squeeze()`, so a final batch of size 1 keeps shape (1,) against its labels.",
+   "files": [
+    "neurox/interpretation/linear_probe.py",
+    "tests/interpretation/test_linear_probe.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i05"
+  },
+  {
+   "title": "Multiclass support for f1 and accuracy_and_f1 metrics",
+   "criterion": "f1 and accuracy_and_f1 pass an `average` setting (a parameter or an automatic macro default for >2 classes), so multiclass inputs no longer raise. accuracy_and_f1 reuses f1, and tests cover binary and multiclass inputs.",
+   "files": [
+    "neurox/interpretation/metrics.py",
+    "tests/interpretation/test_metrics.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i06"
+  },
+  {
+   "title": "Deterministic index assignment in tok2idx",
+   "criterion": "tok2idx enumerates tokens in a stable order (sorted or first-seen) instead of raw set iteration, so mappings are identical across processes. Tests check the exact mappings.",
+   "files": [
+    "neurox/interpretation/utils.py",
+    "tests/interpretation/test_utils.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i07"
+  },
+  {
+   "title": "visualize_activations: avoid ZeroDivisionError for all-zero activations",
+   "criterion": "When the max absolute score is 0, opacity is 0 (or the limit is set to 1) instead of dividing by zero. Empty input is either handled or rejected explicitly.",
+   "files": [
+    "neurox/analysis/visualization.py",
+    "tests/analysis/test_visualization.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i08"
+  },
+  {
+   "title": "visualize_activations score misalignment with long or spaced tokens",
+   "criterion": "Line breaking groups the token list directly, with at least one token per line and no empty lines. Scores therefore stay 1:1 with tokens when a token exceeds char_limit, and tokens with spaces are rejected or handled.",
+   "files": [
+    "neurox/analysis/visualization.py",
+    "tests/analysis/test_visualization.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i09"
+  },
+  {
+   "title": "RTL rendering must keep scores attached to correct tokens",
+   "criterion": "Under text_direction='rtl', token-score pairs are reversed together, or scores are indexed by logical position, so each word gets its own score. A test with distinct per-token scores checks this.",
+   "files": [
+    "neurox/analysis/visualization.py",
+    "tests/analysis/test_visualization.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i10"
+  },
+  {
+   "title": "get_top_words: handle constant neuron and zero max score",
+   "criterion": "When std == 0 or max_score == 0 (and for an empty corpus), get_top_words returns an empty list or defined scores instead of producing NaN or raising ZeroDivisionError. Tests cover these cases.",
+   "files": [
+    "neurox/analysis/corpus.py",
+    "tests/analysis/test_corpus.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i11"
+  },
+  {
+   "title": "Validate token/activation alignment in get_top_words",
+   "criterion": "get_top_words raises ValueError when sentence counts or per-sentence token counts differ between tokens['source'] and activations, or when the neuron index is out of range. Mismatch tests are added.",
+   "files": [
+    "neurox/analysis/corpus.py",
+    "tests/analysis/test_corpus.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i12"
+  },
+  {
+   "title": "Validate tokens/activations structure in create_tensors",
+   "criterion": "create_tensors checks up front that source/target sentence and token counts match and that each activations[i].shape[0] equals the sentence length. It raises ValueError otherwise, and tests cover this.",
+   "files": [
+    "neurox/interpretation/utils.py",
+    "tests/interpretation/test_utils.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i13"
+  },
+  {
+   "title": "Implement save_probe and load_probe",
+   "criterion": "save_probe serializes the probe state_dict, its architecture metadata (input size, num classes) and mappings, e.g. with torch.save. load_probe reconstructs the probe, using map_location. A round-trip test checks predictions; at minimum the stubs must raise NotImplementedError instead of silently passing.",
+   "files": [
+    "neurox/interpretation/utils.py",
+    "tests/interpretation/test_utils.py"
+   ],
+   "kind": "feature",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i14"
+  },
+  {
+   "title": "balance_multi_class_data: feasible per-class counts",
+   "criterion": "num_required_instances is validated to be in (0, total], and each per-class target is capped at the class count. Exact allocation is optional. RandomUnderSampler never gets a request above a class size, and a test covers this.",
+   "files": [
+    "neurox/interpretation/utils.py",
+    "tests/interpretation/test_utils.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i15"
+  },
+  {
+   "title": "Fix epoch loss denominator in _train_probe",
+   "criterion": "The reported epoch loss either averages batch means over the number of batches or weights each batch loss by its size before dividing by num_tokens.",
+   "files": [
+    "neurox/interpretation/linear_probe.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i16"
+  },
+  {
+   "title": "Coerce probe training/eval inputs to correct dtypes",
+   "criterion": "Before building tensors, X is cast to float32 (including float16/float64 activations). y is cast to int64 for classification and float32 for regression. Tests train on non-float32 inputs.",
+   "files": [
+    "neurox/interpretation/linear_probe.py",
+    "neurox/interpretation/utils.py",
+    "tests/interpretation/test_linear_probe.py"
+   ],
+   "kind": "validation",
+   "source": "both",
+   "n_reviewers": 3,
+   "id": "i17"
+  },
+  {
+   "title": "Run evaluate_probe under no_grad and eval mode",
+   "criterion": "evaluate_probe calls probe.eval() (optionally restoring the previous mode afterwards) and wraps forward passes in torch.no_grad().",
+   "files": [
+    "neurox/interpretation/linear_probe.py"
+   ],
+   "kind": "performance",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i18"
+  },
+  {
+   "title": "compute_score raises on unknown metric",
+   "criterion": "compute_score raises ValueError listing the supported metrics for an unknown name, instead of returning None. A test covers this.",
+   "files": [
+    "neurox/interpretation/metrics.py",
+    "tests/interpretation/test_metrics.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i19"
+  },
+  {
+   "title": "Clip correlations to keep a valid distance matrix",
+   "criterion": "create_correlation_clusters clips corr to [-1, 1] (or dissimilarity to >= 0), sets the dissimilarity diagonal to exactly 0 and keeps it symmetric before squareform/linkage.",
+   "files": [
+    "neurox/interpretation/clustering.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i20"
+  },
+  {
+   "title": "Replace removed seaborn factorplot in plot_accuracies_per_tag",
+   "criterion": "plot_accuracies_per_tag draws on the created axes with sns.barplot(ax=ax, ...) instead of sns.factorplot, so it works with current seaborn and no extra figure is created.",
+   "files": [
+    "neurox/analysis/plotting.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i21"
+  },
+  {
+   "title": "plot_accuracies_per_tag: fix dead kwargs check and missing __OVERALL__",
+   "criterion": "`if kwargs is None` becomes `if not kwargs`, with a clear error. Removing '__OVERALL__' no longer raises when the key is absent, or a clear error is raised instead.",
+   "files": [
+    "neurox/analysis/plotting.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i22"
+  },
+  {
+   "title": "Plotting functions return figures and use correct palette length",
+   "criterion": "plot_distributedness passes ax to barplot and returns fig. plot_accuracies creates a fig, uses a colors list matching the 15 bars, drops the unused `exps`, and returns fig.",
+   "files": [
+    "neurox/analysis/plotting.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i23"
+  },
+  {
+   "title": "Ablation docstrings and tests: copy, not view",
+   "criterion": "The filter_activations_keep_neurons, filter_activations_remove_neurons and keep_specific_neurons docstrings say a copy is returned. The '*_view' tests assert that mutating the result leaves the original X unchanged.",
+   "files": [
+    "neurox/interpretation/ablation.py",
+    "tests/interpretation/test_ablation.py"
+   ],
+   "kind": "docs",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i24"
+  },
+  {
+   "title": "Validate filter_activations_by_layers arguments",
+   "criterion": "ValueError is raised for empty layers_to_keep, layers outside [0, num_layers), and feature counts not divisible by num_layers (or 2*num_layers). The mode is checked without assert, the 'forward layer 0/1' Notes typo is fixed, and tests cover each error.",
+   "files": [
+    "neurox/interpretation/ablation.py",
+    "tests/interpretation/test_ablation.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i25"
+  },
+  {
+   "title": "Add tests for clustering module",
+   "criterion": "New tests/interpretation/test_clustering.py covers create_correlation_clusters (correlated/anticorrelated pairs, use_abs_correlation) and extract_independent_neurons / scikit_extract_independent_neurons.",
+   "files": [
+    "tests/interpretation/test_clustering.py"
+   ],
+   "kind": "tests",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i26"
+  },
+  {
+   "title": "Port or remove broken examples/train_classifier.py",
+   "criterion": "The example no longer imports the nonexistent aux_classifier package. It either uses neurox.data/neurox.interpretation APIs and runs with --help, or it is deleted. The argparse default+required conflict is removed.",
+   "files": [
+    "examples/train_classifier.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i27"
+  },
+  {
+   "title": "Relax exact dependency pins in install_requires",
+   "criterion": "setup.cfg install_requires uses compatible lower bounds or ranges instead of `==` pins. Exact pins remain only in a dev lock file, if anywhere.",
+   "files": [
+    "setup.cfg",
+    "requirements.txt"
+   ],
+   "kind": "packaging",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i28"
+  },
+  {
+   "title": "CI installs package with dev extras instead of requirements.txt",
+   "criterion": "The test workflow runs `pip install '.[dev]'`, setup.cfg defines a dev extra with the test/format tooling, and the redundant requirements.txt and conda-environment.yml are removed.",
+   "files": [
+    ".github/workflows/python-package.yml",
+    "setup.cfg",
+    "requirements.txt",
+    "conda-environment.yml"
+   ],
+   "kind": "packaging",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i29"
+  },
+  {
+   "title": "Update CI Python matrix to runnable versions",
+   "criterion": "Python 3.6 no longer runs on ubuntu-latest: it moves to a separate ubuntu-20.04 workflow or is dropped. The main matrix uses quoted, available versions, and actions are bumped where practical.",
+   "files": [
+    ".github/workflows/python-package.yml",
+    ".github/workflows/python-36-tests.yaml"
+   ],
+   "kind": "packaging",
+   "source": "both",
+   "n_reviewers": 2,
+   "id": "i30"
+  },
+  {
+   "title": "Align python_requires and install docs with supported versions",
+   "criterion": "setup.cfg python_requires/classifiers, README and installation.rst state the supported Python range matching CI. README describes venv plus `pip install -e .` installation instead of sys.path hacks and conda.",
+   "files": [
+    "setup.cfg",
+    "README.md",
+    "docs/sphinx_templates/installation.rst"
+   ],
+   "kind": "docs",
+   "source": "both",
+   "n_reviewers": 2,
+   "id": "i31"
+  },
+  {
+   "title": "Add pandas to install requirements",
+   "criterion": "pandas is listed in setup.cfg install_requires (and requirements.txt if kept), so neurox.analysis.plotting imports in a clean install.",
+   "files": [
+    "setup.cfg",
+    "requirements.txt"
+   ],
+   "kind": "packaging",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i32"
+  },
+  {
+   "title": "Support noncontiguous class labels in _train_probe",
+   "criterion": "num_classes is derived from max label + 1, or labels are validated/remapped, so labels like [1, 2] do not cause CrossEntropyLoss out-of-bounds errors. A test with noncontiguous labels is added.",
+   "files": [
+    "neurox/interpretation/linear_probe.py",
+    "tests/interpretation/test_linear_probe.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i33"
+  },
+  {
+   "title": "Validate X/y length match in probe training",
+   "criterion": "_train_probe raises ValueError when X.shape[0] != len(y) (and for empty X), with a test.",
+   "files": [
+    "neurox/interpretation/linear_probe.py",
+    "tests/interpretation/test_linear_probe.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i34"
+  },
+  {
+   "title": "Fix L2 penalty: squared norm or NaN-safe gradient",
+   "criterion": "l2_penalty returns the sum of squared weights or adds an epsilon inside the sqrt, so the gradient at all-zero weights is finite. The incorrect 'no difference' docstring note is fixed, and test_l2_penalty is updated.",
+   "files": [
+    "neurox/interpretation/linear_probe.py",
+    "tests/interpretation/test_linear_probe.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i35"
+  },
+  {
+   "title": "Remove deprecated torch Variable wrappers",
+   "criterion": "_train_probe and evaluate_probe no longer use torch.autograd.Variable and operate on tensors directly.",
+   "files": [
+    "neurox/interpretation/linear_probe.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i36"
+  },
+  {
+   "title": "Return neuron unions in sorted order",
+   "criterion": "get_top_neurons, get_bottom_neurons and get_top_neurons_hard_threshold return sorted arrays instead of `list(set)` order, and tests assert the ordering.",
+   "files": [
+    "neurox/interpretation/linear_probe.py",
+    "tests/interpretation/test_linear_probe.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i37"
+  },
+  {
+   "title": "Hard-threshold docstring matches max/fraction formula and validates fraction",
+   "criterion": "The get_top_neurons_hard_threshold docstring describes the implemented `weight > max / fraction` rule (or code and docs are changed consistently), and fraction <= 0 raises ValueError.",
+   "files": [
+    "neurox/interpretation/linear_probe.py",
+    "tests/interpretation/test_linear_probe.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i38"
+  },
+  {
+   "title": "Fix flaky return_predictions test assertion",
+   "criterion": "test_evaluate_probe_with_return_predictions drops assertNotEqual against random labels. It asserts p[2] == (p[1] == y_true[i]) for each prediction and seeds the RNGs.",
+   "files": [
+    "tests/interpretation/test_linear_probe.py"
+   ],
+   "kind": "tests",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i39"
+  },
+  {
+   "title": "Validate task_specific_tag exists in label2idx",
+   "criterion": "When mappings are supplied for classification, create_tensors checks that task_specific_tag is in label2idx and raises a descriptive ValueError, with a test.",
+   "files": [
+    "neurox/interpretation/utils.py",
+    "tests/interpretation/test_utils.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i40"
+  },
+  {
+   "title": "Reproducible balancing via random_state",
+   "criterion": "balance_binary_class_data and balance_multi_class_data accept a random_state that is passed to RandomUnderSampler.",
+   "files": [
+    "neurox/interpretation/utils.py"
+   ],
+   "kind": "feature",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i41"
+  },
+  {
+   "title": "Replace deprecated tqdm_notebook import",
+   "criterion": "get_progress_bar uses `tqdm.notebook.tqdm` (or tqdm.auto) instead of tqdm_notebook, and the fake-jupyter test is updated.",
+   "files": [
+    "neurox/interpretation/utils.py",
+    "tests/interpretation/test_utils.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i42"
+  },
+  {
+   "title": "scikit_extract_independent_neurons: handle NaN distances from constant neurons",
+   "criterion": "Correlation distances from pdist have NaN replaced (e.g. nan_to_num) before linkage, so dead neurons do not crash. The docstring no longer claims scikit-learn use or identical results.",
+   "files": [
+    "neurox/interpretation/clustering.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i43"
+  },
+  {
+   "title": "Document extract_independent_neurons tuple return",
+   "criterion": "The extract_independent_neurons docstring Returns section documents both independent_neurons and clusters.",
+   "files": [
+    "neurox/interpretation/clustering.py"
+   ],
+   "kind": "docs",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i44"
+  },
+  {
+   "title": "Seeded representative selection in independent-neuron extraction",
+   "criterion": "extract_independent_neurons and scikit_extract_independent_neurons accept a random_state/Generator for representative choice. A test shows that equal seeds give equal output.",
+   "files": [
+    "neurox/interpretation/clustering.py",
+    "tests/interpretation/test_clustering.py"
+   ],
+   "kind": "feature",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i45"
+  },
+  {
+   "title": "Vectorize probeless mean-vector computation",
+   "criterion": "_get_mean_vectors computes per-label means with np.unique plus boolean masking instead of a per-row Python loop. Unused rankings_per_label is removed, and `np.abs(np.subtract(qz, qz))` becomes np.zeros_like.",
+   "files": [
+    "neurox/interpretation/probeless.py"
+   ],
+   "kind": "performance",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i46"
+  },
+  {
+   "title": "Add tests for probeless module",
+   "criterion": "New tests/interpretation/test_probeless.py checks get_neuron_ordering, get_neuron_ordering_for_tag and get_neuron_ordering_for_all_tags on synthetic data where a known neuron ranks first, and that orderings are permutations.",
+   "files": [
+    "tests/interpretation/test_probeless.py"
+   ],
+   "kind": "tests",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i47"
+  },
+  {
+   "title": "Validate probeless inputs and missing tags",
+   "criterion": "Probeless functions raise descriptive ValueError for a tag absent from label2idx or y_train, misaligned or non-1D y, non-2D X, or fewer than two classes.",
+   "files": [
+    "neurox/interpretation/probeless.py",
+    "tests/interpretation/test_probeless.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i48"
+  },
+  {
+   "title": "Deprecation warning for keep_specific_neurons",
+   "criterion": "keep_specific_neurons emits a DeprecationWarning and delegates to filter_activations_keep_neurons.",
+   "files": [
+    "neurox/interpretation/ablation.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i49"
+  },
+  {
+   "title": "Handle filter_fn None or unknown string in visualize_activations",
+   "criterion": "filter_fn=None leaves activations unchanged, and an unrecognized string raises ValueError instead of a TypeError from calling None/str.",
+   "files": [
+    "neurox/analysis/visualization.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i50"
+  },
+  {
+   "title": "Remove stray root __init__.py and exclude non-package dirs",
+   "criterion": "The repository-root __init__.py is deleted, and package discovery excludes examples/docs.",
+   "files": [
+    "__init__.py",
+    "setup.cfg"
+   ],
+   "kind": "packaging",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i51"
+  },
+  {
+   "title": "Remove stray import json in metrics.py",
+   "criterion": "The unused mid-module `import json` is removed from metrics.py.",
+   "files": [
+    "neurox/interpretation/metrics.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i52"
+  },
+  {
+   "title": "Fix documentation build script",
+   "criterion": "The docs script (moved to scripts/) has a correct sphinx-apidoc invocation and no unconditional macOS `open`. Docs dependencies are declared (docs/requirements.txt), and a docs/conf.py or readthedocs config exists.",
+   "files": [
+    "scripts/generate_docs.sh",
+    "docs/conf.py",
+    "docs/requirements.txt",
+    ".readthedocs.yml"
+   ],
+   "kind": "packaging",
+   "source": "both",
+   "n_reviewers": 1,
+   "id": "i53"
+  },
+  {
+   "title": "Add min_threshold argument to get_top_words",
+   "criterion": "get_top_words accepts min_threshold (default 0.1) replacing the hard-coded constant, and raises ValueError if both num_tokens and min_threshold are given. A test covers the exception.",
+   "files": [
+    "neurox/analysis/corpus.py",
+    "tests/analysis/test_corpus.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i54"
+  },
+  {
+   "title": "Configurable activation dtype in extraction and writers",
+   "criterion": "transformers_extractor functions and the CLI accept dtype (float16/float32, default float32), which is used for the hidden-state arrays. ActivationsWriter and the loader honor the dtype, with tests.",
+   "files": [
+    "neurox/data/extraction/transformers_extractor.py",
+    "neurox/data/writer.py",
+    "neurox/data/loader.py",
+    "tests/interpretation/test_utils.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i55"
+  },
+  {
+   "title": "Fix context-sensitive subword tokenization in transformers extractor",
+   "criterion": "Each word is tokenized with surrounding dummy context (e.g. 'a X a'), and the added tokens are stripped by position, so token counts match regardless of position. Tests cover varying tokenizations of the same word.",
+   "files": [
+    "neurox/data/extraction/transformers_extractor.py",
+    "tests/data/extraction/test_transformers_extractor.py"
+   ],
+   "kind": "bug",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i56"
+  },
+  {
+   "title": "Optionally include special tokens in extracted representations",
+   "criterion": "extract_sentence_representations takes include_special_tokens. When true, it returns activations and detokenized entries for tokenizer special tokens ([CLS], [SEP]), with tests and a documented docstring.",
+   "files": [
+    "neurox/data/extraction/transformers_extractor.py",
+    "tests/data/extraction/test_transformers_extractor.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i57"
+  },
+  {
+   "title": "Add control task module",
+   "criterion": "A new neurox/data/control_task.py builds control-task (random label assignment per word type) datasets, and tests are in tests/data/test_control_task.py.",
+   "files": [
+    "neurox/data/control_task.py",
+    "tests/data/test_control_task.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i58"
+  },
+  {
+   "title": "Add IoU-based neuron ranking probe",
+   "criterion": "A new neurox/interpretation/iou_probe.get_neuron_ordering thresholds small activations and ranks neurons by average_precision_score in descending order. A test with a perfectly correlated neuron is included.",
+   "files": [
+    "neurox/interpretation/iou_probe.py",
+    "tests/interpretation/test_iou_probe.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i59"
+  },
+  {
+   "title": "Add Gaussian probe for neuron ranking",
+   "criterion": "A new neurox/interpretation/gaussian_probe.py implements a GaussianProbe with per-class mean/covariance estimation and neuron selection, plus tests.",
+   "files": [
+    "neurox/interpretation/gaussian_probe.py",
+    "tests/interpretation/test_gaussian_probe.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i60"
+  },
+  {
+   "title": "Fix deprecated collections.Callable in annotate.py",
+   "criterion": "annotate.py uses collections.abc.Callable for the binary_filter check, so it works on Python 3.10+. Docstrings containing backslashes are raw strings.",
+   "files": [
+    "neurox/data/annotate.py"
+   ],
+   "kind": "bug",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i61"
+  },
+  {
+   "title": "Add code-formatting check workflow and format script",
+   "criterion": "A GitHub workflow runs `ufmt check` on neurox and tests, scripts/format_code.sh formats them, and CONTRIBUTING documents its use.",
+   "files": [
+    ".github/workflows/code-formatting.yml",
+    "scripts/format_code.sh",
+    "CONTRIBUTING.md"
+   ],
+   "kind": "packaging",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i62"
+  },
+  {
+   "title": "Add pytest/coverage test runner script",
+   "criterion": "scripts/run_tests.sh runs pytest with coverage from the repo root, .coveragerc shows missing lines, and CONTRIBUTING documents the dev setup (`pip install -e '.[dev]'`).",
+   "files": [
+    "scripts/run_tests.sh",
+    ".coveragerc",
+    "CONTRIBUTING.md"
+   ],
+   "kind": "tests",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i63"
+  },
+  {
+   "title": "Version management with bumpversion",
+   "criterion": ".bumpversion.cfg keeps the version in sync across setup.cfg and docs/conf.py, and CONTRIBUTING documents bump2version usage.",
+   "files": [
+    ".bumpversion.cfg",
+    "setup.cfg",
+    "docs/conf.py",
+    "CONTRIBUTING.md"
+   ],
+   "kind": "packaging",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i64"
+  },
+  {
+   "title": "Remove debug prints and dead guard in create_tensors",
+   "criterion": "`print(idx)`, `print(list(example_set)[:20])`, the unused example_set and the odd `if idx < num_tokens` guard are removed from create_tensors, along with the debug print in the balancing helper.",
+   "files": [
+    "neurox/interpretation/utils.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i65"
+  },
+  {
+   "title": "Reject balance_data for regression in create_tensors",
+   "criterion": "create_tensors raises ValueError when balance_data=True with task_type='regression'.",
+   "files": [
+    "neurox/interpretation/utils.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i66"
+  },
+  {
+   "title": "Validate source_tokens length when returning predictions",
+   "criterion": "With return_predictions, evaluate_probe raises ValueError if the flattened source_tokens length differs from X rows, instead of a mid-loop StopIteration or silently ignoring extra tokens.",
+   "files": [
+    "neurox/interpretation/linear_probe.py",
+    "tests/interpretation/test_linear_probe.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i67"
+  },
+  {
+   "title": "evaluate_probe uses the probe's existing device",
+   "criterion": "evaluate_probe infers the probe's current device and moves only the input batches, rather than moving the model to CUDA just because CUDA is available.",
+   "files": [
+    "neurox/interpretation/linear_probe.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i68"
+  },
+  {
+   "title": "Validate probe training hyperparameters",
+   "criterion": "_train_probe rejects nonpositive batch_size/epochs/learning rate, negative lambda penalties and NaN inputs with ValueError.",
+   "files": [
+    "neurox/interpretation/linear_probe.py",
+    "tests/interpretation/test_linear_probe.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i69"
+  },
+  {
+   "title": "Boundary behavior for get_top/bottom_neurons percentage",
+   "criterion": "percentage outside [0, 1] raises ValueError. percentage 0 returns no neurons, and all-zero class weights are handled deterministically, with tests.",
+   "files": [
+    "neurox/interpretation/linear_probe.py",
+    "tests/interpretation/test_linear_probe.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i70"
+  },
+  {
+   "title": "get_random_neurons strict comparison and seeding",
+   "criterion": "get_random_neurons uses a strict comparison so probability 0 selects nothing, validates the probability range, and accepts a random_state.",
+   "files": [
+    "neurox/interpretation/linear_probe.py",
+    "tests/interpretation/test_linear_probe.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i71"
+  },
+  {
+   "title": "Validate batch_generator inputs",
+   "criterion": "batch_generator raises on X/y length mismatch and on non-positive or non-integer batch_size, preventing the batch_size=0 infinite loop. Tests are added.",
+   "files": [
+    "neurox/interpretation/utils.py",
+    "tests/interpretation/test_utils.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i72"
+  },
+  {
+   "title": "Fix test_linear_probe_forward to test forward pass",
+   "criterion": "The test passes a valid (batch, 50) tensor to a real or properly mocked probe, and asserts that the forward call happens and the output shape is (batch, 5).",
+   "files": [
+    "tests/interpretation/test_linear_probe.py"
+   ],
+   "kind": "tests",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i73"
+  },
+  {
+   "title": "Text drawn once, not darken times, in visualize_activations",
+   "criterion": "The text-drawing loop is moved outside the `for _ in range(darken)` loop, and the mutable default colors list becomes a tuple.",
+   "files": [
+    "neurox/analysis/visualization.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i74"
+  },
+  {
+   "title": "Explicit validation of visualize_activations parameters",
+   "criterion": "Asserts are replaced with ValueError/TypeError checks for two colors, positive char_limit/font_size, non-negative integer darken and finite scores, with tests.",
+   "files": [
+    "neurox/analysis/visualization.py",
+    "tests/analysis/test_visualization.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i75"
+  },
+  {
+   "title": "Handle degenerate inputs in clustering functions",
+   "criterion": "The clustering functions validate 2-D finite input, return a single cluster for one neuron, and raise clear errors for empty or too-small matrices.",
+   "files": [
+    "neurox/interpretation/clustering.py",
+    "tests/interpretation/test_clustering.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i76"
+  },
+  {
+   "title": "Pass linkage method through extract_independent_neurons",
+   "criterion": "extract_independent_neurons accepts a `method` parameter and forwards it to create_correlation_clusters.",
+   "files": [
+    "neurox/interpretation/clustering.py"
+   ],
+   "kind": "feature",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i77"
+  },
+  {
+   "title": "Fix multi-digit layer parsing in train_classifier example",
+   "criterion": "The forward/backward pairing check uses `l[1:]` instead of `l[1]`, so layers such as f10/b10 validate correctly.",
+   "files": [
+    "examples/train_classifier.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i78"
+  },
+  {
+   "title": "Fix evaluate_probe docstring parameter name",
+   "criterion": "The evaluate_probe docstring documents `metric` (not `metrics`) and lists the valid values.",
+   "files": [
+    "neurox/interpretation/linear_probe.py"
+   ],
+   "kind": "docs",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i79"
+  },
+  {
+   "title": "Fix get_top_neurons docstring order and typo",
+   "criterion": "The get_top_neurons docstring says the selection is descending and fixes the 'compcomplete' typo.",
+   "files": [
+    "neurox/interpretation/linear_probe.py"
+   ],
+   "kind": "docs",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i80"
+  },
+  {
+   "title": "Fix get_top_words docstring",
+   "criterion": "The get_top_words docstring correctly describes the neuron index and the returned list of (token, score) tuples, with no stale 'relative to X' or top_neurons naming.",
+   "files": [
+    "neurox/analysis/corpus.py"
+   ],
+   "kind": "docs",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i81"
+  }
+ ]
+}

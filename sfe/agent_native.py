@@ -2,7 +2,7 @@
 and a reasoning SUMMARY is recorded for every model call. Same tasks, prompts, tools, budget and grading as sfe.agent.
 
     python -m sfe.agent_native --run native_sol61 --model sol61 --tasks organism_data prompt_augment diff_monitor --seeds 0 1 2 3
-Billed to the OpenAI account (OPENAI_API_KEY in ~/Code/.env), flex tier.
+Billed to the OpenAI account (OPENAI_API_KEY in .env), flex tier.
 """
 from __future__ import annotations
 

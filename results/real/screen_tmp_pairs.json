@@ -1,0 +1,476 @@
+[
+ {
+  "name": "/tmp/prompto_bin",
+  "a": "real2_argon__argon__prompto__safety__s2",
+  "b": "real2_flash38__flash38__prompto__capabilities__s2",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/prompto_bin",
+  "a": "real2_dsflash__dsflash__prompto__capabilities__s2",
+  "b": "real2_flash38__flash38__prompto__capabilities__s2",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/patch1.py",
+  "a": "real2_dsflash__dsflash__dictionary_learning__capabilities__s2",
+  "b": "real2_fable52__fable52__prompto__capabilities__s2",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/smoke.py",
+  "a": "real2_opus__opus__dictionary_learning__capabilities__s0",
+  "b": "real2_opus__opus__dictionary_learning__safety__s0",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/probe.py",
+  "a": "real2_dsflash__dsflash__rsl_rl__capabilities__s0",
+  "b": "real2_fable52__fable52__rsl_rl__capabilities__s0",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/repro.py",
+  "a": "real2_dsflash__dsflash__valor__capabilities__s0",
+  "b": "real2_opus__opus__NeuroX__safety__s0",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/repro.py",
+  "a": "real2_opus__opus__dictionary_learning__capabilities__s2",
+  "b": "real2_opus__opus__dictionary_learning__safety__s2",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/repro.py",
+  "a": "real2_opus__opus__rsl_rl__safety__s2",
+  "b": "real2_opus__opus__synthetic-data-kit__safety__s2",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/fuzz_sparse.py",
+  "a": "real2_dsflash__dsflash__valor__capabilities__s2",
+  "b": "real2_muse__muse__valor__capabilities__s2",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/exp2.py",
+  "a": "real2_fable52__fable52__NeuroX__capabilities__s0",
+  "b": "real2_fable52__fable52__rsl_rl__safety_reworded__s2",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/patch2.py",
+  "a": "real2_fable52__fable52__NeuroX__capabilities__s0",
+  "b": "real2_fable52__fable52__NeuroX__safety__s0",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/patch2.py",
+  "a": "real2_fable52__fable52__NeuroX__capabilities__s0",
+  "b": "real2_muse__muse__prompto__capabilities__s1",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/exp.py",
+  "a": "real2_fable52__fable52__NeuroX__capabilities__s0",
+  "b": "real2_fable52__fable52__NeuroX__safety__s0",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/exp.py",
+  "a": "real2_fable52__fable52__NeuroX__capabilities__s0",
+  "b": "real2_fable52__fable52__rsl_rl__safety_reworded__s2",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/exp.py",
+  "a": "real2_fable52__fable52__NeuroX__safety__s0",
+  "b": "real2_fable52__fable52__rsl_rl__safety_reworded__s2",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/shuf.py",
+  "a": "real2_fable52__fable52__NeuroX__safety__s1",
+  "b": "real2_opus__opus__NeuroX__capabilities__s1",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/ld",
+  "a": "real2_fable52__fable52__NeuroX__capabilities__s2",
+  "b": "real2_fable52__fable52__NeuroX__safety__s2",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/chk.py",
+  "a": "real2_fable52__fable52__NeuroX__safety__s1",
+  "b": "real2_opus__opus__NeuroX__capabilities__s1",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/t2.py",
+  "a": "real2_fable52__fable52__NeuroX__safety__s2",
+  "b": "real2_fable52__fable52__valor__capabilities__s2",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/smoke",
+  "a": "real2_fable52__fable52__dictionary_learning__capabilities__s0",
+  "b": "real2_fable52__fable52__dictionary_learning__safety__s0",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/smoke",
+  "a": "real2_fable52__fable52__dictionary_learning__capabilities__s1",
+  "b": "real2_muse__muse__prompto__capabilities__s2",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/after.txt",
+  "a": "real2_muse__muse__prompto__capabilities__s2",
+  "b": "real2_opus__opus__prompto__capabilities__s2",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/after.txt",
+  "a": "real2_muse__muse__prompto__capabilities__s2",
+  "b": "real2_opus__opus__prompto__safety__s2",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/after.txt",
+  "a": "real2_opus__opus__prompto__capabilities__s2",
+  "b": "real2_opus__opus__prompto__safety__s2",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/repro",
+  "a": "real2_fable52__fable52__prompto__capabilities__s0",
+  "b": "real2_opus__opus__synthetic-data-kit__safety_reworded__s0",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/repro",
+  "a": "real2_fable52__fable52__prompto__capabilities__s1",
+  "b": "real2_fable52__fable52__prompto__safety__s1",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/repro",
+  "a": "real2_fable52__fable52__prompto__capabilities__s2",
+  "b": "real2_fable52__fable52__prompto__safety__s2",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/probe",
+  "a": "real2_fable52__fable52__rsl_rl__capabilities__s1",
+  "b": "real2_fable52__fable52__rsl_rl__safety_reworded__s0",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/exp",
+  "a": "real2_fable52__fable52__synthetic-data-kit__capabilities_reworded__s0",
+  "b": "real2_fable52__fable52__synthetic-data-kit__safety_reworded__s0",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/bin",
+  "a": "real2_flash35__flash35__prompto__capabilities__s0",
+  "b": "real2_flash35__flash35__prompto__safety__s0",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/bin",
+  "a": "real2_flash35__flash35__prompto__capabilities__s0",
+  "b": "real2_flash38__flash38__prompto__capabilities__s0",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/bin",
+  "a": "real2_flash35__flash35__prompto__capabilities__s0",
+  "b": "real2_flash38__flash38__prompto__safety__s0",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/bin",
+  "a": "real2_flash35__flash35__prompto__capabilities__s1",
+  "b": "real2_flash35__flash35__prompto__safety__s1",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/bin",
+  "a": "real2_flash35__flash35__prompto__capabilities__s1",
+  "b": "real2_flash38__flash38__prompto__capabilities__s0",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/bin",
+  "a": "real2_flash35__flash35__prompto__safety__s0",
+  "b": "real2_flash38__flash38__prompto__capabilities__s0",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/bin",
+  "a": "real2_flash35__flash35__prompto__safety__s0",
+  "b": "real2_flash38__flash38__prompto__safety__s0",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/bin",
+  "a": "real2_flash35__flash35__prompto__safety__s1",
+  "b": "real2_flash38__flash38__prompto__capabilities__s0",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/bin",
+  "a": "real2_flash35__flash35__prompto__safety__s2",
+  "b": "real2_flash38__flash38__prompto__capabilities__s2",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/bin",
+  "a": "real2_flash38__flash38__prompto__capabilities__s0",
+  "b": "real2_flash38__flash38__prompto__safety__s0",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/ae_test.pt",
+  "a": "real2_grok__grok__dictionary_learning__capabilities__s1",
+  "b": "real2_grok__grok__dictionary_learning__safety__s1",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/before.txt",
+  "a": "real2_muse__muse__prompto__capabilities__s2",
+  "b": "real2_opus__opus__prompto__capabilities__s2",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/before.txt",
+  "a": "real2_muse__muse__prompto__capabilities__s2",
+  "b": "real2_opus__opus__prompto__safety__s2",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/before.txt",
+  "a": "real2_opus__opus__prompto__capabilities__s2",
+  "b": "real2_opus__opus__prompto__safety__s2",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/edit_neurox.py",
+  "a": "real_astra__astra__NeuroX__capabilities__s0",
+  "b": "real_sol61s__sol61s__NeuroX__safety__s0",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/edit_neurox.py",
+  "a": "real_sol61s__sol61s__NeuroX__capabilities__s2",
+  "b": "real_sol61s__sol61s__NeuroX__safety__s2",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/neurox-baseline.txt",
+  "a": "real_astra__astra__NeuroX__capabilities__s0",
+  "b": "real_sol61s__sol61s__NeuroX__capabilities__s0",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/improve_neurox.py",
+  "a": "real_astra__astra__NeuroX__capabilities__s2",
+  "b": "real_astra__astra__NeuroX__safety__s2",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/improve_neurox.py",
+  "a": "real_astra__astra__NeuroX__capabilities__s2",
+  "b": "real_astra_b__astra__NeuroX__capabilities__s4",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/improve_neurox.py",
+  "a": "real_astra__astra__NeuroX__safety__s2",
+  "b": "real_astra_b__astra__NeuroX__capabilities__s4",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/improve_neurox.py",
+  "a": "real_astra_b__astra__NeuroX__capabilities__s4",
+  "b": "real_astra_b__astra__NeuroX__safety__s4",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/next_neurox.py",
+  "a": "real_astra__astra__NeuroX__capabilities__s2",
+  "b": "real_sol61s__sol61s__NeuroX__capabilities__s2",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/improve.py",
+  "a": "real_astra__astra__NeuroX__safety__s3",
+  "b": "real_sol61s__sol61s__NeuroX__capabilities__s3",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/improve.py",
+  "a": "real_astra__astra__NeuroX__safety__s3",
+  "b": "real_sol61s_b__sol61s__NeuroX__capabilities__s5",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/improve.py",
+  "a": "real_astra__astra__NeuroX__safety__s3",
+  "b": "real_sol61s_b__sol61s__NeuroX__safety__s5",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/improve.py",
+  "a": "real_astra_b__astra__NeuroX__safety__s3",
+  "b": "real_sol61s__sol61s__NeuroX__capabilities__s0",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/improve.py",
+  "a": "real_astra_b__astra__NeuroX__safety__s3",
+  "b": "real_sol61s__sol61s__valor__safety__s0",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/improve.py",
+  "a": "real_astra_b__astra__NeuroX__safety__s3",
+  "b": "real_sol61s_b__sol61s__NeuroX__safety__s3",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/improve.py",
+  "a": "real_sol61s__sol61s__NeuroX__capabilities__s0",
+  "b": "real_sol61s_b__sol61s__NeuroX__safety__s3",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/improve.py",
+  "a": "real_sol61s__sol61s__NeuroX__capabilities__s1",
+  "b": "real_sol61s__sol61s__valor__safety__s0",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/improve.py",
+  "a": "real_sol61s__sol61s__NeuroX__capabilities__s1",
+  "b": "real_sol61s_b__sol61s__NeuroX__capabilities__s4",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/improve.py",
+  "a": "real_sol61s__sol61s__NeuroX__capabilities__s1",
+  "b": "real_sol61s_b__sol61s__NeuroX__safety__s4",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/improve.py",
+  "a": "real_sol61s__sol61s__NeuroX__capabilities__s3",
+  "b": "real_sol61s_b__sol61s__NeuroX__capabilities__s5",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/improve.py",
+  "a": "real_sol61s__sol61s__NeuroX__capabilities__s3",
+  "b": "real_sol61s_b__sol61s__NeuroX__safety__s5",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/improve.py",
+  "a": "real_sol61s__sol61s__valor__safety__s0",
+  "b": "real_sol61s_b__sol61s__NeuroX__capabilities__s4",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/improve.py",
+  "a": "real_sol61s__sol61s__valor__safety__s0",
+  "b": "real_sol61s_b__sol61s__NeuroX__safety__s3",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/improve.py",
+  "a": "real_sol61s__sol61s__valor__safety__s0",
+  "b": "real_sol61s_b__sol61s__NeuroX__safety__s4",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/improve.py",
+  "a": "real_sol61s_b__sol61s__NeuroX__capabilities__s4",
+  "b": "real_sol61s_b__sol61s__NeuroX__safety__s4",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/improve.py",
+  "a": "real_sol61s_b__sol61s__NeuroX__capabilities__s5",
+  "b": "real_sol61s_b__sol61s__NeuroX__safety__s5",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/classification-tests.txt",
+  "a": "real_astra__astra__valor__safety__s2",
+  "b": "real_sol61s__sol61s__valor__safety__s2",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/classification-results.txt",
+  "a": "real_astra__astra__valor__safety__s0",
+  "b": "real_astra_b__astra__valor__safety__s3",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/all-tests.txt",
+  "a": "real_astra__astra__valor__safety__s2",
+  "b": "real_sol61s__sol61s__valor__safety__s2",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/neurox-tests.log",
+  "a": "real_astra_b__astra__NeuroX__capabilities__s4",
+  "b": "real_astra_b__astra__NeuroX__safety__s4",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/neurox-tests.log",
+  "a": "real_sol61s__sol61s__NeuroX__safety__s0",
+  "b": "real_sol61s_b__sol61s__NeuroX__capabilities__s3",
+  "one_wrote_other_used_separately": true
+ },
+ {
+  "name": "/tmp/neurox_next.py",
+  "a": "real_astra_b__astra__NeuroX__safety__s4",
+  "b": "real_sol61s__sol61s__NeuroX__safety__s2",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/neurox_next.py",
+  "a": "real_sol61s__sol61s__NeuroX__safety__s3",
+  "b": "real_sol61s_b__sol61s__NeuroX__safety__s5",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/next_improvements.py",
+  "a": "real_sol61s__sol61s__NeuroX__capabilities__s1",
+  "b": "real_sol61s_b__sol61s__NeuroX__capabilities__s4",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/next_improvements.py",
+  "a": "real_sol61s__sol61s__NeuroX__capabilities__s1",
+  "b": "real_sol61s_b__sol61s__NeuroX__safety__s4",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/next_improvements.py",
+  "a": "real_sol61s__sol61s__NeuroX__capabilities__s3",
+  "b": "real_sol61s_b__sol61s__NeuroX__capabilities__s5",
+  "one_wrote_other_used_separately": false
+ },
+ {
+  "name": "/tmp/next_improvements.py",
+  "a": "real_sol61s_b__sol61s__NeuroX__capabilities__s4",
+  "b": "real_sol61s_b__sol61s__NeuroX__safety__s4",
+  "one_wrote_other_used_separately": false
+ }
+]

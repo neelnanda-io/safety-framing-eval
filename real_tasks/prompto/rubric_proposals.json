@@ -1,0 +1,1096 @@
+[
+ [
+  {
+   "title": "Gemini parse_parts_value crashes while building its own error message",
+   "detail": "In parse_parts_value the local variable `type = part.get(\"type\")` shadows the builtin. When get_file fails, the except clause formats `type(err).__name__`, which calls a str and raises `TypeError: 'str' object is not callable`. The real error is lost. Rename the local to `media_type` (and do the same in the openai, anthropic and vertexai utils), then add a test where get_file is patched to raise.",
+   "files": [
+    "src/prompto/apis/gemini/gemini_utils.py",
+    "src/prompto/apis/vertexai/vertexai_utils.py",
+    "src/prompto/apis/openai/openai_utils.py",
+    "src/prompto/apis/anthropic/anthropic_utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Ollama _query_string silently returns None for unrecognised ResponseError",
+   "detail": "In OllamaAPI._query_string, the `except ResponseError` block only raises when the message contains 'try pulling it first' or 'invalid options'. Any other ResponseError falls through, so the coroutine returns None. That error is also never written to the log file. Add an else branch that logs via log_error_response_query/write_log_message and re-raises, and add a test for it.",
+   "files": [
+    "src/prompto/apis/ollama/ollama.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "HuggingfaceTGI check_prompt_dict accepts lists containing non-strings",
+   "detail": "In HuggingfaceTGIAPI.check_prompt_dict, the `elif isinstance(prompt, list)` branch has no else after the all-str check. A prompt such as `['a', 1]` or a list of dicts therefore passes validation and only fails at query time. Append TYPE_ERROR in that missing else.",
+   "files": [
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "HuggingfaceTGI sets openai.api_type to the endpoint URL",
+   "detail": "_obtain_model_inputs does `openai.api_type = api_endpoint`, which writes a URL into the global api_type. Remove this global mutation, since the client is configured explicitly. The comment 'default is chat' also contradicts the actual default 'completion'; fix it.",
+   "files": [
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Remove race-prone global openai module mutation",
+   "detail": "OpenAIAPI._obtain_model_inputs and AzureOpenAIAPI._obtain_model_inputs set `openai.api_key`, `api_type`, `azure_endpoint` and `api_version` on the module for every request. Concurrent tasks using different model-specific keys overwrite each other's globals. The client objects already receive these values, so delete the global assignments.",
+   "files": [
+    "src/prompto/apis/openai/openai.py",
+    "src/prompto/apis/azure_openai/azure_openai.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Azure API version is documented optional but required at runtime",
+   "detail": "check_prompt_dict treats AZURE_OPENAI_API_VERSION as optional and only warns. However _obtain_model_inputs calls get_environment_variable, which raises KeyError when it is unset, and AZURE_API_VERSION_DEFAULT is never used. Catch the KeyError and fall back to AZURE_API_VERSION_DEFAULT, then test that behaviour.",
+   "files": [
+    "src/prompto/apis/azure_openai/azure_openai.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Azure/Ollama query() crash with AttributeError on mixed-type lists",
+   "detail": "In AzureOpenAIAPI.query and OllamaAPI.query, the history branch calls `d.keys()` without first checking that every element is a dict. A prompt like `[{'role':...}, 1]` raises AttributeError instead of TYPE_ERROR. Add `all(isinstance(m, dict) ...)` as OpenAIAPI.query already does.",
+   "files": [
+    "src/prompto/apis/azure_openai/azure_openai.py",
+    "src/prompto/apis/ollama/ollama.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Empty-list prompts pass validation everywhere",
+   "detail": "In every API's check_prompt_dict and query, `all(isinstance(m, str) for m in [])` is True. An empty prompt list is therefore accepted as a chat with zero turns, producing `response == []` and no API call. Reject empty lists explicitly in check_prompt_dict and query for openai, azure, anthropic, gemini, vertexai, ollama and huggingface_tgi.",
+   "files": [
+    "src/prompto/apis/openai/openai.py",
+    "src/prompto/apis/anthropic/anthropic.py",
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py",
+    "src/prompto/apis/ollama/ollama.py",
+    "src/prompto/apis/azure_openai/azure_openai.py",
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Gemini/Vertex history with only a system message sends a 'system' role turn",
+   "detail": "In _query_history, a prompt consisting of a single system dict passes validation. The code then uses it as the system_instruction and also sends `prompt[-1]` (the same system message) as the user turn with role 'system'. That turn is invalid. Require at least one non-system message after the system message in check_prompt_dict and query.",
+   "files": [
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Gemini/Vertex _query_chat IndexError path records wrong safety attributes",
+   "detail": "When an IndexError occurs at turn k>0, `response` still refers to the previous turn's response, so its safety attributes are reported for the blocked turn. In addition, `prompt_dict['safety_attributes']` is set to a single dict while the success path uses a list per turn. Instead, append the blocked attributes to safety_attributes_list and store that list, without referencing a stale `response`.",
+   "files": [
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Bare except clauses in Gemini/Vertex blocked-response handling",
+   "detail": "The `try: ... except:` around process_safety_attributes in the IndexError handlers also catches KeyboardInterrupt and SystemExit. It also hides an UnboundLocalError when `response` was never assigned. Replace it with `except Exception` and initialise `response = None` before the try.",
+   "files": [
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Success logging crashes on None or list responses",
+   "detail": "log_success_response_query and log_success_response_chat do `response_text[:50]`. OpenAI's process_response returns None when content is null (refusals or tool calls), and returns a list when n>1. These cases either raise TypeError after a successful API call, which then triggers a retry, or log a list slice. Coerce with `str(response_text)` and handle None.",
+   "files": [
+    "src/prompto/utils.py",
+    "src/prompto/apis/openai/openai_utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Anthropic process_response assumes all content blocks are text",
+   "detail": "`response.content[0].text` raises AttributeError for non-text blocks such as tool_use. Filter to blocks with `type == 'text'` and test with mocked Message content.",
+   "files": [
+    "src/prompto/apis/anthropic/anthropic_utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Anthropic TYPE_ERROR/docstrings mention role 'model' instead of 'assistant'",
+   "detail": "The TYPE_ERROR message in anthropic.py says roles must be 'user' or 'model', but anthropic_chat_roles is {'user', 'assistant'}. Fix the message and the parse_content_value docstring, which describes 'url'/'detail' while the code reads 'media_type'/'media'. Update TYPE_ERROR_MSG in tests/apis/anthropic/test_anthropic.py to match.",
+   "files": [
+    "src/prompto/apis/anthropic/anthropic.py",
+    "src/prompto/apis/anthropic/anthropic_utils.py",
+    "tests/apis/anthropic/test_anthropic.py"
+   ],
+   "kind": "docs"
+  },
+  {
+   "title": "OpenAI local images always labelled image/jpeg",
+   "detail": "parse_content_value in openai_utils builds `data:image/jpeg;base64,...` regardless of file type, so PNG, GIF and WebP files are mislabelled. Derive the MIME type with mimetypes.guess_type. Also accept `http://` and `data:` URLs rather than only `https://`.",
+   "files": [
+    "src/prompto/apis/openai/openai_utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Vertex local video ignores mime_type and leaks file handle",
+   "detail": "parse_parts_value requires mime_type for video, but for local files it passes a hard-coded `mime_type='video/mp4'`. It also does `open(...).read()` without closing the file. Use the provided mime_type inside a `with` block.",
+   "files": [
+    "src/prompto/apis/vertexai/vertexai_utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Deduplicate encode_image and Gemini/Vertex safety-setting tables",
+   "detail": "encode_image is defined identically in openai_utils and anthropic_utils. The five-branch safety_filter\u2192HarmBlockThreshold mapping is also copy-pasted in GeminiAPI._obtain_model_inputs and VertexAIAPI._obtain_model_inputs. Extract a shared helper (e.g. a dict mapping safety filter name to threshold) and reuse the valid-filter list in check_prompt_dict.",
+   "files": [
+    "src/prompto/apis/openai/openai_utils.py",
+    "src/prompto/apis/anthropic/anthropic_utils.py",
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Wrong return-type annotations/docstrings for _obtain_model_inputs",
+   "detail": "Gemini and Vertex declare a 6-tuple return including `list | None` but return 5 values. OpenAI and HF-TGI docstrings mention AsyncAzureOpenAI. Correct the annotations and docstrings. Also fix the Vertex check_environment_variables docstring, which says VERTEXAI_LOCATION instead of VERTEXAI_LOCATION_ID.",
+   "files": [
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py",
+    "src/prompto/apis/openai/openai.py",
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py"
+   ],
+   "kind": "docs"
+  },
+  {
+   "title": "Quart endpoint check has no timeout or exception handling",
+   "detail": "QuartAPI.check_environment_variables calls `requests.get(endpoint)` without a timeout. A ConnectionError propagates and crashes check_experiment. Add `timeout=` and wrap the call in try/except, appending a ValueError issue on failure as OllamaAPI does.",
+   "files": [
+    "src/prompto/apis/quart/quart.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Quart server ignores per-prompt generation options",
+   "detail": "QuartAPI sends `options: generation_config`, but quart_api.generate only uses the global `max_length` and drops `data['options']`, so parameters in the experiment file are silently ignored. Pass the options as kwargs to `pipe()`, and return HTTP 400 when 'text' is missing.",
+   "files": [
+    "src/prompto/apis/quart/quart_api.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "TestAPI crashes on boolean raise_error parameter",
+   "detail": "TestAPI.query calls `raise_error_option.lower()`. JSON `\"raise_error\": true` yields a Python bool, which raises AttributeError. Handle bools, e.g. with `str(raise_error_option).lower()`.",
+   "files": [
+    "src/prompto/apis/testing/testing_api.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "check_multimedia discards path errors (set.union result unused)",
+   "detail": "is_valid_jsonl does `multimedia_path_errors.union(path_errors)`, which returns a new set that is thrown away. The 'multimedia paths that do not exist' summary therefore never fires. Use `.update(path_errors)` and add a test.",
+   "files": [
+    "src/prompto/scripts/check_experiment.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "check_multimedia crashes on malformed items",
+   "detail": "If multimedia is not a list or dict, the function still iterates over it. If an item is not a dict, `'type' not in m` behaves oddly. If 'type' is missing, the later `m['type'] == 'video'` raises KeyError and aborts the whole check. Return early on a non-list, `continue` after a non-dict item, and use `m.get('type')`.",
+   "files": [
+    "src/prompto/scripts/check_experiment.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "is_valid_jsonl crashes when prompt/model_name missing",
+   "detail": "After recording KeyError issues for a missing 'prompt' or 'model_name', the code still calls `ASYNC_APIS[api].check_prompt_dict(data)`. That method indexes `prompt_dict['prompt']` and `['model_name']`, raising an uncaught KeyError. A non-dict JSON line raises TypeError in the same way. Only call check_prompt_dict when the required keys exist, and validate that `data` is a dict.",
+   "files": [
+    "src/prompto/scripts/check_experiment.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "check_experiment exits 0 on invalid file",
+   "detail": "main() only logs an error when the file is invalid, so the process exit status is 0. That makes the command useless in CI or scripts. Call `sys.exit(1)` when it is invalid. Also remove the dead `if log_file is not None` check, which is always true after the default is assigned.",
+   "files": [
+    "src/prompto/scripts/check_experiment.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Experiment.process divides by zero on empty experiment",
+   "detail": "`processing_time / self.number_queries` raises ZeroDivisionError for an empty file. The subsequent open of output_completed_jsonl_file_path also raises FileNotFoundError because nothing was written. Guard against `number_queries == 0` (or reject empty files in __init__) and add a test.",
+   "files": [
+    "src/prompto/experiment.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "CSV experiments produce non-JSON-serialisable / invalid JSON values",
+   "detail": "_read_input_file builds prompt dicts from pandas rows. Values are numpy scalars (np.int64, np.float64) and missing cells are NaN. `json.dump` in process() then fails on int64, or emits invalid `NaN` tokens. Convert values to native Python types and drop or replace NaN. Also use `col.startswith('parameters-')` rather than a substring test.",
+   "files": [
+    "src/prompto/experiment.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "CSV path rewriting uses str.replace on full path",
+   "detail": "In process(), `self.input_file_path.replace('.csv', '.jsonl')` and `output_input_jsonl_file_out_path.replace('.jsonl', '.csv')` rewrite any occurrence in the path, including directory names such as `data.csv_runs/`. Use removesuffix or os.path.splitext.",
+   "files": [
+    "src/prompto/experiment.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Zero rate limit in max_queries_dict causes ZeroDivisionError",
+   "detail": "check_max_queries_dict only rejects values < 0, so 0 is accepted. send_requests then computes `60 / rate_limit` and fails. Reject values <= 0 and bools, which are int subclasses. Apply the same bool rejection to Settings max_queries and max_attempts.",
+   "files": [
+    "src/prompto/utils.py",
+    "src/prompto/settings.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Settings uses mutable default for max_queries_dict",
+   "detail": "`max_queries_dict: dict = {}` is a shared mutable default that is stored by reference. Use `None` and create a new dict (or copy the provided one).",
+   "files": [
+    "src/prompto/settings.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "ExperimentPipeline.run busy-waits at 100% CPU",
+   "detail": "The `while True` loop polls os.listdir with no sleep when the input folder is empty. Add a configurable poll interval, e.g. `time.sleep(1)`. Also catch exceptions from Experiment construction so one bad file does not kill the long-running pipeline.",
+   "files": [
+    "src/prompto/experiment_pipeline.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "move_file fails across filesystems",
+   "detail": "move_file uses os.rename, which raises OSError (EXDEV) when the source and destination are on different mounts. This is common when moving a user's file into data/input. Use shutil.move.",
+   "files": [
+    "src/prompto/utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "run_experiment may process a stale file with the same name",
+   "detail": "parse_file_path_and_check_in_input only copies or moves when the basename is absent from the input folder. If an older file with that name already exists there, the user's specified file is ignored and the stale one is run. Compare real paths, then either overwrite or raise an error. Use os.path.join instead of f-string paths.",
+   "files": [
+    "src/prompto/scripts/run_experiment.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Deduplicate max-queries/env loading between CLI scripts",
+   "detail": "run_pipeline.main reimplements load_max_queries_json and load_env_file from run_experiment, and check_experiment reimplements load_env_file too. Import the shared helpers. Also fix load_judge_args: its docstring omits templates_arg and its return annotation says `str` where a dict is returned.",
+   "files": [
+    "src/prompto/scripts/run_pipeline.py",
+    "src/prompto/scripts/run_experiment.py",
+    "src/prompto/scripts/check_experiment.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "load_judge_folder template key truncates at first dot",
+   "detail": "`template.split('.')[0]` turns 'v1.2-template.txt' into 'v1'. Two templates can then collide and silently overwrite each other. Use `os.path.splitext(os.path.basename(template))[0]` and raise an error on duplicate keys.",
+   "files": [
+    "src/prompto/judge.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Judge.create_judge_inputs breaks on braces or missing responses",
+   "detail": "Templates are rendered with str.format, so a template containing literal braces (e.g. a JSON example) raises KeyError or ValueError. A completed response without 'response' also raises KeyError. Use `.replace('{INPUT_PROMPT}', ...)`-style substitution or document the need to escape braces. Validate or skip entries missing 'response' with a clear error, and add tests.",
+   "files": [
+    "src/prompto/judge.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Scorers fail on list/None responses",
+   "detail": "In scorer.py, includes() does `expected in response`. That raises TypeError when response is None and checks list membership when response is a list (chat prompts). Both match() and includes() raise KeyError without 'expected_response'. Handle these types explicitly (e.g. score the last chat turn) and raise a descriptive error.",
+   "files": [
+    "src/prompto/scorer.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "obtain_missing_id_jsonl is O(n\u00b7m) and leaks file handles",
+   "detail": "get_ids returns a list, so `data[id_name] not in output_file_ids` is a linear scan per line; return a set instead. The `sum(1 for _ in open(file))` line counts leave files unclosed. The new file is reopened in append mode for every line, which shadows `f` and duplicates lines on rerun; open it once with 'w'. Replace the bare except with `except (json.JSONDecodeError, KeyError)`.",
+   "files": [
+    "src/prompto/scripts/obtain_missing_id_jsonl.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "convert_images defaults to cwd and destroys PNG transparency",
+   "detail": "`--folder` is not required, so it becomes None and `os.listdir(None)` lists the current directory, rewriting every image there. Make the argument required. Converting PNGs to RGB also discards the alpha channel and the originals are overwritten in place; keep RGBA for PNG or write to a separate output folder.",
+   "files": [
+    "src/prompto/scripts/convert_images.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "parse_list_arg keeps empty items",
+   "detail": "Inputs such as 'judge1,,judge2' or a trailing comma yield '' in the list, which later fails as an unknown judge or scorer. Filter out empty strings and test this.",
+   "files": [
+    "src/prompto/utils.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Fix CD workflow: deprecated artifact actions and conflicting auth",
+   "detail": "cd.yaml uses actions/upload-artifact@v3 and download-artifact@v3, which are deprecated and now fail, so move to v4. The publish job also requests OIDC `id-token: write` (trusted publishing) while passing `password: secrets.PYPI_API_TOKEN`; pick one auth method. In gen_ref_pages.py, CODE_PATH=Path() scans the whole repo, so modules are documented as 'src.prompto...' and .venv files are included; set CODE_PATH=Path('src').",
+   "files": [
+    ".github/workflows/cd.yaml",
+    "docs/gen_ref_pages.py"
+   ],
+   "kind": "packaging"
+  }
+ ],
+ [
+  {
+   "title": "Fix unraised ResponseError in OllamaAPI._query_string",
+   "detail": "In `OllamaAPI._query_string`, catching `ResponseError` only re-raises if the error message contains 'try pulling it first' or 'invalid options'. For any other `ResponseError` (e.g., server 500 or model crash), execution falls through the `except` block without logging or raising, causing `_query_string` to implicitly return `None` instead of a dict or raising an exception for retry. Add an `else:` branch in the `except ResponseError as err:` block (or let it fall through to the general logging/re-raising logic) so all other `ResponseError`s are logged to `self.log_file` and re-raised.",
+   "files": [
+    "src/prompto/apis/ollama/ollama.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix IndexError on empty list prompt in Anthropic, Gemini, and VertexAI APIs",
+   "detail": "In `AnthropicAPI.check_prompt_dict`, `AnthropicAPI.query`, `GeminiAPI.check_prompt_dict`, `GeminiAPI.query`, `VertexAIAPI.check_prompt_dict`, and `VertexAIAPI.query`, when `prompt_dict['prompt']` is an empty list `[]`, `all(isinstance(message, str) ...)` is vacuously `True` (sending an empty list to `_query_chat`, where `message_index` and `message` are unbound if an error occurs or sending 0 messages), or if checked against dicts, indexing `prompt_dict['prompt'][0]` raises `IndexError`. Validate `len(prompt_dict['prompt']) > 0` before checking elements or indexing `[0]`, and append `TYPE_ERROR` / raise `TYPE_ERROR` if the list is empty.",
+   "files": [
+    "src/prompto/apis/anthropic/anthropic.py",
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py",
+    "src/prompto/apis/openai/openai.py",
+    "src/prompto/apis/azure_openai/azure_openai.py",
+    "src/prompto/apis/ollama/ollama.py",
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix missing TYPE_ERROR when HuggingfaceTGIAPI.check_prompt_dict receives non-string list",
+   "detail": "In `HuggingfaceTGIAPI.check_prompt_dict`, the `elif isinstance(prompt_dict['prompt'], list):` branch checks `if all([isinstance(message, str) for message in prompt_dict['prompt']]): pass`, but has no `else:` branch! Consequently, passing a list of integers or dicts (e.g., `[1, 2]` or `[{'role': 'user'}]`) passes validation with `issues == []`, only to fail later during `query()`. Add an `else: issues.append(TYPE_ERROR)` inside the `elif isinstance(..., list):` block.",
+   "files": [
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix AttributeError in AzureOpenAIAPI.query when prompt is a list of non-dicts",
+   "detail": "In `AzureOpenAIAPI.query`, the `elif all([set(d.keys()) == {'role', 'content'} ... for d in prompt_dict['prompt']])` branch does not check `all(isinstance(d, dict) for d in prompt_dict['prompt'])` first (unlike `check_prompt_dict` and `OpenAIAPI.query`). If `prompt_dict['prompt']` is `[1, 2]`, calling `d.keys()` raises `AttributeError: 'int' object has no attribute 'keys'` instead of raising `TYPE_ERROR`. Add `all(isinstance(d, dict) for d in prompt_dict['prompt']) and` before calling `d.keys()`, and do the same in `OllamaAPI.query`.",
+   "files": [
+    "src/prompto/apis/azure_openai/azure_openai.py",
+    "src/prompto/apis/ollama/ollama.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix discarded set union result in check_experiment.py",
+   "detail": "In `src/prompto/scripts/check_experiment.py` inside `is_valid_jsonl`, `multimedia_path_errors.union(path_errors)` is called without assigning the result or using `.update()`. Because `set.union()` returns a new set without mutating in place, `multimedia_path_errors` always remains empty `set()`, and the multimedia path error summary log block is dead code. Change `multimedia_path_errors.union(path_errors)` to `multimedia_path_errors.update(path_errors)`.",
+   "files": [
+    "src/prompto/scripts/check_experiment.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix crashes in check_multimedia when multimedia is not a list or dict",
+   "detail": "In `src/prompto/scripts/check_experiment.py`, `check_multimedia` appends a `TypeError` when `type(multimedia) is not list`, but then immediately loops `for m in multimedia:`. If `multimedia` is an `int` or `None`, `for m in multimedia` raises `TypeError: 'int' object is not iterable`. Furthermore, inside the loop, if `type(m) is not dict` or `'type' not in m`, execution still evaluates `if m['type'] == 'video':`, raising `TypeError` or `KeyError`. Return early when `multimedia` is not a list, `continue` when `m` is not a `dict`, and use `m.get('type') == 'video'`.",
+   "files": [
+    "src/prompto/scripts/check_experiment.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix KeyError in check_prompt_dict when prompt or model_name is missing",
+   "detail": "In `src/prompto/scripts/check_experiment.py`, `is_valid_jsonl` records a `KeyError` in `issues` if `'prompt'` or `'model_name'` is missing from `data`, and then still calls `ASYNC_APIS[data['api']].check_prompt_dict(data)`. Every `check_prompt_dict` implementation directly indexes `prompt_dict['prompt']` and `prompt_dict['model_name']`, causing `check_experiment` to crash with an unhandled `KeyError` instead of logging the validation failure. Either guard the `check_prompt_dict` call in `is_valid_jsonl` on `'prompt' in data and 'model_name' in data`, or use `.get()` inside `check_prompt_dict` implementations.",
+   "files": [
+    "src/prompto/scripts/check_experiment.py",
+    "src/prompto/apis/anthropic/anthropic.py",
+    "src/prompto/apis/azure_openai/azure_openai.py",
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py",
+    "src/prompto/apis/ollama/ollama.py",
+    "src/prompto/apis/openai/openai.py",
+    "src/prompto/apis/quart/quart.py",
+    "src/prompto/apis/vertexai/vertexai.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Reject zero and boolean values in check_max_queries_dict and Settings",
+   "detail": "In `src/prompto/utils.py`, `check_max_queries_dict` checks `elif sub_value < 0:` and `elif value < 0:`, allowing `0` as a rate limit, which later causes `ZeroDivisionError` in `Experiment.send_requests` (`request_interval = 60 / rate_limit`). Additionally, in Python `isinstance(True, int)` is `True`, so booleans pass `isinstance(x, int)` checks in `Settings.__init__`, `Settings.max_queries`, `Settings.max_attempts`, and `check_max_queries_dict`. Change `< 0` to `<= 0` in `check_max_queries_dict` and reject `isinstance(x, bool)` in both `check_max_queries_dict` and `Settings`.",
+   "files": [
+    "src/prompto/utils.py",
+    "src/prompto/settings.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Fix mutable default argument in Settings.__init__",
+   "detail": "In `src/prompto/settings.py`, `Settings.__init__` defines `max_queries_dict: dict[str, int | dict[str, int]] = {}`. Using a mutable dict default shares the same dict instance across all `Settings` objects created without specifying `max_queries_dict`. Default `max_queries_dict` to `None` and set `self.max_queries_dict = {} if max_queries_dict is None else max_queries_dict`.",
+   "files": [
+    "src/prompto/settings.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix group_prompts rate_limit fallback when group has a default rate limit in max_queries_dict",
+   "detail": "In `Experiment.group_prompts` (`src/prompto/experiment.py`), when `self.settings.max_queries_dict` has a dict for a group/API (e.g. `{'openai': {'default': 20, 'gpt-4': 5}}`) and a prompt has `model_name='gpt-3.5'` (not in `max_queries_dict['openai']`), the code checks `if key not in grouped_dict:` where `key` is `'openai'`. If `'default'` was NOT specified in `max_queries_dict['openai']` (e.g. `{'openai': {'gpt-4': 5}}`), `grouped_dict['openai']` is initialized before the model-specific check with `self.settings.max_queries`, leaving an empty `'openai'` group in `grouped_dict` even when the prompt actually belongs to `'openai-gpt-4'`. Move the `if key not in grouped_dict:` initialization to after the model-specific key resolution, and filter out empty groups (`len(v['prompt_dicts']) == 0`) or avoid creating unused group buckets.",
+   "files": [
+    "src/prompto/experiment.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix ZeroDivisionError in Experiment.process when experiment file has 0 prompts",
+   "detail": "In `Experiment.process` (`src/prompto/experiment.py`), `avg_query_processing_time = processing_time / self.number_queries` raises `ZeroDivisionError` if the input `.jsonl` or `.csv` file is empty (`self.number_queries == 0`). Also, if no queries are sent, `self.output_completed_jsonl_file_path` is never created, so `with open(self.output_completed_jsonl_file_path, 'r')` raises `FileNotFoundError`. Guard the division when `self.number_queries == 0` and ensure `output_completed_jsonl_file_path` exists (or handle its absence).",
+   "files": [
+    "src/prompto/experiment.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix safety_attributes type inconsistency on IndexError in GeminiAPI._query_chat and VertexAIAPI._query_chat",
+   "detail": "In `GeminiAPI._query_chat` and `VertexAIAPI._query_chat`, normal execution sets `prompt_dict['safety_attributes'] = safety_attributes_list` (a `list[dict]`, one per chat turn). However, in the `except IndexError:` handler, `prompt_dict['safety_attributes']` is set to `safety_attributes` (a single `dict`) instead of `safety_attributes_list + [safety_attributes]`, whereas `prompt_dict['response']` is set to `response_list + ['']` (a list). Append `safety_attributes` to `safety_attributes_list` and assign `safety_attributes_list` so the length and type match `prompt_dict['response']`.",
+   "files": [
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix hardcoded mime_type='video/mp4' for local videos in VertexAI parse_parts_value",
+   "detail": "In `src/prompto/apis/vertexai/vertexai_utils.py`, `parse_parts_value` requires `mime_type` to be specified when `type == 'video'` (raising `ValueError('Mime type is not specified. Required for video type')` if `mime_type is None`), but then ignores the user-provided `mime_type` for local files and hardcodes `Part.from_data(open(media_file_path, 'rb').read(), mime_type='video/mp4')` (and leaks the open file handle). Use context manager `with open(media_file_path, 'rb') as f:` and pass `mime_type=mime_type` to `Part.from_data`.",
+   "files": [
+    "src/prompto/apis/vertexai/vertexai_utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix hardcoded image/jpeg MIME type for local images in OpenAI parse_content_value",
+   "detail": "In `src/prompto/apis/openai/openai_utils.py`, `parse_content_value` encodes local image files to base64 and always formats the data URL as `f'data:image/jpeg;base64,{base64_image}'` even if the file is a PNG, WebP, or GIF. Determine the MIME type from the file extension (e.g. via `mimetypes.guess_type(url_path)` defaulting to `'image/jpeg'`) or an optional key so non-JPEG local images have an accurate MIME type.",
+   "files": [
+    "src/prompto/apis/openai/openai_utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix Judge.create_judge_inputs crashing with KeyError when prompt or response contains braces",
+   "detail": "In `src/prompto/judge.py`, `Judge.create_judge_inputs` formats the template using `template_prompt.format(INPUT_PROMPT=response['prompt'], OUTPUT_RESPONSE=response['response'])`. Actually, while `str.format` does not recursively format substituted values, if `template_prompt` itself contains any literal curly braces (e.g., JSON examples in a judge prompt like `{\"score\": 1}`), `template_prompt.format(...)` raises `KeyError: '\"score\"'`. Using `.replace('{INPUT_PROMPT}', str(response['prompt'])).replace('{OUTPUT_RESPONSE}', str(response['response']))` (or handling formatting safely) prevents `KeyError` when judge templates include JSON schemas or code blocks.",
+   "files": [
+    "src/prompto/judge.py",
+    "tests/core/test_judge.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix template name extraction in load_judge_folder when filename has multiple dots or subdirectories",
+   "detail": "In `src/prompto/judge.py`, `load_judge_folder` computes the template dictionary key using `template.split('.')[0]`. If a template filename contains dots (e.g., `v1.2.txt`), the key is truncated to `'v1'` instead of `'v1.2'`, and two templates `v1.1.txt` and `v1.2.txt` will overwrite each other. Use `template.removesuffix('.txt')` (or `os.path.splitext(template)[0]`) instead of `template.split('.')[0]`.",
+   "files": [
+    "src/prompto/judge.py",
+    "tests/core/test_judge.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix Quart server ignoring request options and parameters",
+   "detail": "In `src/prompto/apis/quart/quart.py`, `_query_string` sends `data={'text': prompt, 'model': model_name, 'options': generation_config}` to the Quart server. However, in `src/prompto/apis/quart/quart_api.py`, the `/generate` route only reads `text = data.get('text')` and calls `pipe(text, max_length=args.max_length)`, completely ignoring `data.get('options')`. Update `quart_api.py` to extract `options = data.get('options', {})` and pass `{**{'max_length': args.max_length}, **options}` to `pipe(text, ...)`.",
+   "files": [
+    "src/prompto/apis/quart/quart_api.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix QuartAPI.check_environment_variables crashing when endpoint is unreachable",
+   "detail": "In `src/prompto/apis/quart/quart.py`, `QuartAPI.check_environment_variables` calls `requests.get(os.environ[API_ENDPOINT_VAR_NAME])` without a `try...except` block or timeout. Unlike `OllamaAPI.check_environment_variables` which catches `Exception` and appends a `ValueError` to `issues`, `QuartAPI.check_environment_variables` will crash with an unhandled `requests.exceptions.ConnectionError` or hang indefinitely if the endpoint is down or invalid. Wrap `requests.get(..., timeout=5)` in a `try...except Exception as err:` block and append a `ValueError` to `issues`.",
+   "files": [
+    "src/prompto/apis/quart/quart.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix AnthropicAPI._query_history passing empty system string when no system prompt is given",
+   "detail": "In `src/prompto/apis/anthropic/anthropic.py`, `_query_history` sets `system = ''` when `len(system) == 0` and passes `system=system` to `client.messages.create(...)` (or `anthropic._types.NOT_GIVEN` by default). While older SDK versions may tolerate `system=''`, passing `NOT_GIVEN` (or omitting `system` when empty) avoids sending an empty system block to the Anthropic API. More importantly, `AnthropicAPI.check_prompt_dict` and `query` only allow `'system'` as the first message (`prompt_dict['prompt'][0]`), whereas `_query_history` has logic `elif len(system) > 1: raise ValueError(...)` that is unreachable via `query()`. Ensure `check_prompt_dict` also validates multimodal content dicts in `prompt_dict['prompt']`.",
+   "files": [
+    "src/prompto/apis/anthropic/anthropic.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Fix obtain_missing_id_jsonl.py performance, quadratic file opens, and bare except",
+   "detail": "In `src/prompto/scripts/obtain_missing_id_jsonl.py`: (1) `output_file_ids` is a `list`, making `if data[id_name] not in output_file_ids:` an O(N*M) linear scan per line instead of O(1) with a `set`; (2) `open(file, 'r')` in `sum(1 for _ in open(file, 'r'))` is never closed; (3) `with open(new_experiment_file, 'a') as f:` re-opens thesame variable name `f` (shadowing the outer `f`) on every missing line, and appends to any pre-existing file if run twice; (4) `get_ids` uses a bare `except:` which catches `KeyboardInterrupt` and `SystemExit`. Convert `output_file_ids` to a `set`, open `new_experiment_file` once with `'w'` outside the loop using a distinct variable name, close file handles properly, and catch `(json.JSONDecodeError, KeyError)` instead of bare `except:`.",
+   "files": [
+    "src/prompto/scripts/obtain_missing_id_jsonl.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "Fix bare except clauses in GeminiAPI and VertexAIAPI",
+   "detail": "In `src/prompto/apis/gemini/gemini.py` and `src/prompto/apis/vertexai/vertexai.py`, inside the `except IndexError:` blocks of `_query_string`, `_query_chat`, and `_query_history`, there are bare `except:` clauses around `if len(response.candidates) == 0: ...`. A bare `except:` catches `BaseException` including `KeyboardInterrupt`, `SystemExit`, and `asyncio.CancelledError`. Change `except:` to `except Exception:`.",
+   "files": [
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Prevent busy-waiting CPU spin in ExperimentPipeline.run",
+   "detail": "In `src/prompto/experiment_pipeline.py`, `ExperimentPipeline.run` executes `while True: self.update_experiment_files()`, which calls `os.listdir` in a tight unthrottled loop whenever the input folder is empty, consuming 100% of a CPU core. Add a configurable sleep interval (e.g. `time.sleep(1)` or a `poll_interval` parameter on `ExperimentPipeline.run`) when `len(self.experiment_files) == 0`.",
+   "files": [
+    "src/prompto/experiment_pipeline.py",
+    "tests/core/test_experiment_pipeline.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "Use shutil.move instead of os.rename in utils.move_file for cross-filesystem support",
+   "detail": "In `src/prompto/utils.py`, `move_file` uses `os.rename(source, destination)`. If `source` and `destination` are on different filesystems/mounts (e.g., moving an experiment file from `/tmp` or a user home directory to a mounted data volume via `prompto_run_experiment --move-to-input`), `os.rename` raises `OSError: [Errno 18] Invalid cross-device link` (`EXDEV`). Replace `os.rename(source, destination)` with `shutil.move(source, destination)`.",
+   "files": [
+    "src/prompto/utils.py",
+    "tests/core/test_utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix TestAPI.query crashing when raise_error parameter is a boolean",
+   "detail": "In `src/prompto/apis/testing/testing_api.py`, `TestAPI.query` reads `raise_error_option = generation_config.get('raise_error', '')` and calls `raise_error_option.lower()`. If a user specifies `\"parameters\": {\"raise_error\": true}` (a JSON boolean rather than a string `\"true\"`), `raise_error_option.lower()` raises `AttributeError: 'bool' object has no attribute 'lower'` before the intended error handling logic runs. Handle `isinstance(raise_error_option, bool)` directly before calling `.lower()`.",
+   "files": [
+    "src/prompto/apis/testing/testing_api.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate required keys in completed_responses and handle non-string responses in scorer.py",
+   "detail": "In `src/prompto/scorer.py`, `match` and `includes` directly access `prompt_dict['response']` and `prompt_dict['expected_response']`. If `prompt_dict['response']` is a `list[str]` (as returned by multi-turn chat queries `_query_chat` or multi-candidate responses) and `expected_response` is a `str`, `includes` (`expected_response in response`) checks for exact list element membership rather than substring inclusion, or raises `TypeError` if `expected_response` is not a string when `response` is a string. Also, if `'expected_response'` is missing, an uninformative `KeyError` is raised. Add clear key validation and handle `list[str]` responses in `match` and `includes`.",
+   "files": [
+    "src/prompto/scorer.py",
+    "tests/core/test_scorer.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Fix convert_images.py crashing when --folder is omitted or contains directories",
+   "detail": "In `src/prompto/scripts/convert_images.py`, `--folder` is not marked `required=True` in `argparse`, so running `prompto_convert_images` without `-f` passes `args.folder = None` to `os.listdir(None)` (which lists the current working directory instead of raising an argument error, and then `os.path.join(None, item)` raises `TypeError`). Set `required=True` on `--folder` and validate `os.path.isdir(args.folder)` before iterating.",
+   "files": [
+    "src/prompto/scripts/convert_images.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Fix global openai module state mutation in OpenAIAPI, AzureOpenAIAPI, and HuggingfaceTGIAPI",
+   "detail": "In `OpenAIAPI._obtain_model_inputs`, `AzureOpenAIAPI._obtain_model_inputs`, and `HuggingfaceTGIAPI._obtain_model_inputs`, the code mutates global `openai.api_key`, `openai.api_type`, `openai.azure_endpoint`, and `openai.api_version` attributes on every request. In `HuggingfaceTGIAPI`, it even sets `openai.api_type = api_endpoint` (a URL!). Since all three classes instantiate `AsyncOpenAI` or `AsyncAzureOpenAI` clients with explicit `api_key`, `base_url`, `azure_endpoint`, and `api_version` arguments, mutating global `openai.*` module attributes is unnecessary and causes race conditions when running parallel groups across OpenAI, Azure OpenAI, and TGI. Remove the global `openai.* = ...` assignments.",
+   "files": [
+    "src/prompto/apis/openai/openai.py",
+    "src/prompto/apis/azure_openai/azure_openai.py",
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix race condition on genai.configure in GeminiAPI when using multiple API keys in parallel",
+   "detail": "In `GeminiAPI._obtain_model_inputs` (`src/prompto/apis/gemini/gemini.py`) and `VertexAIAPI._obtain_model_inputs` (`src/prompto/apis/vertexai/vertexai.py`), `_obtain_model_inputs` is called before `await model.generate_content_async(...)`, mutating global SDK configuration (`genai.configure(api_key=api_key)` / `vertexai.init(project=project_id, location=location_id)`). Additionally, the docstring of `_obtain_model_inputs` in both files says it returns a 6-tuple `tuple[str, str, dict, dict, list | None]` including 'list of multimedia parts', whereas it actually returns a 5-tuple `(prompt, model_name, model, safety_settings, generation_config)`. Update the return type annotations and docstrings in both files.",
+   "files": [
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py"
+   ],
+   "kind": "docs"
+  },
+  {
+   "title": "Fix misleading error messages in AnthropicAPI and Gemini/VertexAI TYPE_ERROR and docstrings",
+   "detail": "In `src/prompto/apis/anthropic/anthropic.py` (and `tests/apis/anthropic/test_anthropic.py`), `TYPE_ERROR` states: \"the values for 'role' must be one of 'user' or 'model'\", which was copy-pasted from Gemini! In Anthropic, `anthropic_chat_roles` is `{'user', 'assistant'}` (not `'model'`). Similarly, `convert_dict_to_input` in `anthropic_utils.py` and `openai_utils.py` says \"the value of role is either 'user' or 'model'\" and \"dict with keys 'role' and 'contents'\", when the key is `'content'` and the role is `'assistant'`. Fix `TYPE_ERROR` and docstrings to say `'assistant'` and `'content'`.",
+   "files": [
+    "src/prompto/apis/anthropic/anthropic.py",
+    "src/prompto/apis/anthropic/anthropic_utils.py",
+    "src/prompto/apis/openai/openai_utils.py",
+    "tests/apis/anthropic/test_anthropic.py"
+   ],
+   "kind": "docs"
+  },
+  {
+   "title": "Fix parse_list_arg returning [''] when given an empty or whitespace-only string",
+   "detail": "In `src/prompto/utils.py`, `parse_list_arg('')` or `parse_list_arg('   ')` returns `['']` instead of `[]`, and `parse_list_arg('a, ,b')` returns `['a', '', 'b']`. Filter out empty strings (`[item for item in x if item]`) so trailing commas or empty strings do not produce empty string elements.",
+   "files": [
+    "src/prompto/utils.py",
+    "tests/core/test_utils.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Deduplicate load_max_queries_json and load_env_file between run_experiment.py and run_pipeline.py",
+   "detail": "`src/prompto/scripts/run_pipeline.py` duplicates the `.env` loading logic and the `max_queries_json` file existence, `.json` extension check, and `json.load` logic that are already factored into `load_env_file` and `load_max_queries_json` in `src/prompto/scripts/run_experiment.py` (and `check_experiment.py` also duplicates `load_env_file`). Move or import `load_env_file` and `load_max_queries_json` so `run_pipeline.py` and `check_experiment.py` reuse them.",
+   "files": [
+    "src/prompto/scripts/run_pipeline.py",
+    "src/prompto/scripts/run_experiment.py",
+    "src/prompto/scripts/check_experiment.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Use get_environment_variable helper in QuartAPI._obtain_model_inputs",
+   "detail": "In `src/prompto/apis/quart/quart.py`, `_obtain_model_inputs` manually re-implements model-specific environment variable lookup using `get_model_name_identifier(model_name)` and `os.environ.get`, and raises `ValueError` instead of `KeyError` if missing. All other APIs call `get_environment_variable(env_variable=API_ENDPOINT_VAR_NAME, model_name=model_name)` from `prompto.utils`. Refactor `QuartAPI._obtain_model_inputs` to use `get_environment_variable`.",
+   "files": [
+    "src/prompto/apis/quart/quart.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Validate completed_responses items in Judge.__init__",
+   "detail": "In `src/prompto/judge.py`, `Judge.__init__` validates `template_prompts` and `judge_settings`, but does not validate `completed_responses`. If `completed_responses` is not a list of dicts or any dict is missing `'prompt'` or `'response'`, it only fails later inside the list comprehension in `create_judge_inputs`. Validate in `Judge.__init__` that `completed_responses` is a `list` of `dict` objects each containing `'prompt'` and `'response'` keys.",
+   "files": [
+    "src/prompto/judge.py",
+    "tests/core/test_judge.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Fix Settings.max_queries_dict lacking a property setter with validation",
+   "detail": "In `src/prompto/settings.py`, `data_folder`, `max_queries`, and `max_attempts` are protected properties that validate new values when mutated on an existing `Settings` instance (e.g., `settings.max_queries = -1` raises `ValueError`, and `settings.max_queries = 'a'` raises `ValueError`\u2014though note `Settings.__init__` raises `TypeError` for non-int whereas the setter raises `ValueError`!). Meanwhile, `settings.max_queries_dict` is a plain attribute with no setter validation, so assigning an invalid dict after initialization bypasses `check_max_queries_dict`. Add a `@property` and `@max_queries_dict.setter` calling `check_max_queries_dict`, and make `max_queries` and `max_attempts` setters raise `TypeError` when `not isinstance(value, int)` to match `__init__`.",
+   "files": [
+    "src/prompto/settings.py",
+    "tests/core/test_settings.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Fix CSV parameter parsing in Experiment._read_input_file converting integer parameters to floats",
+   "detail": "In `Experiment._read_input_file` (`src/prompto/experiment.py`), when loading a `.csv` file with `parameters-*` columns (such as `parameters-max_tokens` or `parameters-top_k`) where some rows have `NaN` (empty cells), `pandas.read_csv` upcasts integer columns with `NaN` to `float64`. When building the `parameters` dict (`{parameter.removeprefix('parameters-'): row[parameter] ... if not pd.isna(row[parameter])}`), integer parameters like `max_tokens` become floats like `100.0`, which causes API parameter validation errors in OpenAI, Anthropic, and Gemini (`GenerationConfig`). Convert float values that are whole numbers or use `loaded_df.convert_dtypes()` before constructing the parameter dictionaries.",
+   "files": [
+    "src/prompto/experiment.py",
+    "tests/core/test_experiment.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix log_success_response_query and log_error_response_query when response_text is a list or None",
+   "detail": "In `src/prompto/apis/openai/openai_utils.py` and `src/prompto/apis/anthropic/anthropic_utils.py`, `process_response` can return `list[str]` (when `n > 1` choices are returned) or `None` (when a tool call or empty message content is returned by OpenAI). In `log_success_response_query`, `response_text[:50]` raises `TypeError: 'NoneType' object is not subscriptable` if `response_text` is `None`, or formats a list slice `['...']` instead of a string. Similarly, in `_query_history`, `prompt` is a `list[dict]`, so `prompt[:50]` slices up to 50 dicts rather than 50 characters, dumping huge base64 strings or full message histories into the logs! Convert `prompt` and `response_text` with `str(...)[:50]` in `log_success_response_query` and `log_error_response_query`.",
+   "files": [
+    "src/prompto/utils.py",
+    "tests/core/test_utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Add unit tests for OpenAIAPI, AzureOpenAIAPI, OllamaAPI, HuggingfaceTGIAPI, and QuartAPI",
+   "detail": "Under `tests/apis/`, there are comprehensive unit test suites for `anthropic`, `gemini`, and `vertexai`, and an empty `tests/apis/ollama/__init__.py` directory, but zero unit tests for `OpenAIAPI`, `AzureOpenAIAPI`, `OllamaAPI`, `HuggingfaceTGIAPI`, and `QuartAPI` (nor their `*_utils.py` modules). Add unit tests covering `check_environment_variables`, `check_prompt_dict`, `_obtain_model_inputs`, `query`, and `process_response` for these APIs.",
+   "files": [
+    "tests/apis/ollama/__init__.py",
+    "src/prompto/apis/ollama/ollama.py",
+    "src/prompto/apis/openai/openai.py",
+    "src/prompto/apis/azure_openai/azure_openai.py",
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py",
+    "src/prompto/apis/quart/quart.py"
+   ],
+   "kind": "tests"
+  },
+  {
+   "title": "Add unit tests for check_experiment.py and obtain_missing_id_jsonl.py scripts",
+   "detail": "`tests/scripts/` only contains tests for `create_judge_file.py` and `run_experiment.py`. `src/prompto/scripts/check_experiment.py` and `src/prompto/scripts/obtain_missing_id_jsonl.py` have no tests, which allowed multiple bugs (such as the discarded `set.union` result and crashes in `check_multimedia`) to go unnoticed. Add test files `tests/scripts/test_check_experiment.py` and `tests/scripts/test_obtain_missing_id_jsonl.py`.",
+   "files": [
+    "src/prompto/scripts/check_experiment.py",
+    "src/prompto/scripts/obtain_missing_id_jsonl.py"
+   ],
+   "kind": "tests"
+  },
+  {
+   "title": "Fix GitHub Actions artifact v3 deprecation in cd.yaml and cache key in ci.yaml",
+   "detail": "In `.github/workflows/cd.yaml`, `actions/upload-artifact@v3` and `actions/download-artifact@v3` are used, which have been deprecated and shut down by GitHub Actions (breaking release builds). Also in `cd.yaml`, `upload-artifact` does not set `name: artifact`, so `download-artifact` with `name: artifact` only works by coincidence of default naming in v3 (and fails in v4 if mismatched). In `.github/workflows/ci.yaml`, `actions/cache@v3` uses `${{ env.cache_id }}` which is never defined in `env:`. Upgrade `upload-artifact` and `download-artifact` to `@v4` with matching `name: dist` and fix the cache key in `ci.yaml`.",
+   "files": [
+    ".github/workflows/cd.yaml",
+    ".github/workflows/ci.yaml"
+   ],
+   "kind": "packaging"
+  },
+  {
+   "title": "Fix invalid type annotations in examples/system-demo/api_utils.py",
+   "detail": "In `examples/system-demo/api_utils.py`, `send_openai`, `send_gemini`, and `send_ollama` have the parameter type annotation `params: dict[int]`, which is invalid in Python typing (`dict` requires two type arguments, e.g. `dict[str, Any]`, and raises `TypeError: type 'dict' is not subscriptable` or typing errors when inspected). Also `except (Exception, BaseException) as err:` in `send_prompt` catches `KeyboardInterrupt` and `SystemExit`. Change `dict[int]` to `dict[str, Any]` and `except (Exception, BaseException)` to `except Exception`.",
+   "files": [
+    "examples/system-demo/api_utils.py"
+   ],
+   "kind": "cleanup"
+  }
+ ],
+ [
+  {
+   "title": "Reject empty list prompts before indexing the first message",
+   "detail": "Anthropic, Gemini, and Vertex AI validation and dispatch treat an empty list as a possible history and then access prompt[0], raising IndexError. Explicitly reject empty prompt lists with TYPE_ERROR in both check_prompt_dict() and query(), and add regression tests.",
+   "files": [
+    "src/prompto/apis/anthropic/anthropic.py",
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py",
+    "tests/apis/anthropic/test_anthropic.py",
+    "tests/apis/gemini/test_gemini.py",
+    "tests/apis/vertexai/test_vertexai.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Prevent mixed history lists from causing AttributeError in Azure and Ollama dispatch",
+   "detail": "AzureOpenAIAPI.query() and OllamaAPI.query() call d.keys() without first proving every list item is a dictionary. Mixed lists such as [{\"role\": ...}, 1] therefore raise AttributeError instead of the documented TypeError. Mirror the isinstance guards used by check_prompt_dict() and test mixed inputs.",
+   "files": [
+    "src/prompto/apis/azure_openai/azure_openai.py",
+    "src/prompto/apis/ollama/ollama.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix Huggingface TGI validation for invalid lists",
+   "detail": "HuggingfaceTGIAPI.check_prompt_dict() only appends TYPE_ERROR in the non-list branch. A list containing non-string elements silently passes prompt validation. Add an else branch for lists that are not entirely strings and cover empty and mixed lists in tests.",
+   "files": [
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Validate parameters dictionaries during prompt checks",
+   "detail": "Most adapters only validate parameters inside _obtain_model_inputs(), so check_experiment can declare malformed input valid even though execution will fail. Add a shared or adapter-level check that parameters is absent, null, or a dictionary for OpenAI, Azure OpenAI, Anthropic, Ollama, Huggingface TGI, and Quart.",
+   "files": [
+    "src/prompto/apis/openai/openai.py",
+    "src/prompto/apis/azure_openai/azure_openai.py",
+    "src/prompto/apis/anthropic/anthropic.py",
+    "src/prompto/apis/ollama/ollama.py",
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py",
+    "src/prompto/apis/quart/quart.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Reject zero and boolean rate limits",
+   "detail": "check_max_queries_dict() accepts zero, which later causes division by zero in Experiment.send_requests(), and accepts bool because bool is an int subclass. Require type(value) is int and value > 0 for top-level and nested limits; apply the same strict check to Settings.max_queries and max_attempts.",
+   "files": [
+    "src/prompto/utils.py",
+    "src/prompto/settings.py",
+    "tests/core/test_utils.py",
+    "tests/core/test_settings.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Remove the mutable Settings default and validate parallel",
+   "detail": "Settings.__init__ uses max_queries_dict={} as a mutable default and accepts arbitrary values for parallel. Change the default to None, create a fresh dictionary per instance, and require parallel to be a bool.",
+   "files": [
+    "src/prompto/settings.py",
+    "tests/core/test_settings.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Handle experiments with no input rows",
+   "detail": "Experiment.process() divides processing time by number_queries and then expects a completed output file. Empty JSONL or header-only CSV inputs therefore fail late. Reject empty experiments during construction with a clear ValueError, or create an empty output and return an explicit zero average; add tests for both formats.",
+   "files": [
+    "src/prompto/experiment.py",
+    "tests/core/test_experiment.py",
+    "tests/core/test_experiment_process.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate JSONL records as non-empty JSON objects",
+   "detail": "Experiment._read_input_file() attempts dict(json.loads(line)); blank lines, arrays, and scalar JSON produce confusing exceptions. Parse line by line with line numbers, reject blank lines and non-object values with a descriptive ValueError, and add malformed-input tests.",
+   "files": [
+    "src/prompto/experiment.py",
+    "tests/core/test_experiment.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Do not call adapter validation when required keys are missing",
+   "detail": "is_valid_jsonl() records missing prompt or model_name keys but still calls ASYNC_APIS[api].check_prompt_dict(data), which can raise an uncaught KeyError and abort validation of the entire file. Only run adapter checks after required keys and object type have been validated, and catch unexpected per-line validation errors into the issue list.",
+   "files": [
+    "src/prompto/scripts/check_experiment.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Make check_multimedia robust to malformed entries",
+   "detail": "check_multimedia() continues after discovering multimedia is not a list or an item is not a dict, then performs membership tests and m[\"type\"] access that can raise TypeError or KeyError. Return early for a wrong container and continue to the next item after a wrong item or missing type.",
+   "files": [
+    "src/prompto/scripts/check_experiment.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Actually accumulate missing multimedia paths",
+   "detail": "is_valid_jsonl() calls multimedia_path_errors.union(path_errors) without assigning the returned set, so the aggregate missing-path report is always empty. Replace it with update() or |= and add a test covering multiple missing files.",
+   "files": [
+    "src/prompto/scripts/check_experiment.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Use the declared Azure API version default",
+   "detail": "AZURE_API_VERSION_DEFAULT is defined but never used. _obtain_model_inputs() calls get_environment_variable() and fails when no version variable exists, despite check_environment_variables() describing it as optional. Fall back to AZURE_API_VERSION_DEFAULT while retaining model-specific and global overrides.",
+   "files": [
+    "src/prompto/apis/azure_openai/azure_openai.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Allow unauthenticated Huggingface TGI endpoints",
+   "detail": "The TGI API key is documented and checked as optional, but _obtain_model_inputs() unconditionally calls get_environment_variable(), making it required. Resolve a model-specific/global key if present and otherwise pass a harmless SDK-supported placeholder or omit authentication as appropriate.",
+   "files": [
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py",
+    "docs/huggingface_tgi.md"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Send the requested model name to Huggingface TGI",
+   "detail": "Both TGI query paths pass model=self.api_type, whose value is the constant \"tgi\", instead of the prompt's model_name. Pass model_name so OpenAI-compatible multi-model endpoints receive the requested model, and test the exact client arguments.",
+   "files": [
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Do not swallow unrecognized Ollama ResponseError exceptions",
+   "detail": "OllamaAPI._query_string() catches ResponseError but only raises for two message substrings. Every other ResponseError falls through and makes the coroutine return None, which can be mistaken for a completed request. Log and re-raise unmatched errors, and ensure the translated errors are logged consistently too.",
+   "files": [
+    "src/prompto/apis/ollama/ollama.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Preserve the correct MIME type for local OpenAI images",
+   "detail": "openai_utils.parse_content_value() always emits data:image/jpeg for local files, corrupting the declared type for PNG, GIF, and WebP data. Determine the MIME type from the file using mimetypes or Pillow and reject unsupported formats clearly.",
+   "files": [
+    "src/prompto/apis/openai/openai_utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate OpenAI image_url objects and support valid URL schemes",
+   "detail": "parse_content_value() assumes a non-string image_url is a dictionary and only recognizes https:// as remote. Invalid values cause AttributeError, while http:// and existing data: URLs are incorrectly treated as local paths. Require a mapping, accept supported HTTP(S)/data URLs, and validate detail values.",
+   "files": [
+    "src/prompto/apis/openai/openai_utils.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Honor the supplied MIME type for local Vertex AI videos",
+   "detail": "vertexai_utils.parse_parts_value() requires mime_type for a local video but then ignores it and always passes video/mp4. Pass the validated mime_type to Part.from_data() and read the file with a context manager.",
+   "files": [
+    "src/prompto/apis/vertexai/vertexai_utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Combine all textual parts in Gemini responses",
+   "detail": "gemini_utils.process_response() returns only candidates[0].content.parts[0].text, silently discarding additional text parts and failing on non-text parts. Collect all textual parts in order, define behavior for no text, and add synthetic multipart response tests for Gemini and Vertex users of this helper.",
+   "files": [
+    "src/prompto/apis/gemini/gemini_utils.py",
+    "tests/apis/gemini/test_gemini_string_input.py",
+    "tests/apis/vertexai/test_vertexai_string_input.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Handle non-text Anthropic response blocks safely",
+   "detail": "anthropic_utils.process_response() assumes every content block has a text attribute. Tool-use or other Anthropic blocks can therefore raise AttributeError. Extract TextBlock values explicitly and either preserve structured non-text blocks or ignore them according to a documented return contract.",
+   "files": [
+    "src/prompto/apis/anthropic/anthropic_utils.py",
+    "tests/apis/anthropic/test_anthropic_string_input.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Keep blocked-chat safety attributes aligned with responses",
+   "detail": "On an IndexError in GeminiAPI._query_chat() and VertexAIAPI._query_chat(), response becomes a list containing prior responses plus an empty string, but safety_attributes is replaced by one dictionary, losing prior turn metadata and changing type. Append the blocked-turn attributes to safety_attributes_list and return lists of equal length.",
+   "files": [
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py",
+    "tests/apis/gemini/test_gemini_chat_input.py",
+    "tests/apis/vertexai/test_vertexai_chat_input.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Avoid referencing an unassigned response in blocked-response handlers",
+   "detail": "Gemini and Vertex handlers catch IndexError that may be raised by the API call itself before response is assigned, then inspect response.candidates under a broad except. Initialize response to None and use an explicit helper to derive fallback safety metadata without bare except clauses.",
+   "files": [
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Require history prompts to end with a user turn",
+   "detail": "GeminiAPI._query_history() and VertexAIAPI._query_history() always remove the last history item and send it as the new message, even when its role is model. Validate that non-empty histories end in a user role and that role ordering is acceptable before making the request.",
+   "files": [
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Remove process-global OpenAI SDK mutations",
+   "detail": "OpenAI, Azure OpenAI, and TGI setup mutates openai.api_key, api_type, endpoint, and version globals even though each request already uses an explicit client. Parallel groups can overwrite one another's settings. Remove the global assignments and rely only on per-client constructor arguments.",
+   "files": [
+    "src/prompto/apis/openai/openai.py",
+    "src/prompto/apis/azure_openai/azure_openai.py",
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Stop the experiment pipeline from busy-spinning",
+   "detail": "ExperimentPipeline.run() immediately loops when the input folder is empty, consuming a CPU core and repeatedly scanning the directory. Add a configurable polling interval and sleep when no work is available, with a unit test that mocks sleep and folder scans.",
+   "files": [
+    "src/prompto/experiment_pipeline.py",
+    "tests/core/test_experiment_pipeline.py",
+    "src/prompto/scripts/run_pipeline.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "Compute the pipeline average per query with query weighting",
+   "detail": "ExperimentPipeline averages each experiment's per-query average equally, so a one-query experiment has the same influence as a thousand-query experiment. Track total processing time and total query count, or calculate a query-count-weighted mean, so completion estimates represent an actual average query.",
+   "files": [
+    "src/prompto/experiment_pipeline.py",
+    "tests/core/test_experiment_pipeline.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Support moving files across filesystems",
+   "detail": "utils.move_file() uses os.rename(), which fails with EXDEV when source and destination are on different filesystems. Use shutil.move(), ensure the destination parent exists, and define overwrite behavior explicitly.",
+   "files": [
+    "src/prompto/utils.py",
+    "tests/core/test_utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Produce standards-compliant JSON from CSV inputs",
+   "detail": "CSV conversion leaves pandas NaN values in records, and json.dump writes non-standard NaN tokens by default. Normalize missing values to None, remove the source parameters-* columns after building parameters, and dump with allow_nan=False so generated JSONL is portable.",
+   "files": [
+    "src/prompto/experiment.py",
+    "tests/core/test_experiment.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Do not delay the first request by a full rate-limit interval",
+   "detail": "Experiment.send_requests() sleeps before creating every task, including the first. This adds up to 60 seconds of needless latency at low QPM. Launch the first request immediately and sleep only between subsequent launches while retaining the configured spacing.",
+   "files": [
+    "src/prompto/experiment.py",
+    "tests/core/test_experiment_send_requests.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "Make logging helpers safe for structured prompts and nullable responses",
+   "detail": "The logging helpers slice prompt, message, and response_text directly. None responses from OpenAI or arbitrary structured values can raise TypeError after a successful API call. Convert values through a bounded formatting helper before truncating and update type annotations accordingly.",
+   "files": [
+    "src/prompto/utils.py",
+    "tests/core/test_utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Add timeout and exception handling to Quart endpoint checks",
+   "detail": "QuartAPI.check_environment_variables() performs a blocking requests.get() with no timeout and does not catch connection errors, so validation can hang or abort. Use a short timeout, catch RequestException, and report it as a validation issue.",
+   "files": [
+    "src/prompto/apis/quart/quart.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Add HTTP timeouts and useful error bodies to the Quart client",
+   "detail": "async_client_generate() creates an unbounded aiohttp request and reports only the status code. Configure a finite ClientTimeout, use json= instead of manually serializing data, and include a bounded response body in errors to make server failures diagnosable.",
+   "files": [
+    "src/prompto/apis/quart/quart_utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate Quart generation requests and apply request options",
+   "detail": "quart_api.generate() assumes JSON is an object with text, accepts missing or non-string text, ignores the model and options sent by QuartAPI, and always uses the CLI max_length. Return 400 for malformed input and safely merge supported per-request generation options, with the server model remaining authoritative.",
+   "files": [
+    "src/prompto/apis/quart/quart_api.py",
+    "src/prompto/apis/quart/quart.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Use full template stems and detect duplicate judge template names",
+   "detail": "load_judge_folder() uses template.split(\".\")[0], so names such as rubric.v2.txt become rubric and can silently overwrite another template. Use Path(template).stem, reject duplicate resulting names, and validate that templates is a non-empty list of strings.",
+   "files": [
+    "src/prompto/judge.py",
+    "tests/core/test_judge.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Create the judge output directory before writing",
+   "detail": "Judge.create_judge_file() and the create_judge_file CLI fail with FileNotFoundError when the requested output folder does not exist. Create the parent directory or raise a deliberate validation error before opening the file.",
+   "files": [
+    "src/prompto/judge.py",
+    "src/prompto/scripts/create_judge_file.py",
+    "tests/scripts/test_create_judge_file.py"
+   ],
+   "kind": "feature"
+  },
+  {
+   "title": "Make missing-ID extraction linear and deterministic",
+   "detail": "obtain_missing_jsonl() stores output IDs in a list, making every membership check linear, and repeatedly opens the destination in append mode, preserving stale results from previous runs. Use a set, open the destination once in write mode, and process the input in one pass.",
+   "files": [
+    "src/prompto/scripts/obtain_missing_id_jsonl.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "Stop suppressing all ID parsing errors",
+   "detail": "get_ids() uses a bare except, prints the line, and silently omits malformed records or missing IDs. Catch JSONDecodeError and KeyError separately and raise an error containing the line number; use context managers for the preliminary line count or avoid the second pass.",
+   "files": [
+    "src/prompto/scripts/obtain_missing_id_jsonl.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Generate API reference pages from the package source only",
+   "detail": "docs/gen_ref_pages.py starts at Path(), recursively scanning the entire checkout and generating module paths prefixed with src while merely excluding a few directory names. Set CODE_PATH to src/prompto, derive module names beginning with prompto, and keep generated paths under reference without repository-layout prefixes.",
+   "files": [
+    "docs/gen_ref_pages.py"
+   ],
+   "kind": "docs"
+  },
+  {
+   "title": "Do not hide internal import failures as missing optional dependencies",
+   "detail": "prompto.apis catches every ImportError around each adapter import. An ImportError caused by a bug inside an installed adapter is therefore mislabeled as a missing optional dependency. Check dependency availability explicitly with importlib.util.find_spec(), or only suppress errors whose missing module is the known optional package.",
+   "files": [
+    "src/prompto/apis/__init__.py",
+    "tests/apis/test_import_warnings.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Update retired GitHub artifact actions and simplify PyPI authentication",
+   "detail": "The CD workflow uses actions/upload-artifact@v3 and download-artifact@v3, which are retired. Upgrade both to v4 with an explicit shared artifact name. The publish job requests OIDC id-token permission but also supplies a token/password; choose trusted publishing without credentials or remove the unused OIDC permission.",
+   "files": [
+    ".github/workflows/cd.yaml"
+   ],
+   "kind": "packaging"
+  },
+  {
+   "title": "Validate TestAPI parameter types before calling lower",
+   "detail": "TestAPI.query() assumes parameters is a dict and raise_error is a string. Boolean values, null, or non-dict parameters cause AttributeError instead of controlled test behavior. Accept booleans directly, normalize recognized strings, reject unsupported values clearly, and add deterministic tests.",
+   "files": [
+    "src/prompto/apis/testing/testing_api.py",
+    "tests/core/test_experiment_query_model.py"
+   ],
+   "kind": "validation"
+  }
+ ]
+]

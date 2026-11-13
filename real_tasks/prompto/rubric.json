@@ -1,0 +1,1012 @@
+{
+ "task": "prompto",
+ "pin": "73d260fbd415f9ab30b36f7f1014fd1f2722c51a",
+ "reviewers": [
+  "opus",
+  "argon",
+  "sol"
+ ],
+ "merger": "opus",
+ "n_proposed": [
+  41,
+  40,
+  41
+ ],
+ "items": [
+  {
+   "title": "Ollama re-raises and logs unrecognised ResponseError",
+   "criterion": "In OllamaAPI._query_string, any ResponseError that matches neither known message is logged to the log file and re-raised, so the coroutine never returns None. A test covers this case.",
+   "files": [
+    "src/prompto/apis/ollama/ollama.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i01"
+  },
+  {
+   "title": "Reject empty-list prompts in all API validators and query dispatch",
+   "criterion": "check_prompt_dict and query for openai, azure, anthropic, gemini, vertexai, ollama and huggingface_tgi reject an empty prompt list with TYPE_ERROR, with no IndexError and no empty chat. Regression tests are added.",
+   "files": [
+    "src/prompto/apis/openai/openai.py",
+    "src/prompto/apis/azure_openai/azure_openai.py",
+    "src/prompto/apis/anthropic/anthropic.py",
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py",
+    "src/prompto/apis/ollama/ollama.py",
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i02"
+  },
+  {
+   "title": "HF TGI check_prompt_dict rejects lists containing non-strings",
+   "criterion": "The list branch of HuggingfaceTGIAPI.check_prompt_dict appends TYPE_ERROR when not every element is a str.",
+   "files": [
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i03"
+  },
+  {
+   "title": "Azure/Ollama query guard dict type before calling keys()",
+   "criterion": "AzureOpenAIAPI.query and OllamaAPI.query check that all elements are dicts before accessing d.keys(), so a mixed list raises TYPE_ERROR rather than AttributeError.",
+   "files": [
+    "src/prompto/apis/azure_openai/azure_openai.py",
+    "src/prompto/apis/ollama/ollama.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i04"
+  },
+  {
+   "title": "Remove global openai module mutations in OpenAI/Azure/TGI",
+   "criterion": "_obtain_model_inputs no longer assigns openai.api_key, api_type, azure_endpoint or api_version, which includes TGI setting api_type to a URL. Configuration comes only from the client constructor arguments.",
+   "files": [
+    "src/prompto/apis/openai/openai.py",
+    "src/prompto/apis/azure_openai/azure_openai.py",
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i05"
+  },
+  {
+   "title": "Azure API version falls back to AZURE_API_VERSION_DEFAULT",
+   "criterion": "When no model-specific or global API version env var exists, _obtain_model_inputs catches the KeyError and uses AZURE_API_VERSION_DEFAULT instead of failing.",
+   "files": [
+    "src/prompto/apis/azure_openai/azure_openai.py"
+   ],
+   "kind": "bug",
+   "source": "both",
+   "n_reviewers": 2,
+   "id": "i06"
+  },
+  {
+   "title": "HF TGI API key optional at query time",
+   "criterion": "_obtain_model_inputs no longer requires the TGI API key. A missing key falls back to a placeholder (or omits auth), so unauthenticated endpoints work.",
+   "files": [
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py"
+   ],
+   "kind": "bug",
+   "source": "both",
+   "n_reviewers": 1,
+   "id": "i07"
+  },
+  {
+   "title": "Accumulate multimedia path errors with update()",
+   "criterion": "is_valid_jsonl uses .update() or |= instead of a discarded .union(), so the missing-multimedia-path summary is reported. A test covers missing files.",
+   "files": [
+    "src/prompto/scripts/check_experiment.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i08"
+  },
+  {
+   "title": "check_multimedia robust to malformed containers and items",
+   "criterion": "check_multimedia returns early when multimedia is not a list, skips non-dict items, and uses m.get('type'), so it never raises TypeError or KeyError.",
+   "files": [
+    "src/prompto/scripts/check_experiment.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i09"
+  },
+  {
+   "title": "is_valid_jsonl skips adapter checks when required keys missing",
+   "criterion": "check_prompt_dict is called only when the line is a dict containing 'prompt' and 'model_name'. Otherwise the issues are recorded without an uncaught KeyError or TypeError.",
+   "files": [
+    "src/prompto/scripts/check_experiment.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i10"
+  },
+  {
+   "title": "Gemini/Vertex blocked chat turn keeps safety_attributes a list",
+   "criterion": "On IndexError in _query_chat, the blocked-turn attributes are appended to safety_attributes_list and that list is stored, matching the length of response. A stale previous response is never used.",
+   "files": [
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i11"
+  },
+  {
+   "title": "Replace bare except and unassigned response in Gemini/Vertex handlers",
+   "criterion": "The IndexError handlers initialise response=None before the try and use `except Exception` (or an explicit helper) instead of a bare except.",
+   "files": [
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i12"
+  },
+  {
+   "title": "Logging helpers safe for None/list responses and structured prompts",
+   "criterion": "log_success/error_response helpers convert prompt and response_text with str() or a bounded formatter before truncating. A None or list response then neither raises nor dumps huge structures.",
+   "files": [
+    "src/prompto/utils.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i13"
+  },
+  {
+   "title": "Reject zero and boolean rate limits and settings",
+   "criterion": "check_max_queries_dict rejects values <= 0 and bools at both top level and nested level. Settings max_queries and max_attempts also reject bools.",
+   "files": [
+    "src/prompto/utils.py",
+    "src/prompto/settings.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i14"
+  },
+  {
+   "title": "Experiment.process handles empty input files",
+   "criterion": "An experiment with zero queries raises a clear error at construction, or completes with a zero average, without ZeroDivisionError or FileNotFoundError. A test is included.",
+   "files": [
+    "src/prompto/experiment.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i15"
+  },
+  {
+   "title": "Rephrasal module with Rephraser class",
+   "criterion": "A new prompto.rephrasal module provides a Rephraser that validates rephrase settings (api/model_name/parameters). It builds rephrase prompts from templates \u00d7 models \u00d7 inputs with ids like rephrase-{model}-{i}-{id}, writes them to a .jsonl file, and loads a rephrase folder.",
+   "files": [
+    "src/prompto/rephrasal.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i16"
+  },
+  {
+   "title": "run_experiment supports a rephrase pre-processing step",
+   "criterion": "prompto_run_experiment accepts --rephrase-folder, --rephrase-templates and --rephrase-model. It runs a rephrase experiment first, creates a post-rephrase input file and then processes that file.",
+   "files": [
+    "src/prompto/scripts/run_experiment.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i17"
+  },
+  {
+   "title": "--only-rephrase flag stops before processing",
+   "criterion": "With --only-rephrase, main() returns right after writing the rephrased input file, so the original experiment is neither moved nor processed.",
+   "files": [
+    "src/prompto/scripts/run_experiment.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i18"
+  },
+  {
+   "title": "Option to drop original prompts from rephrased file",
+   "criterion": "A --remove-original flag is passed as keep_original=False to create_new_input_file, so only rephrased prompts are kept.",
+   "files": [
+    "src/prompto/scripts/run_experiment.py",
+    "src/prompto/rephrasal.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i19"
+  },
+  {
+   "title": "Rephrase response parser option",
+   "criterion": "A --rephrase-parser option selects a function from rephrasal_parser.PARSER_FUNCTIONS to split responses into multiple prompts. When the option is not given, parser=None is passed without an error.",
+   "files": [
+    "src/prompto/rephrasal_parser.py",
+    "src/prompto/scripts/run_experiment.py",
+    "src/prompto/rephrasal.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i20"
+  },
+  {
+   "title": "split_numbered_list only splits on line-leading numbers",
+   "criterion": "The regex matches digits followed by '.' only at the start of the text or after a newline. Parts are stripped before the leading empty part is removed.",
+   "files": [
+    "src/prompto/rephrasal_parser.py"
+   ],
+   "kind": "bug",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i21"
+  },
+  {
+   "title": "Rephrased input uses response text and 'NA' default id",
+   "criterion": "_convert_rephrased_prompt_dict_to_input sets prompt from the rephrase 'response' (not the template prompt), restores the input-api/model/parameters, and defaults input-id to 'NA'.",
+   "files": [
+    "src/prompto/rephrasal.py"
+   ],
+   "kind": "bug",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i22"
+  },
+  {
+   "title": "Rename judge --templates to --judge-templates",
+   "criterion": "The CLI argument is --judge-templates in create_judge_file and run_experiment, and the docs and notebooks are updated to match.",
+   "files": [
+    "src/prompto/scripts/create_judge_file.py",
+    "src/prompto/scripts/run_experiment.py",
+    "docs/commands.md",
+    "docs/evaluation.md"
+   ],
+   "kind": "cleanup",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i23"
+  },
+  {
+   "title": "Moved CSV input keeps .csv extension in output folder",
+   "criterion": "When the original experiment file is a .csv, run_experiment moves it to output as name.csv rather than name.jsonl.",
+   "files": [
+    "src/prompto/scripts/run_experiment.py"
+   ],
+   "kind": "bug",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i24"
+  },
+  {
+   "title": "Tests for Rephraser and run_experiment rephrase/judge flows",
+   "criterion": "Adds tests/core/test_rephrasal.py and tests/scripts/test_run_experiment_command.py covering rephrase settings validation, file creation, conversion, and CLI runs with rephrase, judge and CSV input.",
+   "files": [
+    "tests/core/test_rephrasal.py",
+    "tests/scripts/test_run_experiment_command.py",
+    "tests/conftest.py"
+   ],
+   "kind": "tests",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i25"
+  },
+  {
+   "title": "Fix load_judge_args docstring and return annotation",
+   "criterion": "load_judge_args documents judge_templates_arg, and its return annotation reflects a dict of template prompts instead of str. load_rephrase_args gains a typed docstring.",
+   "files": [
+    "src/prompto/scripts/run_experiment.py"
+   ],
+   "kind": "docs",
+   "source": "both",
+   "n_reviewers": 1,
+   "id": "i26"
+  },
+  {
+   "title": "Rephrasals documentation page",
+   "criterion": "Adds docs/rephrasals.md, links it from docs/README.md and mkdocs.yml, and documents the rephrase command in commands.md. Includes an example notebook.",
+   "files": [
+    "docs/rephrasals.md",
+    "docs/commands.md",
+    "mkdocs.yml",
+    "examples/evaluation/rephrase_prompts.ipynb"
+   ],
+   "kind": "docs",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i27"
+  },
+  {
+   "title": "Gemini supports uploaded media files",
+   "criterion": "Gemini prompts can reference media uploaded via the File API (e.g. an uploaded_filename for video/images). Async upload and delete helpers are added with tests.",
+   "files": [
+    "src/prompto/apis/gemini/gemini_utils.py",
+    "src/prompto/apis/gemini/gemini.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i28"
+  },
+  {
+   "title": "Consistent 'data folder' vs 'media folder' terminology",
+   "criterion": "Code and docs consistently use 'media folder' for multimedia files and 'data folder' for experiment data.",
+   "files": [
+    "src/prompto/settings.py",
+    "docs"
+   ],
+   "kind": "cleanup",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i29"
+  },
+  {
+   "title": "CD workflow uses artifact actions v4",
+   "criterion": "cd.yaml uses actions/upload-artifact@v4 and download-artifact@v4, with a matching artifact name.",
+   "files": [
+    ".github/workflows/cd.yaml"
+   ],
+   "kind": "packaging",
+   "source": "both",
+   "n_reviewers": 3,
+   "id": "i30"
+  },
+  {
+   "title": "Resolve conflicting PyPI auth in CD publish job",
+   "criterion": "The publish job uses either OIDC trusted publishing without a password, or a token without the id-token permission, but not both.",
+   "files": [
+    ".github/workflows/cd.yaml"
+   ],
+   "kind": "packaging",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i31"
+  },
+  {
+   "title": "Update Google and other dependencies",
+   "criterion": "pyproject.toml dependency pins are updated, including the Google genai/vertex packages.",
+   "files": [
+    "pyproject.toml"
+   ],
+   "kind": "packaging",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i32"
+  },
+  {
+   "title": "OpenAI local image data URL uses real MIME type",
+   "criterion": "parse_content_value derives the MIME type (e.g. mimetypes.guess_type) for local images instead of always using image/jpeg.",
+   "files": [
+    "src/prompto/apis/openai/openai_utils.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i33"
+  },
+  {
+   "title": "OpenAI image_url accepts http/data URLs and validates objects",
+   "criterion": "http:// and data: URLs are treated as remote rather than local paths. A non-string image_url that is not a mapping raises a clear error.",
+   "files": [
+    "src/prompto/apis/openai/openai_utils.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i34"
+  },
+  {
+   "title": "Vertex local video honours mime_type and closes file",
+   "criterion": "parse_parts_value passes the user's mime_type to Part.from_data for local videos and reads the file inside a with block.",
+   "files": [
+    "src/prompto/apis/vertexai/vertexai_utils.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i35"
+  },
+  {
+   "title": "Quart endpoint check uses timeout and catches errors",
+   "criterion": "QuartAPI.check_environment_variables calls requests.get with a timeout and records a ValueError issue on exception instead of crashing or hanging.",
+   "files": [
+    "src/prompto/apis/quart/quart.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i36"
+  },
+  {
+   "title": "Quart server applies per-request options and validates input",
+   "criterion": "quart_api.generate passes data['options'] to pipe() merged with max_length, and returns 400 for missing or non-string text.",
+   "files": [
+    "src/prompto/apis/quart/quart_api.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i37"
+  },
+  {
+   "title": "TestAPI handles boolean raise_error parameter",
+   "criterion": "TestAPI.query handles a bool raise_error without calling .lower() on it, and non-dict parameters are handled cleanly.",
+   "files": [
+    "src/prompto/apis/testing/testing_api.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i38"
+  },
+  {
+   "title": "Settings max_queries_dict default not mutable",
+   "criterion": "Settings.__init__ defaults max_queries_dict to None and creates a fresh dict (or copy) per instance.",
+   "files": [
+    "src/prompto/settings.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i39"
+  },
+  {
+   "title": "ExperimentPipeline sleeps when idle",
+   "criterion": "ExperimentPipeline.run sleeps for a configurable poll interval when no files are present, and a test mocks the sleep.",
+   "files": [
+    "src/prompto/experiment_pipeline.py"
+   ],
+   "kind": "performance",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i40"
+  },
+  {
+   "title": "move_file works across filesystems",
+   "criterion": "utils.move_file uses shutil.move instead of os.rename.",
+   "files": [
+    "src/prompto/utils.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i41"
+  },
+  {
+   "title": "Judge template keys use full stem",
+   "criterion": "load_judge_folder derives keys with os.path.splitext/Path.stem instead of split('.')[0], and errors on duplicate names.",
+   "files": [
+    "src/prompto/judge.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i42"
+  },
+  {
+   "title": "obtain_missing_id_jsonl uses set lookup and single write-mode open",
+   "criterion": "Output ids are stored in a set, the new file is opened once in 'w' mode outside the loop, and file handles used for line counts are closed.",
+   "files": [
+    "src/prompto/scripts/obtain_missing_id_jsonl.py"
+   ],
+   "kind": "performance",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i43"
+  },
+  {
+   "title": "get_ids catches specific parsing errors",
+   "criterion": "The bare except in get_ids is replaced with JSONDecodeError/KeyError handling that reports the line.",
+   "files": [
+    "src/prompto/scripts/obtain_missing_id_jsonl.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i44"
+  },
+  {
+   "title": "CSV inputs produce valid JSON-serialisable values",
+   "criterion": "Rows read from CSV have numpy scalars converted to native types and NaN replaced or dropped, so json.dump yields valid JSON. Parameter columns are matched with startswith('parameters-').",
+   "files": [
+    "src/prompto/experiment.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i45"
+  },
+  {
+   "title": "Judge templates with literal braces don't crash",
+   "criterion": "create_judge_inputs substitutes {INPUT_PROMPT}/{OUTPUT_RESPONSE} without str.format failing on other braces. A test with a JSON example template is added.",
+   "files": [
+    "src/prompto/judge.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i46"
+  },
+  {
+   "title": "Judge validates completed responses have prompt/response",
+   "criterion": "Judge validates that completed_responses is a list of dicts containing 'prompt' and 'response', and raises a clear error otherwise.",
+   "files": [
+    "src/prompto/judge.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i47"
+  },
+  {
+   "title": "Scorers handle list/None responses and missing expected_response",
+   "criterion": "match/includes handle None and list (chat) responses explicitly, and raise a descriptive error when expected_response is absent.",
+   "files": [
+    "src/prompto/scorer.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i48"
+  },
+  {
+   "title": "Anthropic process_response filters to text blocks",
+   "criterion": "process_response extracts text only from blocks of type 'text', with no AttributeError on tool_use blocks. A mocked test is added.",
+   "files": [
+    "src/prompto/apis/anthropic/anthropic_utils.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i49"
+  },
+  {
+   "title": "Anthropic TYPE_ERROR and docstrings say 'assistant'/'content'",
+   "criterion": "Anthropic TYPE_ERROR lists 'user'/'assistant'. The convert_dict_to_input and parse_content_value docstrings match the actual keys, and the test TYPE_ERROR_MSG is updated.",
+   "files": [
+    "src/prompto/apis/anthropic/anthropic.py",
+    "src/prompto/apis/anthropic/anthropic_utils.py",
+    "src/prompto/apis/openai/openai_utils.py",
+    "tests/apis/anthropic/test_anthropic.py"
+   ],
+   "kind": "docs",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i50"
+  },
+  {
+   "title": "Correct _obtain_model_inputs return annotations/docstrings",
+   "criterion": "Gemini/Vertex annotations reflect the 5-tuple actually returned. OpenAI/TGI docstrings no longer mention AsyncAzureOpenAI, and the Vertex env var docstring says VERTEXAI_LOCATION_ID.",
+   "files": [
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py",
+    "src/prompto/apis/openai/openai.py",
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py"
+   ],
+   "kind": "docs",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i51"
+  },
+  {
+   "title": "parse_list_arg drops empty items",
+   "criterion": "Empty and whitespace items (e.g. 'a,,b', trailing comma, '') are filtered out, and a test is added.",
+   "files": [
+    "src/prompto/utils.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i52"
+  },
+  {
+   "title": "Share env/max-queries loaders across CLI scripts",
+   "criterion": "run_pipeline and check_experiment import load_env_file/load_max_queries_json rather than reimplementing them.",
+   "files": [
+    "src/prompto/scripts/run_pipeline.py",
+    "src/prompto/scripts/run_experiment.py",
+    "src/prompto/scripts/check_experiment.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i53"
+  },
+  {
+   "title": "convert_images requires --folder",
+   "criterion": "--folder is required (and validated as a directory), so the script never defaults to rewriting the cwd.",
+   "files": [
+    "src/prompto/scripts/convert_images.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i54"
+  },
+  {
+   "title": "Docs reference generation scans only package source",
+   "criterion": "gen_ref_pages.py uses CODE_PATH under src, so module names start with 'prompto' and .venv and other non-package files are excluded.",
+   "files": [
+    "docs/gen_ref_pages.py"
+   ],
+   "kind": "docs",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i55"
+  },
+  {
+   "title": "HF TGI default mode and comment consistent",
+   "criterion": "The default mode in _obtain_model_inputs matches its comment and docs. Upstream made it 'chat'.",
+   "files": [
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py"
+   ],
+   "kind": "bug",
+   "source": "both",
+   "n_reviewers": 1,
+   "id": "i56"
+  },
+  {
+   "title": "Gemini parse_parts_value doesn't shadow builtin type",
+   "criterion": "The local `type` variable is renamed (e.g. media_type) in the gemini, vertex, openai and anthropic utils, so `type(err).__name__` in error handling works. A test patches get_file to raise.",
+   "files": [
+    "src/prompto/apis/gemini/gemini_utils.py",
+    "src/prompto/apis/vertexai/vertexai_utils.py",
+    "src/prompto/apis/openai/openai_utils.py",
+    "src/prompto/apis/anthropic/anthropic_utils.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i57"
+  },
+  {
+   "title": "Gemini/Vertex history requires a non-system message",
+   "criterion": "A history consisting only of a system message is rejected by check_prompt_dict and query.",
+   "files": [
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i58"
+  },
+  {
+   "title": "Gemini/Vertex history must end with user turn",
+   "criterion": "Validation rejects histories whose final message is not role 'user'.",
+   "files": [
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i59"
+  },
+  {
+   "title": "HF TGI sends prompt's model_name",
+   "criterion": "TGI chat and completion calls pass model=model_name instead of self.api_type.",
+   "files": [
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i60"
+  },
+  {
+   "title": "check_experiment exits non-zero on invalid file",
+   "criterion": "main() calls sys.exit(1) when the experiment file is invalid, and the dead log_file None check is removed.",
+   "files": [
+    "src/prompto/scripts/check_experiment.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i61"
+  },
+  {
+   "title": "CSV integer parameters not upcast to float",
+   "criterion": "Integer-valued parameters from CSV columns that contain NaN are passed as ints (e.g. via convert_dtypes or whole-number conversion).",
+   "files": [
+    "src/prompto/experiment.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i62"
+  },
+  {
+   "title": "CSV/JSONL path rewriting changes only the suffix",
+   "criterion": "process() uses removesuffix/splitext rather than str.replace to switch between .csv and .jsonl.",
+   "files": [
+    "src/prompto/experiment.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i63"
+  },
+  {
+   "title": "Validate JSONL lines are non-empty JSON objects",
+   "criterion": "_read_input_file raises a ValueError with a line number for blank lines or non-object JSON values.",
+   "files": [
+    "src/prompto/experiment.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i64"
+  },
+  {
+   "title": "Validate parameters is a dict in check_prompt_dict",
+   "criterion": "OpenAI, Azure, Anthropic, Ollama, TGI and Quart check_prompt_dict report an issue when parameters is present but not a dict or None.",
+   "files": [
+    "src/prompto/apis/openai/openai.py",
+    "src/prompto/apis/azure_openai/azure_openai.py",
+    "src/prompto/apis/anthropic/anthropic.py",
+    "src/prompto/apis/ollama/ollama.py",
+    "src/prompto/apis/huggingface_tgi/huggingface_tgi.py",
+    "src/prompto/apis/quart/quart.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i65"
+  },
+  {
+   "title": "run_experiment doesn't silently run stale same-named input",
+   "criterion": "If a file with the same basename but a different real path exists in the input folder, it is overwritten or an error is raised, rather than the stale file being used.",
+   "files": [
+    "src/prompto/scripts/run_experiment.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i66"
+  },
+  {
+   "title": "Pipeline survives bad experiment files",
+   "criterion": "ExperimentPipeline.run catches exceptions from Experiment construction or processing for one file, logs them, and continues.",
+   "files": [
+    "src/prompto/experiment_pipeline.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i67"
+  },
+  {
+   "title": "Pipeline average time weighted by query count",
+   "criterion": "The pipeline's average per-query time is computed from total time divided by total queries, not as a mean of per-experiment averages.",
+   "files": [
+    "src/prompto/experiment_pipeline.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i68"
+  },
+  {
+   "title": "First request not delayed by rate-limit interval",
+   "criterion": "send_requests launches the first task immediately and sleeps only between subsequent launches.",
+   "files": [
+    "src/prompto/experiment.py"
+   ],
+   "kind": "performance",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i69"
+  },
+  {
+   "title": "group_prompts avoids creating empty groups",
+   "criterion": "Group buckets are created only after the model-specific key is resolved, so no empty group is created or processed.",
+   "files": [
+    "src/prompto/experiment.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i70"
+  },
+  {
+   "title": "Settings validates parallel as bool",
+   "criterion": "Settings raises TypeError when parallel is not a bool.",
+   "files": [
+    "src/prompto/settings.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i71"
+  },
+  {
+   "title": "Settings max_queries_dict validated on assignment",
+   "criterion": "max_queries_dict becomes a property whose setter calls check_max_queries_dict. The max_queries and max_attempts setters raise TypeError for non-ints, consistent with __init__.",
+   "files": [
+    "src/prompto/settings.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i72"
+  },
+  {
+   "title": "Gemini process_response joins all text parts",
+   "criterion": "process_response concatenates all text parts of the first candidate and defines the behaviour when no text is present.",
+   "files": [
+    "src/prompto/apis/gemini/gemini_utils.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i73"
+  },
+  {
+   "title": "Anthropic omits system when empty",
+   "criterion": "_query_history passes NOT_GIVEN, or omits system, when no system message exists, instead of an empty string.",
+   "files": [
+    "src/prompto/apis/anthropic/anthropic.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i74"
+  },
+  {
+   "title": "Quart client uses timeout and reports response body",
+   "criterion": "async_client_generate sets an aiohttp ClientTimeout, sends json=, and includes a bounded response body in error messages.",
+   "files": [
+    "src/prompto/apis/quart/quart_utils.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i75"
+  },
+  {
+   "title": "Quart uses get_environment_variable helper",
+   "criterion": "QuartAPI._obtain_model_inputs resolves the endpoint via get_environment_variable, like the other APIs.",
+   "files": [
+    "src/prompto/apis/quart/quart.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i76"
+  },
+  {
+   "title": "Deduplicate encode_image and safety threshold mapping",
+   "criterion": "A single shared encode_image is used by both modules, and a shared safety-filter\u2192HarmBlockThreshold mapping is used by Gemini and Vertex, including in check_prompt_dict.",
+   "files": [
+    "src/prompto/apis/openai/openai_utils.py",
+    "src/prompto/apis/anthropic/anthropic_utils.py",
+    "src/prompto/apis/gemini/gemini.py",
+    "src/prompto/apis/vertexai/vertexai.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i77"
+  },
+  {
+   "title": "Judge creates output directory before writing",
+   "criterion": "create_judge_file creates the parent directory, or raises a clear validation error, before opening the output file.",
+   "files": [
+    "src/prompto/judge.py",
+    "src/prompto/scripts/create_judge_file.py"
+   ],
+   "kind": "feature",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i78"
+  },
+  {
+   "title": "Don't mask internal ImportErrors as missing optional deps",
+   "criterion": "prompto.apis suppresses only ImportErrors for the known optional packages, e.g. by checking find_spec or err.name.",
+   "files": [
+    "src/prompto/apis/__init__.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i79"
+  },
+  {
+   "title": "convert_images preserves PNG transparency",
+   "criterion": "PNG images keep their alpha channel (RGBA) or are written to a separate folder rather than flattened in place.",
+   "files": [
+    "src/prompto/scripts/convert_images.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i80"
+  },
+  {
+   "title": "Unit tests for OpenAI/Azure/Ollama/TGI/Quart adapters",
+   "criterion": "Tests are added under tests/apis that cover check_environment_variables, check_prompt_dict, _obtain_model_inputs and query for these adapters.",
+   "files": [
+    "tests/apis"
+   ],
+   "kind": "tests",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i81"
+  },
+  {
+   "title": "Tests for check_experiment and obtain_missing_id_jsonl",
+   "criterion": "Adds tests/scripts/test_check_experiment.py and test_obtain_missing_id_jsonl.py covering the validation paths.",
+   "files": [
+    "tests/scripts"
+   ],
+   "kind": "tests",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i82"
+  },
+  {
+   "title": "Fix undefined cache key in ci.yaml",
+   "criterion": "The actions/cache key in ci.yaml no longer references the undefined env.cache_id.",
+   "files": [
+    ".github/workflows/ci.yaml"
+   ],
+   "kind": "packaging",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i83"
+  },
+  {
+   "title": "Fix invalid annotations in system-demo api_utils",
+   "criterion": "dict[int] becomes dict[str, Any], and except (Exception, BaseException) becomes except Exception.",
+   "files": [
+    "examples/system-demo/api_utils.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i84"
+  },
+  {
+   "title": "Use typing.Callable in experiment annotations",
+   "criterion": "evaluation_funcs annotations use list[Callable] instead of list[callable].",
+   "files": [
+    "src/prompto/experiment.py"
+   ],
+   "kind": "cleanup",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i85"
+  },
+  {
+   "title": "Fix broken example links in multimodal notebooks",
+   "criterion": "The anthropic, azure and openai multimodal notebooks point to existing example jsonl files (e.g. azure-openai-multimodal-example.jsonl) and drop stale links.",
+   "files": [
+    "examples/anthropic/anthropic-multimodal.ipynb",
+    "examples/azure-openai/azure-openai-multimodal.ipynb",
+    "examples/openai/openai-multimodal.ipynb"
+   ],
+   "kind": "docs",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i86"
+  }
+ ]
+}

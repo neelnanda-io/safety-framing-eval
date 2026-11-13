@@ -1,0 +1,1085 @@
+[
+ [
+  {
+   "title": "Distillation.update corrupts the recurrent teacher's rollout hidden state",
+   "detail": "update() never runs the teacher, yet it still touches the teacher's hidden state in three ways. (1) At every epoch it calls teacher.reset(hidden_state=self.last_hidden_states[1]), which restores a stale state saved at the end of the previous update. (2) For every stored step it calls teacher.reset(batch.dones), zeroing every env that was done at any point in the rollout. (3) It then saves the result back into last_hidden_states. As a result, a recurrent teacher starts the next rollout from the wrong state. Fix: remove all teacher reset/get_hidden_state calls from update() and keep only the student's last hidden state. Add a test with an RNNModel teacher checking that its hidden state is unchanged by update().",
+   "files": [
+    "rsl_rl/algorithms/distillation.py",
+    "tests/algorithms/test_distillation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Runner crashes for a deterministic distillation student",
+   "detail": "OnPolicyRunner.learn always passes action_std=self.alg.get_policy().output_std. MLPModel.output_std dereferences self.distribution, which is None when the student has no distribution_cfg, so this raises AttributeError. Distillation.act also requests stochastic_output=True. Fix: pass action_std only when policy.distribution is not None, and make Logger.log accept None. Also have the output_* properties raise a clear error when there is no distribution.",
+   "files": [
+    "rsl_rl/runners/on_policy_runner.py",
+    "rsl_rl/utils/logger.py",
+    "rsl_rl/models/mlp_model.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Shared CNN encoders appear twice in the PPO optimizer",
+   "detail": "With share_cnn_encoders, actor.cnns is the same module as critic.cnns. The optimizer is built from chain(actor.parameters(), critic.parameters()), so the shared parameters are registered twice and Adam updates them twice per step. Clipping also runs over them twice. Fix: deduplicate parameters by id when building the optimizer and the reduce list. Clip gradients over the deduplicated union, or clip the shared parameters once. Add a test that the optimizer has no duplicate parameters.",
+   "files": [
+    "rsl_rl/algorithms/ppo.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "mini_batch_generator reuses one permutation for all epochs",
+   "detail": "indices = torch.randperm(...) is computed once before the epoch loop. Every epoch therefore visits identical mini-batches in identical order, which reduces the decorrelation PPO relies on. Fix: draw a new randperm at the start of each epoch. Add a test that the mini-batch composition differs between epochs.",
+   "files": [
+    "rsl_rl/storage/rollout_storage.py",
+    "tests/storage/test_rollout_storage.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate mini-batch counts in the storage generators",
+   "detail": "mini_batch_generator silently drops batch_size % num_mini_batches samples. recurrent_mini_batch_generator uses num_envs // num_mini_batches, which drops trailing envs and yields empty batches when num_mini_batches > num_envs. Fix: raise ValueError when num_mini_batches > num_envs in the recurrent case, and when num_mini_batches > batch_size. Warn when samples or envs are dropped.",
+   "files": [
+    "rsl_rl/storage/rollout_storage.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Hoist loop-invariant work in recurrent_mini_batch_generator",
+   "detail": "dones.squeeze, last_was_done and the permute are recomputed for every mini-batch and every epoch. Each torch.sum on a tensor slice used as a slice bound also forces a host sync. Fix: compute last_was_done and per-env trajectory counts (cumsum) once before the loops, then slice with Python ints.",
+   "files": [
+    "rsl_rl/storage/rollout_storage.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "split_and_pad_trajectories pads with float32 regardless of input dtype",
+   "detail": "The appended full-length trajectory is torch.zeros(...) with the default float dtype. With integer observations such as uint8 images, pad_sequence receives mixed dtypes and fails or upcasts. Fix: pass dtype=v.dtype (or tensor.dtype) to the zeros. Add a test with a uint8 tensor.",
+   "files": [
+    "rsl_rl/utils/utils.py",
+    "tests/utils/test_trajectory_utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "RNNModel.get_latent squeezes the time dimension when T == 1",
+   "detail": "get_latent applies .squeeze(0) to the RNN output unconditionally. In batch mode with num_steps_per_env == 1, the unpadded output is [1, N, H] and loses its time dimension, so downstream shapes no longer match the stored actions and values. Fix: squeeze only in rollout mode (masks is None), ideally inside RNN.forward.",
+   "files": [
+    "rsl_rl/models/rnn_model.py",
+    "rsl_rl/modules/rnn.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "RND predictor is trained on padded zeros with recurrent policies",
+   "detail": "PPO.update calls rnd.compute_loss(batch.observations[:original_batch_size]). With the recurrent generator, observations are padded [T, n_traj] and original_batch_size is T. The slice is therefore a no-op, and the RND predictor trains on padding zeros. Fix: when batch.masks is not None, unpad (unpad_trajectories or obs[masks]) before computing the RND loss.",
+   "files": [
+    "rsl_rl/algorithms/ppo.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "resolve_rnd_config depends on the undeclared env.unwrapped.step_dt",
+   "detail": "VecEnv declares neither unwrapped nor step_dt, so any non-IsaacLab env raises AttributeError when RND is enabled. Fix: use getattr(env, 'unwrapped', env) and getattr(..., 'step_dt', None) with a documented fallback (no scaling plus a warning), or add step_dt to the VecEnv interface docs.",
+   "files": [
+    "rsl_rl/extensions/rnd.py",
+    "rsl_rl/env/vec_env.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Give a clear error for an invalid RND weight_schedule mode",
+   "detail": "getattr(self, f\"_{weight_schedule['mode']}_weight_schedule\") raises an opaque AttributeError for a typo and a KeyError if 'mode' is missing. Fix: validate the mode against {'constant', 'step', 'linear'} and check the required keys per mode (e.g. final_step > initial_step for linear) with descriptive ValueErrors.",
+   "files": [
+    "rsl_rl/extensions/rnd.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "EmpiricalDiscountedVariationNormalization fails for non-scalar shapes",
+   "detail": "forward() uses `if self.emp_norm._std > 0:`. For a shape with more than one element this raises 'Boolean value of Tensor is ambiguous'. There is also no epsilon in the division. Fix: return rew / (self.emp_norm._std + eps), or use torch.where(std > 0, rew / std, rew).",
+   "files": [
+    "rsl_rl/modules/normalization.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Discounted reward accumulator is never reset or saved",
+   "detail": "_DiscountedAverage.avg accumulates across episode boundaries and is not a buffer. It is therefore lost on checkpoint save/load, and normalization restarts from scratch after resuming. Fix: store avg as a registered buffer, or otherwise persist it in the state dict. Optionally zero it for done envs (pass dones from RND).",
+   "files": [
+    "rsl_rl/modules/normalization.py",
+    "rsl_rl/extensions/rnd.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Iteration counter off-by-one on resume",
+   "detail": "learn() sets current_learning_iteration = it, i.e. the last completed iteration. A second learn() call or a resumed run starts at that same index. It repeats iteration number it, overwrites model_{it}.pt and logs the same step twice. Fix: set current_learning_iteration = it + 1 after each iteration and save the final model as model_{it}.pt using the last completed index. Update test_learn_advances_iteration_counter accordingly.",
+   "files": [
+    "rsl_rl/runners/on_policy_runner.py",
+    "tests/runners/test_on_policy_runner.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Logger ETA is wrong after multiple learn() calls",
+   "detail": "self.tot_time accumulates over the logger's lifetime, but done_it = it + 1 - start_it counts only the current call. The ETA is overestimated on the second and later calls. Fix: track the elapsed time of the current call separately, e.g. reset a per-call timer in init_logging_writer or pass start time, and compute the ETA from it.",
+   "files": [
+    "rsl_rl/utils/logger.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "OnPolicyRunner.load is fragile",
+   "detail": "load() returns loaded_dict['infos'], which raises KeyError for checkpoints without that key. It also defaults map_location=None, so a GPU checkpoint fails to load on a CPU machine. Fix: use loaded_dict.get('infos') and default map_location to self.device.",
+   "files": [
+    "rsl_rl/runners/on_policy_runner.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "PPO.load raises KeyError when RND keys are missing",
+   "detail": "With the default load_cfg, rnd=True is set. Loading a checkpoint trained without RND into an RND-enabled run raises KeyError on 'rnd_state_dict'. Fix: load RND state only if the key is present, and warn otherwise.",
+   "files": [
+    "rsl_rl/algorithms/ppo.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "JIT export does not switch the model to eval mode",
+   "detail": "export_policy_to_jit scripts the as_jit() copy without calling .eval(). The deep-copied modules keep their training flag, so a CNN with BatchNorm is exported in train mode and uses batch statistics at deployment. Fix: call jit_model.eval() before torch.jit.script, as the ONNX path already does.",
+   "files": [
+    "rsl_rl/runners/on_policy_runner.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "W&B and Neptune store_config fail for dict env configs",
+   "detail": "store_config tries env_cfg.to_dict() and falls back to dataclasses.asdict(env_cfg). For a plain dict, which VecEnv.cfg explicitly allows, asdict raises TypeError. Fix: use the dict directly when isinstance(env_cfg, dict). Use asdict only for dataclasses, with a final fallback to str/vars.",
+   "files": [
+    "rsl_rl/utils/wandb_log_writer.py",
+    "rsl_rl/utils/neptune_log_writer.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "NeptuneLogWriter.save_file uses '/' to split paths",
+   "detail": "save_file uses path.rsplit('/', 1)[-1].split('.')[0], which breaks on Windows paths. It also truncates names that contain dots. Fix: use pathlib.Path(path).stem.",
+   "files": [
+    "rsl_rl/utils/neptune_log_writer.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Symmetry computes num_aug with float division and no check",
+   "detail": "augment_batch uses int(batch_size / original_batch_size). If the augmentation function returns a size that is not a multiple, this silently truncates and the repeated tensors mismatch the observations. Fix: use divmod and raise ValueError when there is a remainder. Also check that the actions batch matches the observation batch.",
+   "files": [
+    "rsl_rl/extensions/symmetry.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Symmetry logging-only mode builds an unnecessary autograd graph",
+   "detail": "When use_mirror_loss is False, compute_loss still runs the actor forward with grad enabled on the augmented batch and only detaches afterwards. This costs extra memory and compute on every mini-batch. Fix: wrap the forward and loss in torch.no_grad() when use_mirror_loss is False.",
+   "files": [
+    "rsl_rl/extensions/symmetry.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "Distillation silently swallows unknown config keys",
+   "detail": "Distillation.__init__ accepts **kwargs to absorb rnd_cfg and symmetry_cfg, which also absorbs typos such as 'learning_rte' without any message. Fix: pop the known no-op keys explicitly and warn or raise for any remaining kwargs.",
+   "files": [
+    "rsl_rl/algorithms/distillation.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Validate PPO hyperparameters",
+   "detail": "An unknown schedule value (e.g. 'adaptiv') silently behaves as fixed. Non-positive num_mini_batches or num_learning_epochs, clip_param <= 0, and gamma or lam outside [0, 1] are not rejected. Fix: add explicit checks in PPO.__init__, with schedule restricted to {'adaptive', 'fixed'}.",
+   "files": [
+    "rsl_rl/algorithms/ppo.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "RNN silently falls back to LSTM for unknown types",
+   "detail": "RNN.__init__ selects nn.GRU only if type == 'gru' and uses nn.LSTM otherwise. A value like 'rnn' or 'gur' silently creates an LSTM. Fix: map {'lstm', 'gru'} explicitly and raise ValueError for anything else.",
+   "files": [
+    "rsl_rl/modules/rnn.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "MLP crashes with an IndexError on empty hidden_dims",
+   "detail": "MLP.__init__ indexes hidden_dims_processed[0], which raises IndexError for an empty list. Fix: either support a single linear layer when hidden_dims is empty, or raise a clear ValueError.",
+   "files": [
+    "rsl_rl/modules/mlp.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Validate CNN per-layer parameter list lengths",
+   "detail": "get_param(kernel_size, idx) and the corresponding lookups for stride, dilation, norm and max_pool index into user lists. A list shorter than output_channels raises a bare IndexError deep in construction. Fix: validate in CNN.__init__ that every list/tuple argument has length len(output_channels).",
+   "files": [
+    "rsl_rl/modules/cnn.py",
+    "rsl_rl/utils/utils.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "resolve_obs_groups accepts a string instead of a list",
+   "detail": "A config like {'actor': 'policy'} is iterated character by character. This produces a confusing 'Observation p not found' error. Fix: raise a clear error (or wrap the string in a list) when an obs_groups value is a str or another non-list type.",
+   "files": [
+    "rsl_rl/utils/utils.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "check_nan misses Inf values",
+   "detail": "check_nan only checks torch.isnan, so Inf rewards or observations pass through and later produce NaNs in GAE and normalization. Fix: use ~torch.isfinite for floating-point tensors and skip integer/bool tensors. Update the error messages accordingly.",
+   "files": [
+    "rsl_rl/utils/utils.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "resolve_callable masks real import errors",
+   "detail": "The dot-format branch catches ModuleNotFoundError and continues. When a user module exists but itself imports a missing dependency, that real error is hidden behind 'no valid module.attr split found'. Fix: re-raise when e.name is not the module path being tried.",
+   "files": [
+    "rsl_rl/utils/utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Gaussian distributions change global torch state",
+   "detail": "GaussianDistribution, HeteroscedasticGaussianDistribution and BetaDistribution call Normal.set_default_validate_args(False) or Beta.set_default_validate_args(False) in __init__. This disables validation for every Normal/Beta in the user's process. Fix: construct the distributions with validate_args=False locally instead.",
+   "files": [
+    "rsl_rl/modules/distribution.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Validate init_std and std_range in the Gaussian distributions",
+   "detail": "init_std <= 0 with std_type='log' yields log of a non-positive value (NaN or -inf). std_range with min > max is not checked. Fix: raise ValueError for init_std <= 0 and for std_range[0] >= std_range[1].",
+   "files": [
+    "rsl_rl/modules/distribution.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Heteroscedastic 'scalar' std has zero gradient below the floor",
+   "detail": "In std_type='scalar', the raw MLP output is clamped to std_range. Negative outputs clamp to 1e-6 and receive zero gradient, so the std head can get stuck. Fix: apply softplus (plus the floor) before clamping in update(). Adjust init_mlp_weights to use the inverse-softplus of init_std as the bias.",
+   "files": [
+    "rsl_rl/modules/distribution.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "BetaDistribution entropy omits the rescaling Jacobian",
+   "detail": "log_prob includes -log(scale), but entropy returns the entropy of the unit Beta. The logged entropy is therefore inconsistent with log_prob for action_range != (0, 1). Fix: add self._log_range_scale per dimension before summing. Also validate action_range[1] > action_range[0].",
+   "files": [
+    "rsl_rl/modules/distribution.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "BetaDistribution.init_mlp_weights docstring overstates its effect",
+   "detail": "The docstring claims a near-uniform initial distribution. In fact only the beta half of the last layer is zeroed; alpha stays random and softplus(0) + 1 \u2248 1.69, so the distribution is not uniform. Fix: zero both halves, or correct the docstring and class docs.",
+   "files": [
+    "rsl_rl/modules/distribution.py"
+   ],
+   "kind": "docs"
+  },
+  {
+   "title": "Adaptive-LR tests never exercise PPO.update",
+   "detail": "The tests in TestAdaptiveLearningRate copy the if/else logic into the test body and assert on that copy, so they pass regardless of PPO's behaviour. TestPPOLosses does the same for the losses. Fix: run ppo.update() with schedule='adaptive' and monkeypatch actor.get_kl_divergence to return a large or small KL. Assert on ppo.learning_rate and optimizer.param_groups[0]['lr'].",
+   "files": [
+    "tests/algorithms/test_ppo.py"
+   ],
+   "kind": "tests"
+  },
+  {
+   "title": "test_zero_std_returns_raw_reward is misnamed and asserts almost nothing",
+   "detail": "The test only checks that the output is finite. Fix: assert that the output equals the reward in eval mode with fresh stats (std = 1). Add a separate test for multi-element shapes, which currently fail.",
+   "files": [
+    "tests/modules/test_normalization.py"
+   ],
+   "kind": "tests"
+  },
+  {
+   "title": "Remove or use dead init_weights and forward overrides",
+   "detail": "MLP.init_weights and CNN.init_weights are never called anywhere in the library. MLP.forward and CNN.forward reimplement nn.Sequential.forward identically. Fix: delete the redundant forward overrides, and either delete init_weights or wire it to a config option with a test.",
+   "files": [
+    "rsl_rl/modules/mlp.py",
+    "rsl_rl/modules/cnn.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Fix docs/docstring inaccuracies and typos",
+   "detail": "configuration.rst marks the Symmetry keys use_data_augmentation, use_mirror_loss and mirror_loss_coeff as 'required', but the code defaults them to False/0.0. The 'crelu' activation actually maps to CELU; rename it or document that. resolve_optimizer is annotated as returning an Optimizer instance but returns a class. Typos to fix: 'theRND', 'therecurrent', 'remainingrollout', and index.rst 'It's compact design'.",
+   "files": [
+    "docs/guide/configuration.rst",
+    "rsl_rl/utils/utils.py",
+    "rsl_rl/extensions/rnd.py",
+    "rsl_rl/models/mlp_model.py",
+    "tests/extensions/test_symmetry.py",
+    "docs/index.rst"
+   ],
+   "kind": "docs"
+  },
+  {
+   "title": "Logger mutates env extras and rescans the log dir every iteration",
+   "detail": "Logger.log overwrites ep_info[key] in place, which mutates dicts the env may reuse. It also runs pathlib.Path(log_dir).rglob('*.mp4') on every iteration, walking all checkpoints and subdirectories. Fix: build local tensors without writing back into ep_info. Scan only a dedicated videos subdirectory, or throttle the scan to the save interval.",
+   "files": [
+    "rsl_rl/utils/logger.py"
+   ],
+   "kind": "performance"
+  }
+ ],
+ [
+  {
+   "title": "Fix AttributeError in Logger.log when policy is deterministic (e.g. in Distillation)",
+   "detail": "In `OnPolicyRunner.learn`, `self.logger.log` is called with `action_std=self.alg.get_policy().output_std`. When the policy model is deterministic (`self.distribution is None`, which is common for `Distillation` student models or deterministic actors), `MLPModel.output_std` accesses `self.distribution.std` and raises `AttributeError: 'NoneType' object has no attribute 'std'`. Update `MLPModel.output_std` (and `output_mean`, `output_entropy`, `output_distribution_params`) or `OnPolicyRunner.learn` / `Logger.log` to handle `self.distribution is None` gracefully (e.g. returning `None` or a zero tensor and skipping `Policy/mean_std` logging when `action_std is None`).",
+   "files": [
+    "rsl_rl/models/mlp_model.py",
+    "rsl_rl/runners/on_policy_runner.py",
+    "rsl_rl/utils/logger.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix deterministic Distillaton.act crashing when student has no distribution",
+   "detail": "In `Distillation.act`, `self.student(obs, stochastic_output=True)` is called unconditionally, while in `OnPolicyRunner.learn` `self.alg.get_policy().output_std` is queried after `update()`. If a student `MLPModel` is configured with `distribution_cfg`, `Distillation.update()` only calls `self.student(batch.observations)` with `stochastic_output=False`, which never calls `self.distribution.update(mlp_output)`. If `update()` runs before `act()` or if `self.distribution._distribution` was never populated on the uncompiled `_raw_student`, accessing `output_std` raises `AttributeError: 'NoneType' object has no attribute 'stddev'`. Ensure `output_std` safely handles uninitialized distributions or `None`.",
+   "files": [
+    "rsl_rl/algorithms/distillation.py",
+    "rsl_rl/models/mlp_model.py",
+    "rsl_rl/modules/distribution.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix RNN.detach_hidden_state(dones) being a no-op for in-place slice assignment",
+   "detail": "In `RNN.detach_hidden_state`, when `dones is not None`, it executes `hidden_state[..., dones == 1, :] = hidden_state[..., dones == 1, :].detach()`. In PyTorch, assigning a detached tensor slice into a tensor that requires grad is an in-place CopySlices operation on the original tensor, which keeps `requires_grad=True` on `self.hidden_state` and still backpropagates through the non-done slices and the copy op itself. Furthermore, in `Distillation.update`, `self.student.reset(batch.dones.view(-1))` already zeros out `hidden_state[..., dones == 1, :] = 0.0` right before `detach_hidden_state(batch.dones.view(-1))` is called. If per-env detachment is needed, multiply by `(done == 0)` mask or clone/where; otherwise clarify and fix the graph detachment.",
+   "files": [
+    "rsl_rl/modules/rnn.py",
+    "rsl_rl/algorithms/distillation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix in-place modification of RNN hidden_state during reset(dones) corrupting autograd in Distillation.update",
+   "detail": "In `Distillation.update`, inside the `for batch in self.storage.generator():` loop, `actions = self.student(batch.observations)` runs a forward pass through the RNN (storing `self.hidden_state` which is needed for backward). Before `loss.backward()` is called (when `cnt % self.gradient_length != 0`), `self.student.reset(batch.dones.view(-1))` is called, which mutates `self.hidden_state[..., dones == 1, :] = 0.0` in-place! Mutating a tensor in-place after it has been saved for backward or used in the graph corrupts gradients or raises a PyTorch `RuntimeError: one of the variables needed for gradient computation has been modified by an inplace operation`. Fix `RNN.reset(dones)` to avoid in-place mutation when `self.hidden_state.requires_grad` is True (e.g., using `torch.where` or multiplying by a mask `(dones != 1).unsqueeze(-1)`).",
+   "files": [
+    "rsl_rl/modules/rnn.py",
+    "rsl_rl/algorithms/distillation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix Distillation.update hidden state reset at the start of Rollout vs Update",
+   "detail": "In `Distillation.__init__`, `self.last_hidden_states = (None, None)`. During `learn()`, `act()` and `process_env_step()` advance `self.student`'s and `self.teacher`'s hidden states over the rollout. Then `Distillation.update()` resets `self.student` to `self.last_hidden_states[0]`, which on the first update is `None` (zeros), and at the end of `update()` saves `self.student.get_hidden_state()` into `self.last_hidden_states`. However, `self.teacher` is never run during `update()`, so `self.teacher.get_hidden_state()` at the end of `update()` is still `self.last_hidden_states[1]` (always `None`!), and `self.student`'s hidden state at the end of `update()` has been mutated by the last step's `reset(batch.dones)` and potentially multiple epochs. Moreover, during `act()`, `self.student` continues from whatever state was left after `update()`. Record the initial hidden state at the start of the rollout (before `act()` step 0) and restore the post-rollout hidden state after `update()`.",
+   "files": [
+    "rsl_rl/algorithms/distillation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Avoid sharing activation module instance across layers in MLP and CNN",
+   "detail": "In `MLP.__init__` and `CNN.__init__`, `activation_mod = resolve_nn_activation(activation)` creates a single `nn.Module` instance and appends that exact same object reference to `layers` multiple times. Because `MLP` and `CNN` inherit from `nn.Sequential` and call `self.add_module(f'{idx}', layer)`, all activation sub-modules alias the same `nn.Module` instance. This causes issues with forward/backward hooks, `torch.fx` symbolic tracing, ONNX export, and `named_modules()` (which deduplicates modules by identity, hiding intermediate activation layers). Create a fresh activation instance per layer inside the loop.",
+   "files": [
+    "rsl_rl/modules/mlp.py",
+    "rsl_rl/modules/cnn.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix CNNModel JIT and ONNX export when no 1D observations are present",
+   "detail": "In `CNNModel.get_latent`, the model explicitly supports having no 1D observations (`if not self.obs_groups: return latent_cnn`). However, `_TorchCNNModel.forward` and `_OnnxCNNModel.forward` unconditionally normalize `obs_1d` and concatenate `torch.cat([latent_1d, latent_cnn], dim=-1)`, and `_OnnxCNNModel.get_dummy_inputs` creates `torch.zeros(1, 0)`. Handle `self.obs_dim == 0` (no 1D observations) in `_TorchCNNModel` and `_OnnxCNNModel` so JIT and ONNX exports work for vision-only policies.",
+   "files": [
+    "rsl_rl/models/cnn_model.py",
+    "tests/models/test_cnn_model.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix _TorchLSTMModel missing .cpu() call on RNN module in __init__",
+   "detail": "In `rsl_rl/models/rnn_model.py`, `_TorchGRUModel.__init__` calls `self.rnn.cpu()` before registering the CPU buffer `hidden_state`, whereas `_TorchLSTMModel.__init__` omits `self.rnn.cpu()` while registering CPU buffers `hidden_state` and `cell_state`. If `model.as_jit()` is called directly on a CUDA `RNNModel` with `rnn_type='lstm'`, `self.rnn` remains on CUDA while `self.hidden_state` and `self.cell_state` are on CPU, causing a device mismatch error on `forward()`. Add `self.rnn.cpu()` (and move `obs_normalizer`, `mlp`, `deterministic_output` to CPU or match `model` device) in `_TorchLSTMModel`, `_TorchGRUModel`, `_TorchMLPModel`, and `_TorchCNNModel`.",
+   "files": [
+    "rsl_rl/models/rnn_model.py",
+    "rsl_rl/models/mlp_model.py",
+    "rsl_rl/models/cnn_model.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix PPO.process_env_step modifying rewards in-place with intrinsic_rewards before Logger sees them",
+   "detail": "In `OnPolicyRunner.learn`, `self.alg.process_env_step(obs, rewards, dones, extras)` is called before `self.logger.process_env_step(rewards, dones, extras, intrinsic_rewards)`. Inside `PPO.process_env_step`, `self.transition.rewards = rewards.clone()` is used, so `rewards` itself is not mutated, which is good. However, `self.intrinsic_rewards = self.rnd.get_intrinsic_reward(obs)` is computed using `obs` (which in `OnPolicyRunner.learn` is the *next* observation after `env.step`), and `self.rnd` is in `train()` mode during rollout collection (`self.alg.train_mode()` is called before the rollout loop!). Because `self.rnd` is in `train()` mode during rollout, `self.rnd.reward_normalizer(intrinsic_reward)` updates its running statistics at every rollout step, whereas `state_normalizer` only updates in `update_normalization`. Document or ensure `reward_normalizer` and `state_normalizer` training modes are consistent, and clone `self.intrinsic_rewards` if mutated.",
+   "files": [
+    "rsl_rl/algorithms/ppo.py",
+    "rsl_rl/extensions/rnd.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix RND weight attribute missing if update() or logger runs before get_intrinsic_reward()",
+   "detail": "In `RandomNetworkDistillation.__init__`, `self.initial_weight = weight` is set, but `self.weight` is only set inside `get_intrinsic_reward()`. If `self.alg.rnd.weight` is accessed before `get_intrinsic_reward()` is called (or in tests/custom runners), `AttributeError: 'RandomNetworkDistillation' object has no attribute 'weight'` is raised. Initialize `self.weight = weight` in `RandomNetworkDistillation.__init__`.",
+   "files": [
+    "rsl_rl/extensions/rnd.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Save and load RND update_counter in state_dict for accurate weight scheduling across checkpoints",
+   "detail": "In `RandomNetworkDistillation`, `self.update_counter` is a plain Python `int` used by `_step_weight_schedule` and `_linear_weight_schedule`. When a checkpoint is saved and loaded via `PPO.save()` and `PPO.load()`, `self.rnd.state_dict()` does not include `update_counter`, so resuming training resets the RND weight schedule to step 0. Register `update_counter` as a buffer or include it in `state_dict`/`load_state_dict`.",
+   "files": [
+    "rsl_rl/extensions/rnd.py",
+    "tests/extensions/test_rnd.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix resolve_rnd_config crashing when env has no unwrapped.step_dt attribute",
+   "detail": "In `rsl_rl/extensions/rnd.py`, `resolve_rnd_config` executes `alg_cfg['rnd_cfg']['weight'] *= env.unwrapped.step_dt`. However, `VecEnv` (`rsl_rl/env/vec_env.py`) does not define `unwrapped` or `step_dt` (and `DummyEnv` in tests does not have it either). If a user or test constructs PPO with RND via `PPO.construct_algorithm` on a standard `VecEnv` without `env.unwrapped.step_dt`, it raises `AttributeError`. Use `getattr(getattr(env, 'unwrapped', env), 'step_dt', 1.0)` or check for `hasattr`.",
+   "files": [
+    "rsl_rl/extensions/rnd.py",
+    "tests/extensions/test_rnd.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix OnPolicyRunner.learn with init_at_random_ep_len=True when max_episode_length is a Tensor",
+   "detail": "According to `VecEnv` docstring in `rsl_rl/env/vec_env.py`, `max_episode_length` can be `int | torch.Tensor` ('If it is a tensor, it is the maximum episode length for each environment'). However, `OnPolicyRunner.learn` does `int(self.env.max_episode_length)`, which raises `ValueError: only one element tensors can be converted to Python scalars` when `max_episode_length` is a per-environment tensor. Support tensor `max_episode_length` (e.g., `(torch.rand_like(self.env.episode_length_buf, dtype=torch.float) * self.env.max_episode_length).long()`).",
+   "files": [
+    "rsl_rl/runners/on_policy_runner.py",
+    "tests/runners/test_on_policy_runner.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix OnPolicyRunner.learn when num_learning_iterations == 0",
+   "detail": "In `OnPolicyRunner.learn`, if `num_learning_iterations == 0`, the loop `for it in range(start_it, total_it):` does not execute, and then `self.save(os.path.join(self.logger.log_dir, f'model_{self.current_learning_iteration}.pt'))` overwrites checkpoint 0 (or the loaded iteration's checkpoint) without having done any training. Guard the post-loop save or early-return when `num_learning_iterations <= 0`.",
+   "files": [
+    "rsl_rl/runners/on_policy_runner.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix off-by-one iteration counter when resuming training from checkpoint in OnPolicyRunner",
+   "detail": "In `OnPolicyRunner.learn`, `self.current_learning_iteration = it` is set at the end of each loop iteration `it`, and then after the loop finishes, `self.save` saves `iter = self.current_learning_iteration` (which is `total_it - 1`). When `runner.load()` loads this checkpoint, `self.current_learning_iteration` is set to `total_it - 1`, so the next `runner.learn()` re-runs iteration `total_it - 1` and overwrites `model_{total_it - 1}.pt`! Update `self.current_learning_iteration = it + 1` or increment it at save/load so resumed runs start at the next iteration instead of repeating the last one.",
+   "files": [
+    "rsl_rl/runners/on_policy_runner.py",
+    "tests/runners/test_on_policy_runner.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix EmpiricalNormalization.update division by zero and uninitialized distributed group check",
+   "detail": "In `EmpiricalNormalization.update`, if `x.shape[0] == 0` (empty batch), `torch.var` and `mean_x` produce NaNs and `self.count += 0` leads to `0 / 0 = NaN` when `self.count == 0`. Add an early return `if x.shape[0] == 0: return`. Also, `EmpiricalNormalization.update` checks `if torch.distributed.is_initialized():`, which will perform `all_reduce` even if the model/normalizer is used in a single-GPU context while a process group happens to be initialized on CPU (and if `self.count` is on CPU while backend is NCCL, `torch.distributed.all_reduce(count_x)` will crash).",
+   "files": [
+    "rsl_rl/modules/normalization.py",
+    "tests/modules/test_normalization.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix EmpiricalDiscountedVariationNormalization resetting discounted average across episodes and multi-dim std check",
+   "detail": "In `EmpiricalDiscountedVariationNormalization.forward`, `if self.emp_norm._std > 0:` raises `RuntimeError: Boolean value of Tensor with more than one value is ambiguous` whenever `shape` is non-scalar (e.g. `[1]` or `[N]`), and does not add `self.emp_norm.eps` in the denominator (unlike `EmpiricalNormalization.forward`), even though `eps` is accepted in `__init__` and passed to `EmpiricalNormalization`! Use `torch.all(self.emp_norm._std > 0)` or `rew / (self.emp_norm._std + self.emp_norm.eps)`.",
+   "files": [
+    "rsl_rl/modules/normalization.py",
+    "tests/modules/test_normalization.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix _DiscountedAverage state not being saved in state_dict of EmpiricalDiscountedVariationNormalization",
+   "detail": "In `EmpiricalDiscountedVariationNormalization`, `self.disc_avg = _DiscountedAverage(gamma)` is a plain Python object (not an `nn.Module` and `self.avg` is not a registered buffer). Consequently, calling `.to(device)` on `EmpiricalDiscountedVariationNormalization` after the first step does not move `self.disc_avg.avg`, and `state_dict()` does not save `self.disc_avg.avg`. Register `avg` as a buffer or make `_DiscountedAverage` an `nn.Module`.",
+   "files": [
+    "rsl_rl/modules/normalization.py",
+    "tests/modules/test_normalization.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix PPO.update squeezing batch dimension when mini-batch size is 1",
+   "detail": "In `PPO.update`, `ratio = torch.exp(actions_log_prob - torch.squeeze(batch.old_actions_log_prob))` and `surrogate = -torch.squeeze(batch.advantages) * ratio` use `torch.squeeze(...)` without specifying a dimension. If a mini-batch has size 1 (e.g. `num_envs * num_steps_per_env // num_mini_batches == 1`), `torch.squeeze` removes the batch dimension as well, turning a `(1, 1)` tensor into a 0D scalar while `actions_log_prob` has shape `(1,)`, or causing broadcasting bugs if `actions_log_prob` is `(T, 1)` in recurrent mode! Use `.squeeze(-1)` instead of `torch.squeeze(...)`.",
+   "files": [
+    "rsl_rl/algorithms/ppo.py",
+    "tests/algorithms/test_ppo.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix PPO.process_env_step timeout bootstrapping when num_envs == 1",
+   "detail": "In `PPO.process_env_step`, timeout bootstrapping computes `self.transition.rewards += self.gamma * torch.squeeze(self.transition.values * extras['time_outs'].unsqueeze(1).to(self.device), 1)`. If `self.transition.rewards` has shape `(num_envs, 1)` vs `(num_envs,)`, squeezing dim 1 produces `(num_envs,)` which fails to add in-place to `(num_envs, 1)` (or if `time_outs` is already shape `(num_envs, 1)`, `.unsqueeze(1)` makes it `(num_envs, 1, 1)`!). Normalize `time_outs` with `.view(-1)` and `self.transition.values.squeeze(-1)` matching `self.transition.rewards.shape`.",
+   "files": [
+    "rsl_rl/algorithms/ppo.py",
+    "tests/algorithms/test_ppo.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix Symmetry.augment_batch not repeating old_distribution_params",
+   "detail": "In `Symmetry.augment_batch`, `batch.old_actions_log_prob`, `batch.values`, `batch.advantages`, and `batch.returns` are repeated `num_aug` times, while `batch.old_distribution_params` is left at `original_batch_size`. Although `PPO.update` slices `distribution_params` back to `[:original_batch_size]`, leaving `batch.old_distribution_params` inconsistent with the rest of `batch` is a trap for callers inspecting `batch`. Document this invariant or slice/repeat consistently, and validate `batch.observations.batch_size[0] % original_batch_size == 0`.",
+   "files": [
+    "rsl_rl/extensions/symmetry.py",
+    "tests/extensions/test_symmetry.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Fix Symmetry.compute_loss mutating batch.observations in-place when use_data_augmentation is False",
+   "detail": "In `Symmetry.compute_loss`, when `not self.use_data_augmentation`, it overwrites `batch.observations, _ = self.data_augmentation_func(env=self.env, obs=batch.observations, actions=None)`. This mutates `batch.observations` in-place as a side effect of computing the loss, doubling its batch size while leaving `batch.actions`, `batch.values`, etc. at `original_batch_size`. Store the augmented observations in a local variable `obs_aug` instead of overwriting `batch.observations` when `use_data_augmentation` is False.",
+   "files": [
+    "rsl_rl/extensions/symmetry.py",
+    "tests/extensions/test_symmetry.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix HeteroscedasticGaussianDistribution and BetaDistribution init_mlp_weights when last_activation is set or output_dim is unflattened",
+   "detail": "In `HeteroscedasticGaussianDistribution.init_mlp_weights` and `BetaDistribution.init_mlp_weights`, the code indexes `mlp[-2].weight[self.output_dim :]` assuming `mlp[-2]` is always the final `nn.Linear` layer (`mlp[-1]` being `nn.Unflatten`). If `MLP` is constructed with `last_activation` not None, `mlp[-2]` is `nn.Unflatten` and `mlp[-3]` is `nn.Linear`, raising `AttributeError: 'Unflatten' object has no attribute 'weight'`. Find the last `nn.Linear` layer in `mlp` dynamically instead of hardcoding `mlp[-2]`.",
+   "files": [
+    "rsl_rl/modules/distribution.py",
+    "tests/modules/test_distribution.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix HeteroscedasticGaussianDistribution.init_mlp_weights log_std bias formula",
+   "detail": "In `HeteroscedasticGaussianDistribution.init_mlp_weights`, when `self.std_type == 'log'`, it computes `init_std_log = torch.log(torch.tensor(self.init_std + 1e-7))`, whereas `GaussianDistribution.__init__` computes `torch.log(init_std * torch.ones(output_dim))` without adding `1e-7`. Adding `1e-7` makes the initial std slightly different from `init_std` (especially when `init_std` is small, e.g. `1e-5`) and causes `dist.std` right after initialization to not equal `init_std`. Validate `init_std > 0` and use `math.log(self.init_std)` consistently.",
+   "files": [
+    "rsl_rl/modules/distribution.py",
+    "tests/modules/test_distribution.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Validate std_range and init_std in GaussianDistribution, HeteroscedasticGaussianDistribution, and action_range in BetaDistribution",
+   "detail": "Currently, `GaussianDistribution` and `HeteroscedasticGaussianDistribution` do not validate that `init_std > 0` or `std_range[0] <= std_range[1]` (if `init_std <= 0` with `std_type='log'`, `torch.log` produces `-inf` or `nan`; if `std_range` has `min > max`, `clamp` silently clamps everything to `max`). Similarly, `BetaDistribution` does not validate `action_range[0] < action_range[1]` (if `action_range[0] >= action_range[1]`, `np.log(self._range_scale)` produces `-inf` or `nan`). Add input validation raising `ValueError` for invalid `init_std`, `std_range`, and `action_range`.",
+   "files": [
+    "rsl_rl/modules/distribution.py",
+    "tests/modules/test_distribution.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Validate RNN type in RNN.__init__ instead of silently defaulting to LSTM",
+   "detail": "In `rsl_rl/modules/rnn.py`, `RNN.__init__` sets `rnn_cls = nn.GRU if type.lower() == 'gru' else nn.LSTM`. If a user passes a typo such as `rnn_type='ltsm'` or `'rnn'`, it silently constructs an LSTM instead of raising a `ValueError`. Validate that `type.lower() in ('gru', 'lstm')` and raise a descriptive `ValueError` otherwise.",
+   "files": [
+    "rsl_rl/modules/rnn.py",
+    "tests/models/test_rnn_model.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Validate CNN padding argument in CNN.__init__",
+   "detail": "In `rsl_rl/modules/cnn.py`, `CNN.__init__` documents that `padding` must be one of `'none'`, `'zeros'`, `'reflect'`, `'replicate'`, or `'circular'`. However, if an invalid string (e.g. `'same'` or `'valid'`) is passed, it silently falls through to `p = (0, 0)` and `padding_mode = 'zeros'` without raising an error, while `norm` and `global_pool` both raise `ValueError` on invalid values. Add validation for `padding` to raise `ValueError` on unsupported values.",
+   "files": [
+    "rsl_rl/modules/cnn.py",
+    "tests/models/test_cnn_model.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Fix CNN.init_weights crashing when a Conv2d layer has bias=None",
+   "detail": "In `CNN.init_weights`, `torch.nn.init.zeros_(module.bias)` is called unconditionally for every `nn.Conv2d` module. If a `Conv2d` layer has `bias=None`, this raises `AttributeError` / `ValueError`. Check `if module.bias is not None:` before zero-initializing `module.bias`.",
+   "files": [
+    "rsl_rl/modules/cnn.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix MLP.init_weights indexing scales by Sequential module index instead of Linear layer index",
+   "detail": "In `MLP.init_weights`, `for idx, module in enumerate(self): if isinstance(module, nn.Linear): nn.init.orthogonal_(module.weight, gain=get_param(scales, idx))` passes `idx` (the index in `nn.Sequential`, which increments for both `Linear` and activation/unflatten modules, i.e., `0, 2, 4, ...`) to `get_param(scales, idx)`. If a user passes a tuple/list of scales with one entry per linear layer, `get_param(scales, idx)` accesses the wrong indices and raises `IndexError`! Track a separate `linear_idx` counter for `nn.Linear` layers.",
+   "files": [
+    "rsl_rl/modules/mlp.py",
+    "tests/models/test_mlp_model.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate RolloutStorage training_type and mini_batch_size > 0",
+   "detail": "In `RolloutStorage.__init__`, if an unknown `training_type` (neither `'rl'` nor `'distillation'`) is passed, it silently skips buffer allocation and fails later in `add_transition` or generators. Additionally, in `mini_batch_generator` and `recurrent_mini_batch_generator`, if `num_mini_batches > batch_size` or `num_mini_batches > self.num_envs`, `mini_batch_size` becomes `0`, yielding empty batches that produce `NaN` losses. Validate `training_type in ('rl', 'distillation')` in `__init__` and `mini_batch_size > 0` in the generators.",
+   "files": [
+    "rsl_rl/storage/rollout_storage.py",
+    "tests/storage/test_rollout_storage.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Reshuffle indices on every epoch in RolloutStorage.mini_batch_generator",
+   "detail": "In `RolloutStorage.mini_batch_generator`, `indices = torch.randperm(...)` is computed only once before `for epoch in range(num_epochs):`. This means every epoch iterates through the exact same mini-batches in the exact same order, reducing stochasticity and violating standard PPO practice where transitions are reshuffled at each epoch. Move `indices = torch.randperm(...)` inside the `for epoch in range(num_epochs):` loop.",
+   "files": [
+    "rsl_rl/storage/rollout_storage.py",
+    "tests/storage/test_rollout_storage.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Hoist invariant computations out of the epoch and mini-batch loops in RolloutStorage.recurrent_mini_batch_generator",
+   "detail": "In `RolloutStorage.recurrent_mini_batch_generator`, `dones = self.dones.squeeze(-1)`, `last_was_done` construction, `last_was_done.permute(1, 0)`, and `saved_hidden_state.permute(2, 0, 1, 3)[last_was_done]` are recomputed from scratch inside the inner `for i in range(num_mini_batches):` loop on every mini-batch of every epoch! Precomputing `last_was_done` and the trajectory-indexed hidden states once before the `for ep in range(num_epochs):` loop avoids `num_epochs * num_mini_batches` redundant full-buffer permutations and boolean mask indexings.",
+   "files": [
+    "rsl_rl/storage/rollout_storage.py",
+    "tests/storage/test_rollout_storage.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "Fix WandbLogWriter and NeptuneLogWriter store_config failing when env_cfg is a plain dict or arbitrary object",
+   "detail": "In `WandbLogWriter.store_config` and `NeptuneLogWriter.store_config`, `env_cfg` is typed as `dict | object`. The code tries `env_cfg.to_dict()` and in the `except Exception:` block calls `asdict(env_cfg)`. When `env_cfg` is a plain `dict` (like `DummyEnv.cfg = {}`) or a non-dataclass object without `.to_dict()`, `asdict(env_cfg)` raises `TypeError: asdict() should be called on dataclass instances`! Check `if isinstance(env_cfg, dict):` first, and fall back to `vars(env_cfg)` or `str(env_cfg)` if `asdict` fails.",
+   "files": [
+    "rsl_rl/utils/wandb_log_writer.py",
+    "rsl_rl/utils/neptune_log_writer.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix NeptuneLogWriter.save_file breaking on Windows paths and filenames with multiple dots",
+   "detail": "In `NeptuneLogWriter.save_file`, `name = path.rsplit('/', 1)[-1].split('.')[0]` assumes POSIX path separators and strips everything after the first dot in the filename (e.g., `my.repo.diff` becomes `my`). Use `os.path.splitext(os.path.basename(path))[0]` instead.",
+   "files": [
+    "rsl_rl/utils/neptune_log_writer.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix Logger.stop_logging_writer not closing TensorBoard SummaryWriter",
+   "detail": "In `Logger.stop_logging_writer`, it checks `if isinstance(self.writer, LogWriter): self.writer.stop()`. When `logger` is `'tensorboard'`, `self.writer` is a `torch.utils.tensorboard.SummaryWriter` (which is not a subclass of `LogWriter`), so `self.writer.close()` is never called at the end of `learn()`, potentially leaving buffered events unflushed and file handles open. Call `self.writer.close()` when `self.writer` is a `SummaryWriter` (and in `WandbLogWriter.stop` / `NeptuneLogWriter.stop` call `super().close()`).",
+   "files": [
+    "rsl_rl/utils/logger.py",
+    "rsl_rl/utils/wandb_log_writer.py",
+    "rsl_rl/utils/neptune_log_writer.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix Logger.log crashing on scalar float/int episode extras when default tensor device or dtype differs",
+   "detail": "In `Logger.log`, when `ep_info[key]` is not a `torch.Tensor`, it mutates `ep_info[key] = torch.Tensor([ep_info[key]])` (using the legacy `torch.Tensor` constructor which always creates a CPU float32 tensor and fails if `ep_info[key]` is already a 0D numpy array or bool). Then if `infotensor` stays empty (e.g. `key` missing or empty), `torch.mean(infotensor)` returns `nan`. Also `self.writer.add_scalar(key, value, it)` passes a 0D CUDA `torch.Tensor` `value` instead of `value.item()`, which can fail on custom `LogWriter` implementations expecting `float`. Convert with `torch.as_tensor(ep_info[key], dtype=torch.float, device=self.device).reshape(-1)` and pass `value.item()` to `add_scalar`.",
+   "files": [
+    "rsl_rl/utils/logger.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix Logger.log DivisionByZeroError when collect_time + learn_time == 0",
+   "detail": "In `Logger.log`, `fps = int(collection_size / (collect_time + learn_time))` can raise `ZeroDivisionError` if `collect_time + learn_time == 0` (e.g. in unit tests or mocked timers). Guard the denominator with `max(collect_time + learn_time, 1e-8)`.",
+   "files": [
+    "rsl_rl/utils/logger.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix resolve_callable failing on nested subpackages and masking ImportErrors inside imported modules",
+   "detail": "In `rsl_rl/utils/utils.py`, `resolve_callable` has two bugs: (1) In the dot-separated branch (`if '.' in callable_or_name:`), `except ModuleNotFoundError:` catches `ModuleNotFoundError` even when `module_path` *itself* exists and was found, but importing it failed because of a missing transitive import inside that module! Check `exc.name == module_path` (or `not module_path.startswith(exc.name)`). (2) In the simple-name branch, `pkgutil.iter_modules(rsl_rl.__path__, 'rsl_rl.')` only iterates over immediate child packages of `rsl_rl` and only checks if the name is re-exported in their `__init__.py`.",
+   "files": [
+    "rsl_rl/utils/utils.py",
+    "tests/utils/test_resolve_callable.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Do not mutate input obs_groups dict in-place in resolve_obs_groups",
+   "detail": "In `rsl_rl/utils/utils.py`, `resolve_obs_groups` modifies the caller's `obs_groups` dictionary in-place (`obs_groups[default_set_name] = ...`) before returning it. If a user shares a configuration dict across multiple runs or inspects their original config after runner construction, it has been mutated. Copy `obs_groups = copy.deepcopy(obs_groups)` at the beginning of `resolve_obs_groups` (matching `resolve_class`'s non-mutating behavior).",
+   "files": [
+    "rsl_rl/utils/utils.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Add unit tests for DistillationRunner, Logger, and resolve_obs_groups",
+   "detail": "Currently there are no tests for `DistillationRunner` (including its `teacher_loaded` guard before `learn()`, checkpoint loading from RL vs Distillation, and full `learn()` loop), `Logger` (`process_env_step`, `log`, RND reward tracking, episode extras aggregation), or `resolve_obs_groups` (missing default sets, fallback to `'policy'`, empty list error, unknown group error). Add comprehensive unit tests for these components under `tests/`.",
+   "files": [
+    "tests/runners/test_on_policy_runner.py",
+    "tests/utils/test_resolve_callable.py"
+   ],
+   "kind": "tests"
+  }
+ ],
+ [
+  {
+   "title": "Deduplicate shared CNN parameters in the PPO optimizer",
+   "detail": "When actor and critic share CNN encoders, `chain(self.actor.parameters(), self.critic.parameters())` contains the same parameters twice. This can update shared weights twice and produces optimizer warnings or errors. Build a unique parameter list by object identity and use it consistently for optimization and distributed reduction; add a test covering `share_cnn_encoders=True`.",
+   "files": [
+    "rsl_rl/algorithms/ppo.py",
+    "tests/algorithms/test_ppo.py",
+    "tests/models/test_cnn_model.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Clip PPO gradients as one unique parameter set",
+   "detail": "`PPO.update` clips actor and critic separately. Shared parameters are clipped twice, and even without sharing this does not enforce the documented maximum norm across the complete PPO model. Clip one deduplicated actor-plus-critic parameter collection and test that the resulting global norm is bounded.",
+   "files": [
+    "rsl_rl/algorithms/ppo.py",
+    "tests/algorithms/test_ppo.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Stop dropping feed-forward rollout samples",
+   "detail": "`RolloutStorage.mini_batch_generator` computes a floor-divided mini-batch size and only permutes `num_mini_batches * mini_batch_size` indices, silently discarding the remainder. Split a permutation into balanced chunks so every transition is yielded exactly once per epoch, and strengthen the completeness test with a non-divisible batch size.",
+   "files": [
+    "rsl_rl/storage/rollout_storage.py",
+    "tests/storage/test_rollout_storage.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Reshuffle feed-forward samples on every PPO epoch",
+   "detail": "`mini_batch_generator` creates one permutation outside the epoch loop, so every learning epoch sees identical batches. Generate a fresh permutation inside each epoch while preserving full sample coverage, and add a deterministic test showing epoch order changes under a fixed RNG stream.",
+   "files": [
+    "rsl_rl/storage/rollout_storage.py",
+    "tests/storage/test_rollout_storage.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "Handle non-divisible recurrent mini-batches without dropping environments",
+   "detail": "`recurrent_mini_batch_generator` uses `num_envs // num_mini_batches`, so trailing environments are omitted when the values are not divisible and zero-sized batches occur when there are more mini-batches than environments. Use balanced environment ranges or reject unsupported values explicitly, and test non-divisible and oversized configurations.",
+   "files": [
+    "rsl_rl/storage/rollout_storage.py",
+    "tests/storage/test_rollout_storage.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Use population variance for advantage normalization",
+   "detail": "Both global and per-mini-batch advantage normalization call `std()` with the unbiased default. A rollout or mini-batch containing one value therefore produces NaN. Use `std(unbiased=False)` with the existing epsilon and add one-sample tests for both normalization modes.",
+   "files": [
+    "rsl_rl/algorithms/ppo.py",
+    "tests/algorithms/test_ppo.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Validate PPO hyperparameters at construction",
+   "detail": "Invalid values such as zero epochs, zero or excessive mini-batches, non-positive learning rate, negative clipping, `gamma` or `lam` outside `[0,1]`, non-positive gradient norm, and unknown schedules currently fail later or silently disable training. Validate these in `PPO.__init__` with clear `ValueError`s and parameterized tests.",
+   "files": [
+    "rsl_rl/algorithms/ppo.py",
+    "tests/algorithms/test_ppo.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Store the next learning iteration in runner checkpoints",
+   "detail": "`OnPolicyRunner.learn` sets `current_learning_iteration = it`, and a resumed call starts again at that same iteration. This repeats an already completed iteration and creates off-by-one checkpoint names. Track the number/next index of completed iterations (`it + 1`), adjust final checkpoint naming and logging as needed, and update resume tests.",
+   "files": [
+    "rsl_rl/runners/on_policy_runner.py",
+    "tests/runners/test_on_policy_runner.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Support per-environment maximum episode lengths during random initialization",
+   "detail": "`VecEnv.max_episode_length` is documented as possibly being a tensor, but `learn(init_at_random_ep_len=True)` converts it to `int`, which fails for multi-element tensors and ignores per-environment limits. Generate random episode lengths using each environment's own upper bound and validate that all bounds are positive.",
+   "files": [
+    "rsl_rl/runners/on_policy_runner.py",
+    "rsl_rl/env/vec_env.py",
+    "tests/runners/test_on_policy_runner.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Allow logging deterministic policies without an output distribution",
+   "detail": "The runner always evaluates `get_policy().output_std`, whose property dereferences `self.distribution` even for deterministic students or actors. Make action standard deviation optional in `Logger.log` and only access/log it when a distribution exists; add a deterministic distillation runner test.",
+   "files": [
+    "rsl_rl/runners/on_policy_runner.py",
+    "rsl_rl/utils/logger.py",
+    "rsl_rl/models/mlp_model.py",
+    "tests/runners/test_on_policy_runner.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Default checkpoint loading to the runner device",
+   "detail": "`OnPolicyRunner.load` passes `map_location=None` unless the caller supplies it, so loading a CUDA checkpoint into a CPU runner can fail or leave optimizer tensors on an incompatible device. Default `map_location` to `self.device` and test loading a checkpoint with an explicit device mapping path.",
+   "files": [
+    "rsl_rl/runners/on_policy_runner.py",
+    "tests/runners/test_on_policy_runner.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Close and flush every logging writer",
+   "detail": "`Logger.stop_logging_writer` only calls `stop()` for `LogWriter` instances. A plain TensorBoard `SummaryWriter` is never closed, and the W&B/Neptune implementations finish their remote run without closing their inherited TensorBoard writer. Close/flush all writers and have external writers call `super().close()` before finishing.",
+   "files": [
+    "rsl_rl/utils/logger.py",
+    "rsl_rl/utils/wandb_log_writer.py",
+    "rsl_rl/utils/neptune_log_writer.py",
+    "tests/runners/test_on_policy_runner.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Serialize dictionary environment configs in external loggers",
+   "detail": "`WandbLogWriter.store_config` and `NeptuneLogWriter.store_config` first call `to_dict()` and then `asdict()`. A normal dictionary supports neither path, despite `env_cfg` being typed as `dict | object`, so external logging fails at startup. Handle dictionaries directly, dataclasses with `asdict`, and objects with `to_dict`; add unit tests with each form.",
+   "files": [
+    "rsl_rl/utils/wandb_log_writer.py",
+    "rsl_rl/utils/neptune_log_writer.py",
+    "tests/utils/test_log_writers.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Convert episode-extra metrics to host scalars before backend logging",
+   "detail": "`Logger.log` passes a tensor, potentially a CUDA tensor, directly to `writer.add_scalar` for episode extras. Remote logging clients commonly require Python numeric values. Convert the reduced value with `.item()` while retaining the tensor only for local formatting, and test with a strict fake writer.",
+   "files": [
+    "rsl_rl/utils/logger.py",
+    "tests/utils/test_logger.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Actually freeze the RND target network",
+   "detail": "Calling `self.target.eval()` only changes module mode; target parameters still have `requires_grad=True`. Although current loss code detaches target outputs, the supposedly fixed network remains unnecessarily trainable and can be modified accidentally. Set all target parameters to `requires_grad_(False)` and test both flags and absence of gradients.",
+   "files": [
+    "rsl_rl/extensions/rnd.py",
+    "tests/extensions/test_rnd.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Checkpoint all stateful RND scheduling and reward normalization state",
+   "detail": "`update_counter`, current weight, and `_DiscountedAverage.avg` are plain Python attributes and are absent from `state_dict`. Resuming training restarts the weight schedule and discounted-return normalization history. Register serializable buffers or implement extra state handling, then add save/load continuation tests.",
+   "files": [
+    "rsl_rl/extensions/rnd.py",
+    "rsl_rl/modules/normalization.py",
+    "rsl_rl/algorithms/ppo.py",
+    "tests/extensions/test_rnd.py",
+    "tests/runners/test_on_policy_runner.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate RND weight schedule configurations eagerly",
+   "detail": "Unknown schedule modes currently fail through `getattr`, missing fields fail on the first environment step, and a linear schedule with equal initial/final steps divides by zero. Validate supported modes, required fields, integer step ordering, and finite values in `RandomNetworkDistillation.__init__`, with tests for each invalid configuration.",
+   "files": [
+    "rsl_rl/extensions/rnd.py",
+    "tests/extensions/test_rnd.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Reset discounted RND reward accumulators at episode boundaries",
+   "detail": "`_DiscountedAverage` carries discounted returns across terminal states, contaminating reward-normalization statistics between episodes. Pass done masks into intrinsic reward normalization (or expose a reset method) and zero the accumulator for completed environments before continuing; test two short episodes with known rewards.",
+   "files": [
+    "rsl_rl/extensions/rnd.py",
+    "rsl_rl/modules/normalization.py",
+    "rsl_rl/algorithms/ppo.py",
+    "tests/extensions/test_rnd.py",
+    "tests/modules/test_normalization.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Make discounted variation normalization work for non-scalar shapes",
+   "detail": "`EmpiricalDiscountedVariationNormalization.forward` uses `if self.emp_norm._std > 0`, which raises an ambiguous-tensor error for vector shapes even though the constructor accepts arbitrary shapes. Remove the tensor-valued branch and divide by a clamped standard deviation elementwise, then test a multidimensional reward shape.",
+   "files": [
+    "rsl_rl/modules/normalization.py",
+    "tests/modules/test_normalization.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Include action-range scaling in Beta entropy",
+   "detail": "`BetaDistribution.entropy` returns entropy in the unit interval, but samples are transformed to `action_range`. Differential entropy must add `log(range_scale)` per action dimension. Correct the entropy calculation and add analytical tests comparing ranges `(0,1)` and `(-1,1)`.",
+   "files": [
+    "rsl_rl/modules/distribution.py",
+    "tests/modules/test_distribution.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Validate Gaussian and Beta distribution ranges",
+   "detail": "Gaussian constructors accept non-positive `init_std`, reversed or non-positive `std_range`, producing NaNs or invalid clamps. `BetaDistribution` accepts equal or reversed action bounds, causing invalid logarithms and scaling. Require finite, ordered, positive standard-deviation values and a finite positive action-range width, with failure tests.",
+   "files": [
+    "rsl_rl/modules/distribution.py",
+    "tests/modules/test_distribution.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Avoid globally disabling torch distribution validation",
+   "detail": "The distribution constructors call `Normal.set_default_validate_args(False)` and `Beta.set_default_validate_args(False)`, changing process-wide behavior for unrelated user code. Remove these global calls and pass `validate_args=False` only when constructing this library's internal distributions; test that PyTorch's global default is unchanged.",
+   "files": [
+    "rsl_rl/modules/distribution.py",
+    "tests/modules/test_distribution.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Reject unsupported RNN types instead of silently selecting LSTM",
+   "detail": "`RNN.__init__` chooses GRU only for `\"gru\"` and silently treats every other string as LSTM. A typo therefore changes the model architecture without warning. Explicitly accept only `gru` and `lstm`, raise `ValueError` otherwise, and add constructor tests.",
+   "files": [
+    "rsl_rl/modules/rnn.py",
+    "tests/models/test_rnn_model.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Validate non-empty positive MLP dimensions",
+   "detail": "`MLP.__init__` indexes the first and last hidden dimensions unconditionally, so an empty list raises an opaque `IndexError`; zero and negative dimensions other than the documented `-1` also fail later. Validate positive input/output sizes and a non-empty hidden list containing positive values or `-1`.",
+   "files": [
+    "rsl_rl/modules/mlp.py",
+    "tests/modules/test_mlp.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Correct CNN same-padding calculations for odd dimensions and strides",
+   "detail": "`_compute_padding` can return negative padding, for example with odd input sizes, stride greater than one, and a small kernel. Symmetric `Conv2d` padding also cannot represent all SAME-padding cases. Compute the target `ceil(input/stride)` size, apply explicit asymmetric padding where needed, and test odd rectangular inputs against actual output shapes.",
+   "files": [
+    "rsl_rl/modules/cnn.py",
+    "tests/models/test_cnn_model.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate CNN configuration lengths and padding names",
+   "detail": "Unknown `padding` values are silently treated as no padding, and per-layer tuples shorter than `output_channels` fail with an unrelated `IndexError`. Validate padding modes and ensure `kernel_size`, `stride`, `dilation`, `norm`, and `max_pool` sequences have exactly one entry per convolutional layer; add invalid-config tests.",
+   "files": [
+    "rsl_rl/modules/cnn.py",
+    "tests/models/test_cnn_model.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Do not force only the exported GRU submodule onto CPU",
+   "detail": "`_TorchGRUModel.__init__` calls `self.rnn.cpu()` but leaves copied normalizer and MLP modules on the source device. Calling `as_jit()` directly on a CUDA model then creates a mixed-device wrapper. Remove the isolated move and let callers move the complete export module, matching the LSTM path; add a device-consistency test.",
+   "files": [
+    "rsl_rl/models/rnn_model.py",
+    "tests/models/test_rnn_model.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Backpropagate the final partial distillation accumulation",
+   "detail": "`Distillation.update` discards any accumulated loss when the total number of timestep batches is not divisible by `gradient_length`. This silently wastes rollout data and is only warned about. Perform a final optimizer step for the remainder, remove or revise the warning, and update the optimizer-step tests for non-divisible lengths.",
+   "files": [
+    "rsl_rl/algorithms/distillation.py",
+    "tests/algorithms/test_distillation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Normalize distillation accumulated loss by accumulation length",
+   "detail": "The distillation code sums per-timestep mean losses before `backward`, so gradient magnitude grows linearly with `gradient_length` and the configured learning rate changes meaning when truncation length changes. Divide each accumulation by its actual number of terms, including the final partial group, and test equivalent updates under duplicated data.",
+   "files": [
+    "rsl_rl/algorithms/distillation.py",
+    "tests/algorithms/test_distillation.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Validate distillation optimization parameters",
+   "detail": "A zero `gradient_length` causes modulo-by-zero, non-positive epoch counts produce an empty update and division by zero, and invalid learning rates or gradient norms reach the optimizer later. Validate `gradient_length`, epochs, learning rate, gradient bucket size, and optional max norm in `Distillation.__init__`.",
+   "files": [
+    "rsl_rl/algorithms/distillation.py",
+    "tests/algorithms/test_distillation.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Preserve recurrent rollout hidden states across distillation updates",
+   "detail": "`Distillation.update` resets and mutates both student and teacher internal states. The teacher is never forwarded during the update, so its collected rollout state is replaced by reset states, corrupting recurrent teacher behavior on the next rollout. Snapshot rollout states before training and restore them afterward, or train with explicit stored states without touching inference state; add a two-rollout recurrent test.",
+   "files": [
+    "rsl_rl/algorithms/distillation.py",
+    "rsl_rl/storage/rollout_storage.py",
+    "tests/algorithms/test_distillation.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate rollout storage mode and dimensions",
+   "detail": "`RolloutStorage.__init__` accepts unknown training types and non-positive environment or transition counts, creating a partially initialized object that fails much later. Restrict `training_type` to `rl` or `distillation`, require positive sizes and action dimensions, and verify that observation batch size equals `num_envs`.",
+   "files": [
+    "rsl_rl/storage/rollout_storage.py",
+    "tests/storage/test_rollout_storage.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Validate transitions and require complete rollouts before generation",
+   "detail": "`add_transition` blindly dereferences optional fields, while all generators iterate over full capacity rather than the number of written steps. Missing fields produce obscure attribute errors and partial rollouts train on stale or zero data. Validate required fields, shapes, and devices by training mode, and either reject incomplete generation or iterate only over `step`; add partial-rollout tests.",
+   "files": [
+    "rsl_rl/storage/rollout_storage.py",
+    "tests/storage/test_rollout_storage.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Preserve distribution-parameter dtype in rollout storage",
+   "detail": "Lazy `distribution_params` buffers are created without `dtype=p.dtype`, forcing them to the default floating dtype. Mixed-precision or float64 policy parameters are silently converted, affecting stored KL inputs. Allocate with matching dtype and device, and test non-default dtypes.",
+   "files": [
+    "rsl_rl/storage/rollout_storage.py",
+    "tests/storage/test_rollout_storage.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Validate symmetry augmentation outputs before mutating a batch",
+   "detail": "`Symmetry.augment_batch` assumes the callback returns matching observation/action counts and an integer augmentation factor. A callback returning one copy, mismatched tensors, or a non-multiple batch can produce empty mirror losses or misaligned PPO tensors. Check non-None outputs, batch-size agreement, divisibility, and at least one mirrored copy when mirror loss is requested; add malformed callback tests.",
+   "files": [
+    "rsl_rl/extensions/symmetry.py",
+    "tests/extensions/test_symmetry.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Do not hide dependency import failures in dotted callable resolution",
+   "detail": "`resolve_callable` catches every `ModuleNotFoundError` while probing dotted module prefixes. If a valid module exists but its import fails because one of its dependencies is missing, the function masks the real error and eventually reports that no module split exists. Only continue when the missing module is the attempted prefix; otherwise re-raise the original exception and test with a temporary failing module.",
+   "files": [
+    "rsl_rl/utils/utils.py",
+    "tests/utils/test_resolve_callable.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate distributed gradient reduction arguments",
+   "detail": "`reduce_gradients_in_buckets` accepts non-positive bucket sizes and world sizes. These can cause empty concatenations, extremely inefficient one-element reductions, or division by zero. Require a positive finite bucket size and positive integer world size before processing gradients, with local tests that do not initialize distributed training.",
+   "files": [
+    "rsl_rl/utils/utils.py",
+    "tests/algorithms/test_distributed.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Reject infinities as well as NaNs in environment outputs",
+   "detail": "`check_nan` only tests `torch.isnan`, so infinite observations or rewards pass into the policy and typically poison the entire update. For floating and complex tensors, use `torch.isfinite`; keep non-floating done tensors supported and update the function name or documentation accordingly. Add NaN, positive-infinity, and negative-infinity tests.",
+   "files": [
+    "rsl_rl/utils/utils.py",
+    "tests/utils/test_check_nan.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Validate normalization update batches and feature shapes",
+   "detail": "`EmpiricalNormalization.update` accepts empty batches and mismatched trailing shapes. Empty input creates NaN moments, while incompatible shapes may broadcast and corrupt running statistics. Require a non-empty leading batch dimension matching the configured feature shape and add tests for both failures.",
+   "files": [
+    "rsl_rl/modules/normalization.py",
+    "tests/modules/test_normalization.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Freeze distillation teacher parameters explicitly",
+   "detail": "The teacher is excluded from the optimizer but its parameters retain `requires_grad=True`. Calls outside the runner's inference context can build unnecessary teacher graphs, waste memory, and permit accidental gradient accumulation. Set teacher parameters non-trainable while retaining eval mode, and test that teacher outputs and checkpoint loading still work without gradients.",
+   "files": [
+    "rsl_rl/algorithms/distillation.py",
+    "tests/algorithms/test_distillation.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "Make RNN done masking and selective detachment autograd-safe",
+   "detail": "`RNN.reset` and `detach_hidden_state(dones)` modify hidden-state slices in place. During truncated distillation backpropagation this can trigger autograd version errors, and assigning a detached slice back into the same tensor does not reliably sever history for only those environments. Replace in-place edits with functional masked tensors for GRU and both LSTM states, and test backward passes with dones inside an accumulation window.",
+   "files": [
+    "rsl_rl/modules/rnn.py",
+    "tests/models/test_rnn_model.py",
+    "tests/algorithms/test_distillation.py"
+   ],
+   "kind": "bug"
+  }
+ ]
+]

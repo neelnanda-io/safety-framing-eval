@@ -1,0 +1,1137 @@
+{
+ "task": "synthetic-data-kit",
+ "pin": "31f60efc0d2d7f5c134fb4cf8df900301bee69e8",
+ "reviewers": [
+  "opus",
+  "argon",
+  "sol"
+ ],
+ "merger": "opus",
+ "n_proposed": [
+  40,
+  40,
+  41
+ ],
+ "items": [
+  {
+   "title": "CLI failures must produce nonzero process exit codes",
+   "criterion": "Every `return 1` in system_check, ingest, create, curate and save_as is replaced by `raise typer.Exit(code=1)`. Tests assert `exit_code == 1` for failure cases such as a missing file or an unreachable server.",
+   "files": [
+    "synthetic_data_kit/cli.py",
+    "tests/functional/test_cli.py",
+    "tests/integration/test_backward_compatibility.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i01"
+  },
+  {
+   "title": "QAGenerator must use client.config so chunk overrides apply",
+   "criterion": "QAGenerator.__init__ uses `client.config` instead of re-reading config from disk, or merges config only once. A test shows that the --chunk-size/--chunk-overlap overrides set in create.process_file reach split_into_chunks.",
+   "files": [
+    "synthetic_data_kit/generators/qa_generator.py",
+    "synthetic_data_kit/core/create.py",
+    "tests/unit/test_qa_generator.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i02"
+  },
+  {
+   "title": "Web server file routes must block path traversal",
+   "criterion": "view_file, qa_json, edit_item and delete_item resolve the requested path and reject (4xx) any path outside the data root, including `../` paths. Tests cover a traversal attempt.",
+   "files": [
+    "synthetic_data_kit/server/app.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i03"
+  },
+  {
+   "title": "Sanitize uploaded filenames in web upload and ingest routes",
+   "criterion": "The upload and ingest routes pass uploaded filenames through `werkzeug.utils.secure_filename` and reject empty names before saving.",
+   "files": [
+    "synthetic_data_kit/server/app.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i04"
+  },
+  {
+   "title": "split_into_chunks must honor the overlap argument",
+   "criterion": "Overlap between consecutive chunks is bounded by the `overlap` parameter, not a hardcoded last 3 sentences, and `overlap=0` yields no overlap. Unit tests check the overlap length.",
+   "files": [
+    "synthetic_data_kit/utils/text.py",
+    "tests/unit/test_utils.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i05"
+  },
+  {
+   "title": "split_into_chunks must split paragraphs larger than chunk_size",
+   "criterion": "No chunk exceeds chunk_size except where it cannot be avoided, because oversized paragraphs are split with a sentence, word or character fallback and no text is lost. Tests cover a single huge paragraph and the empty string.",
+   "files": [
+    "synthetic_data_kit/utils/text.py",
+    "tests/unit/test_utils.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i06"
+  },
+  {
+   "title": "Remove stray test_write.json written by create qa",
+   "criterion": "process_file for the qa type no longer writes `test_write.json` into the output directory.",
+   "files": [
+    "synthetic_data_kit/core/create.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i07"
+  },
+  {
+   "title": "Propagate QA output write failures instead of returning success",
+   "criterion": "Exceptions from writing the QA result are no longer caught and swallowed, so process_file does not return output_path when the write failed.",
+   "files": [
+    "synthetic_data_kit/core/create.py",
+    "tests/integration/test_create_flow.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i08"
+  },
+  {
+   "title": "Handle bare output filenames without makedirs('') crash",
+   "criterion": "Every `os.makedirs(os.path.dirname(path))` call is guarded so it does nothing when dirname is empty, or a shared helper is used. This covers curate, save_as, format_converter and all parser save() methods.",
+   "files": [
+    "synthetic_data_kit/core/curate.py",
+    "synthetic_data_kit/core/save_as.py",
+    "synthetic_data_kit/utils/format_converter.py",
+    "synthetic_data_kit/parsers/txt_parser.py",
+    "synthetic_data_kit/parsers/pdf_parser.py",
+    "synthetic_data_kit/parsers/html_parser.py",
+    "synthetic_data_kit/parsers/docx_parser.py",
+    "synthetic_data_kit/parsers/ppt_parser.py",
+    "synthetic_data_kit/parsers/youtube_parser.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i09"
+  },
+  {
+   "title": "LLMClient retry settings: handle missing keys and zero values",
+   "criterion": "max_retries and retry_delay are resolved with `is not None` checks and defaults of 3 and 1.0, and invalid values (negative or non-numeric) are rejected. Retry loops raise after exhaustion instead of returning None.",
+   "files": [
+    "synthetic_data_kit/models/llm_client.py",
+    "tests/unit/test_llm_client.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i10"
+  },
+  {
+   "title": "parse_ratings must not globally unescape \\n/\\t before json.loads",
+   "criterion": "The `replace('\\\\n','\\n')`-style rewriting of the raw text is removed, and JSON containing escaped sequences inside strings parses correctly. A test covers this.",
+   "files": [
+    "synthetic_data_kit/utils/llm_processing.py",
+    "tests/unit/test_llm_processing.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i11"
+  },
+  {
+   "title": "Validate parse_qa_pairs output schema",
+   "criterion": "parse_qa_pairs returns only dict items that have string `question` and `answer` fields. When nothing valid is found it falls back or raises, and tests cover dicts, string lists and missing keys.",
+   "files": [
+    "synthetic_data_kit/utils/llm_processing.py",
+    "tests/unit/test_llm_processing.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i12"
+  },
+  {
+   "title": "rate_qa_pairs average computed over actually rated pairs",
+   "criterion": "avg_score divides total_score by the count of evaluated pairs rather than by len(qa_pairs). A test with a failed or unparsable batch confirms this.",
+   "files": [
+    "synthetic_data_kit/generators/qa_generator.py",
+    "tests/unit/test_qa_generator.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i13"
+  },
+  {
+   "title": "Reuse one AsyncOpenAI client per batch and close it",
+   "criterion": "_process_message_async no longer constructs a new AsyncOpenAI client per message. A single client is created per batch_completion, or cached, shared across tasks and closed.",
+   "files": [
+    "synthetic_data_kit/models/llm_client.py"
+   ],
+   "kind": "performance",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i14"
+  },
+  {
+   "title": "No directory creation at CLI import; honor --config paths",
+   "criterion": "AppContext no longer creates data directories in __init__ at module import. Directories are created in the CLI callback from the config selected with -c, so `--help` has no filesystem side effects.",
+   "files": [
+    "synthetic_data_kit/cli.py",
+    "synthetic_data_kit/core/context.py",
+    "tests/unit/test_context.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i15"
+  },
+  {
+   "title": "YouTube video-id extraction supports shorts, embed and youtu.be?si",
+   "criterion": "The video id is parsed via urllib.parse for watch, youtu.be (stripping the query), /shorts/ and /embed/ URLs. A clear ValueError replaces the AttributeError on `.group` when no id is found.",
+   "files": [
+    "synthetic_data_kit/core/ingest.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i16"
+  },
+  {
+   "title": "Add timeouts to HTTP requests in ingest and parsers",
+   "criterion": "requests.head in _check_pdf_url and requests.get in HTMLParser.parse and PDFParser.parse all pass a timeout argument.",
+   "files": [
+    "synthetic_data_kit/core/ingest.py",
+    "synthetic_data_kit/parsers/html_parser.py",
+    "synthetic_data_kit/parsers/pdf_parser.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i17"
+  },
+  {
+   "title": "save_as conversation extraction locates roles, supports wrapped/ShareGPT forms",
+   "criterion": "convert_format finds user and assistant messages by role rather than fixed indices 1 and 2. It handles 2-message conversations, lists of {conversations: [...]} from cot-enhance, and from/value keys, and warns on or rejects malformed items without KeyError.",
+   "files": [
+    "synthetic_data_kit/core/save_as.py",
+    "tests/integration/test_save_as_flow.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i18"
+  },
+  {
+   "title": "to_hf_dataset handles empty input",
+   "criterion": "An empty qa_pairs list produces a clear ValueError or an empty Dataset instead of an IndexError. A unit test covers this.",
+   "files": [
+    "synthetic_data_kit/utils/format_converter.py",
+    "tests/unit/test_format_converter.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i19"
+  },
+  {
+   "title": "Strictly validate cot-enhance input shapes",
+   "criterion": "Format detection requires all items to be dicts, so empty or non-dict lists are not misclassified. Unrecognized shapes, such as a dict without qa_pairs or conversations, raise a descriptive ValueError instead of iterating keys or slicing a dict.",
+   "files": [
+    "synthetic_data_kit/core/create.py",
+    "tests/unit/test_error_handling.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i20"
+  },
+  {
+   "title": "edit_item/delete_item request validation",
+   "criterion": "The handlers use `get_json(silent=True)` and check fields with `is not None`, so falsy content such as an empty dict is accepted. They require an integer item_index within range and return 400 for invalid input instead of 500.",
+   "files": [
+    "synthetic_data_kit/server/app.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i21"
+  },
+  {
+   "title": "Make CI linting actually run",
+   "criterion": ".pre-commit-config.yaml defines real hooks such as ruff, or ci.yml runs ruff check unconditionally rather than only `if: failure()`.",
+   "files": [
+    ".pre-commit-config.yaml",
+    ".github/workflows/ci.yml"
+   ],
+   "kind": "packaging",
+   "source": "reviewers",
+   "n_reviewers": 3,
+   "id": "i22"
+  },
+  {
+   "title": "Remove leaked API key from multimodal notebook",
+   "criterion": "The hardcoded API_ENDPOINT_KEY value in the use-case notebook is replaced by a placeholder, and the executed outputs and counts are reset.",
+   "files": [
+    "use-cases/multimodal-qa/Multimodal_Usage_Example_Guide.ipynb"
+   ],
+   "kind": "cleanup",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i23"
+  },
+  {
+   "title": "Parsers return a uniform list of document dicts",
+   "criterion": "The TXT, DOCX, PPT and PDF parsers return `[{\"text\": ...}]` instead of a raw string. QAGenerator exposes process_documents(documents=...) that consumes this format, and the tests are updated.",
+   "files": [
+    "synthetic_data_kit/parsers/txt_parser.py",
+    "synthetic_data_kit/parsers/docx_parser.py",
+    "synthetic_data_kit/parsers/ppt_parser.py",
+    "synthetic_data_kit/parsers/pdf_parser.py",
+    "synthetic_data_kit/generators/qa_generator.py",
+    "tests/unit/test_parsers.py",
+    "tests/unit/test_additional_parsers.py",
+    "tests/unit/test_qa_generator.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i24"
+  },
+  {
+   "title": "Multimodal ingest to Lance datasets with text and image columns",
+   "criterion": "ingest accepts `--multimodal`, including for directory input via the directory processor, and writes a .lance dataset with text and image columns using a multimodal parser and lance utilities. Tests are added.",
+   "files": [
+    "synthetic_data_kit/cli.py",
+    "synthetic_data_kit/parsers/multimodal_parser.py",
+    "synthetic_data_kit/utils/lance_utils.py",
+    "synthetic_data_kit/utils/directory_processor.py",
+    "tests/functional/test_multimodal.py",
+    "tests/integration/test_multimodal_flow.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i25"
+  },
+  {
+   "title": "Add multimodal-qa content type to create",
+   "criterion": "create supports `--type multimodal-qa` on .lance input via MultimodalQAGenerator.process_dataset. The output JSON is named from the input base_name rather than a fixed name, and the CLI help lists the type.",
+   "files": [
+    "synthetic_data_kit/core/create.py",
+    "synthetic_data_kit/generators/multimodal_qa_generator.py",
+    "synthetic_data_kit/cli.py",
+    "tests/integration/test_multimodal_flow.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i26"
+  },
+  {
+   "title": "Add vqa content type routed to VQAGenerator",
+   "criterion": "create.process_file handles content_type 'vqa' by calling VQAGenerator.process_dataset with documents, output_dir, num_examples and verbose.",
+   "files": [
+    "synthetic_data_kit/core/create.py",
+    "synthetic_data_kit/generators/vqa_generator.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i27"
+  },
+  {
+   "title": "Curate supports cot_examples input and preserves the CoT format",
+   "criterion": "curate_qa_pairs accepts files containing cot_examples and no qa_pairs: it rates question/answer while keeping reasoning, then writes the filtered cot_examples back. The empty-input error message mentions both formats and the tests are updated.",
+   "files": [
+    "synthetic_data_kit/core/curate.py",
+    "tests/unit/test_error_handling.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i28"
+  },
+  {
+   "title": "Rolling summary option for long documents",
+   "criterion": "QAGenerator.generate_summary accepts rolling_summary. When it is set, the document is split into max_context_length chunks with configurable summary_overlap, each chunk is summarized, and the joined summaries are re-summarized. create.process_file passes the flag through and config.yaml gains summary_overlap.",
+   "files": [
+    "synthetic_data_kit/generators/qa_generator.py",
+    "synthetic_data_kit/core/create.py",
+    "configs/config.yaml"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i29"
+  },
+  {
+   "title": "Declare pylance and PyMuPDF dependencies",
+   "criterion": "pyproject.toml lists pylance and PyMuPDF in runtime dependencies, not the wrong 'fitz' package, and PyMuPDF in dev extras.",
+   "files": [
+    "pyproject.toml"
+   ],
+   "kind": "packaging",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i30"
+  },
+  {
+   "title": "Normalize and validate numeric ratings",
+   "criterion": "parse_ratings converts ratings to finite floats, for example from the string \"8\", and skips or rejects booleans, unconvertible values and values outside 1-10. Curation threshold comparison and score sums therefore no longer raise TypeError.",
+   "files": [
+    "synthetic_data_kit/utils/llm_processing.py",
+    "synthetic_data_kit/core/curate.py",
+    "tests/unit/test_llm_processing.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i31"
+  },
+  {
+   "title": "Use structured JSON extraction in parse_qa_pairs and CoT parse_json_output",
+   "criterion": "Both parsers check fenced code blocks first and use decoder-based extraction instead of greedy first-`[` to last-`]` slicing. Unrelated brackets in the surrounding prose do not break parsing, as tests show.",
+   "files": [
+    "synthetic_data_kit/utils/llm_processing.py",
+    "synthetic_data_kit/generators/cot_generator.py",
+    "tests/unit/test_llm_processing.py",
+    "tests/unit/test_cot_generator.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i32"
+  },
+  {
+   "title": "extract_json_from_text uses raw_decode for embedded JSON",
+   "criterion": "extract_json_from_text scans for the first valid JSON object or array using `json.JSONDecoder().raw_decode`. Text containing multiple {} blocks then yields the first valid one, as a test shows.",
+   "files": [
+    "synthetic_data_kit/utils/text.py",
+    "tests/unit/test_utils.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i33"
+  },
+  {
+   "title": "Config getters merge defaults into partial sections",
+   "criterion": "get_generation_config, get_curate_config, get_vllm_config and the other getters merge user values over the defaults, so a partial section keeps unspecified defaults. Unit tests cover this.",
+   "files": [
+    "synthetic_data_kit/utils/config.py",
+    "tests/unit/test_utils.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i34"
+  },
+  {
+   "title": "ingest.process_file resolves output_dir from config when None",
+   "criterion": "Passing output_dir=None resolves the configured parsed output path instead of raising TypeError from os.path.exists(None). A test covers direct library use.",
+   "files": [
+    "synthetic_data_kit/core/ingest.py",
+    "tests/unit/test_parsers.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i35"
+  },
+  {
+   "title": "Avoid filename collisions for URLs from the same domain",
+   "criterion": "Non-YouTube URL output names include a sanitized path slug or a hash of the full URL, so two pages from one domain produce distinct files.",
+   "files": [
+    "synthetic_data_kit/core/ingest.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i36"
+  },
+  {
+   "title": "PPTParser must not duplicate slide titles",
+   "criterion": "The title shape is skipped in the shapes loop, so each title appears once, and test_ppt_parse_success is updated to match.",
+   "files": [
+    "synthetic_data_kit/parsers/ppt_parser.py",
+    "tests/unit/test_additional_parsers.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i37"
+  },
+  {
+   "title": "YouTubeParser ImportError names pytubefix",
+   "criterion": "The install hint says `pip install pytubefix youtube-transcript-api`, and the test match strings are updated.",
+   "files": [
+    "synthetic_data_kit/parsers/youtube_parser.py",
+    "tests/unit/test_additional_parsers.py"
+   ],
+   "kind": "docs",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i38"
+  },
+  {
+   "title": "Web curate form passes a quality threshold",
+   "criterion": "The unused num_pairs field in CurateForm is replaced with a bounded threshold field, and its value is passed to curate_qa_pairs.",
+   "files": [
+    "synthetic_data_kit/server/app.py",
+    "synthetic_data_kit/server/templates/curate.html"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i39"
+  },
+  {
+   "title": "Validate create --type and numeric options early",
+   "criterion": "Unknown --type values, num_pairs <= 0, chunk_size <= 0 and overlap outside [0, chunk_size) are rejected before any server check or LLM call. Rejection happens in the CLI through Typer constraints and in create.process_file for library callers.",
+   "files": [
+    "synthetic_data_kit/cli.py",
+    "synthetic_data_kit/core/create.py",
+    "tests/functional/test_cli.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i40"
+  },
+  {
+   "title": "Validate curate threshold range and positive batch sizes",
+   "criterion": "Thresholds outside [1, 10] are rejected, and batch_size, inference batch and SDK_BATCH_SIZE values must be positive integers. Zero no longer causes a range() error.",
+   "files": [
+    "synthetic_data_kit/core/curate.py",
+    "synthetic_data_kit/cli.py",
+    "tests/unit/test_error_handling.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i41"
+  },
+  {
+   "title": "COTGenerator.process_document: real verbose param, remove dead env round-trip",
+   "criterion": "include_simple_steps is either used or removed, a proper verbose parameter is added and passed from create.py, and the no-op read-then-write of SDK_VERBOSE is deleted.",
+   "files": [
+    "synthetic_data_kit/generators/cot_generator.py",
+    "synthetic_data_kit/core/create.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i42"
+  },
+  {
+   "title": "Remove redundant first file read in cot-enhance",
+   "criterion": "The unused `read_json(file_path)` call in the cot-enhance branch is removed, and the misleading read_json helper is renamed if kept.",
+   "files": [
+    "synthetic_data_kit/core/create.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i43"
+  },
+  {
+   "title": "Remove or gate debug prints in config, client and create",
+   "criterion": "Unconditional prints in load_config, get_llm_provider, LLMClient init and create.process_file are removed or moved to logger.debug, and the impossible WARNING branch is deleted.",
+   "files": [
+    "synthetic_data_kit/utils/config.py",
+    "synthetic_data_kit/models/llm_client.py",
+    "synthetic_data_kit/core/create.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i44"
+  },
+  {
+   "title": "Update DOCS.md to match the actual CLI and modules",
+   "criterion": "DOCS.md drops references to core/cleanup.py, setup.py, data/cleaned and `create --threshold`. It documents --chunk-size, --chunk-overlap, --preview, cot-enhance and the curated paths.",
+   "files": [
+    "DOCS.md"
+   ],
+   "kind": "docs",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i45"
+  },
+  {
+   "title": "Fix Getting Started link in issue template",
+   "criterion": "The config.yml contact link points to use-cases/getting-started/README.md.",
+   "files": [
+    ".github/ISSUE_TEMPLATE/config.yml"
+   ],
+   "kind": "docs",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i46"
+  },
+  {
+   "title": "Remove committed .DS_Store files",
+   "criterion": "Tracked .DS_Store files under use-cases are deleted and .DS_Store is listed in .gitignore.",
+   "files": [
+    "use-cases/.DS_Store",
+    "use-cases/adding_reasoning_to_llama_3/.DS_Store",
+    "use-cases/getting-started/.DS_Store",
+    ".gitignore"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i47"
+  },
+  {
+   "title": "Progress bars advance despite TaskID 0",
+   "criterion": "Guards like `if progress_ctx and task:` become `is not None` checks, so the first task (id 0) updates.",
+   "files": [
+    "synthetic_data_kit/core/curate.py",
+    "synthetic_data_kit/generators/qa_generator.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i48"
+  },
+  {
+   "title": "parse_ratings must not silently return [] on one missing rating",
+   "criterion": "A single array item lacking 'rating' no longer returns []. The function falls through to other methods or raises, so the caller's per-item fallback runs.",
+   "files": [
+    "synthetic_data_kit/utils/llm_processing.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i49"
+  },
+  {
+   "title": "parse_ratings tries array before object extraction",
+   "criterion": "A JSON array of rating objects is parsed as an array rather than failing because a `{...}` regex spans multiple elements. A test covers this.",
+   "files": [
+    "synthetic_data_kit/utils/llm_processing.py",
+    "tests/unit/test_llm_processing.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i50"
+  },
+  {
+   "title": "parse_qa_pairs regex fallback fully decodes JSON escapes",
+   "criterion": "Captured strings are decoded with json.loads, so \\n, \\\\ and \\uXXXX are unescaped. Errors are handled per pair.",
+   "files": [
+    "synthetic_data_kit/utils/llm_processing.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i51"
+  },
+  {
+   "title": "Per-chunk pair counts round up to meet requested total",
+   "criterion": "pairs_per_chunk in QAGenerator and examples_per_chunk in COTGenerator use math.ceil, so the total is not under-produced. The excess is truncated.",
+   "files": [
+    "synthetic_data_kit/generators/qa_generator.py",
+    "synthetic_data_kit/generators/cot_generator.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i52"
+  },
+  {
+   "title": "CoT single-call path caps output at num_examples",
+   "criterion": "_generate_single_call slices results to num_examples and drops non-dict items.",
+   "files": [
+    "synthetic_data_kit/generators/cot_generator.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i53"
+  },
+  {
+   "title": "cot-enhance keeps all conversations when flattening nested output",
+   "criterion": "Nested lists are flattened only when the outer list has length 1. Otherwise the result is validated as a list of message dicts, with the original kept on mismatch.",
+   "files": [
+    "synthetic_data_kit/core/create.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i54"
+  },
+  {
+   "title": "Pass the full summary into QA generation prompt",
+   "criterion": "generate_qa_pairs no longer truncates the summary to `summary[:100]`; it passes the full summary or a configurable limit.",
+   "files": [
+    "synthetic_data_kit/generators/qa_generator.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i55"
+  },
+  {
+   "title": "Reject empty documents before LLM calls",
+   "criterion": "Empty or whitespace-only documents raise a clear ValueError before summary or generation, so there is no division by zero on len(chunks). Tests cover the QA and CoT paths.",
+   "files": [
+    "synthetic_data_kit/core/create.py",
+    "synthetic_data_kit/generators/qa_generator.py",
+    "synthetic_data_kit/generators/cot_generator.py",
+    "tests/unit/test_qa_generator.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i56"
+  },
+  {
+   "title": "vLLM completion retries on JSON decode errors; fix backoff",
+   "criterion": "_vllm_chat_completion also catches ValueError and JSON decode errors and retries. The backoff is made truly exponential, or the comment is corrected.",
+   "files": [
+    "synthetic_data_kit/models/llm_client.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i57"
+  },
+  {
+   "title": "Reject unsupported LLM provider names",
+   "criterion": "Providers other than 'vllm' and 'api-endpoint' raise a clear error in config, CLI and LLMClient instead of silently falling back to vLLM.",
+   "files": [
+    "synthetic_data_kit/utils/config.py",
+    "synthetic_data_kit/models/llm_client.py",
+    "synthetic_data_kit/cli.py",
+    "tests/unit/test_llm_client.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i58"
+  },
+  {
+   "title": "load_config requires a mapping YAML root",
+   "criterion": "Empty or scalar YAML files raise a clear error instead of returning None or a scalar that fails later.",
+   "files": [
+    "synthetic_data_kit/utils/config.py",
+    "tests/unit/test_utils.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i59"
+  },
+  {
+   "title": "Remove logging.basicConfig call at library import",
+   "criterion": "llm_client.py no longer configures root logging on import; any logging setup is done in the CLI.",
+   "files": [
+    "synthetic_data_kit/models/llm_client.py",
+    "synthetic_data_kit/cli.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i60"
+  },
+  {
+   "title": "Lazily import Flask server in CLI",
+   "criterion": "run_server is imported inside the server command, so other commands work without Flask installed and without the server module's side effects.",
+   "files": [
+    "synthetic_data_kit/cli.py"
+   ],
+   "kind": "performance",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i61"
+  },
+  {
+   "title": "Validate curation input schema up front",
+   "criterion": "curate_qa_pairs checks for a dict root with a qa_pairs list of dicts that have question and answer fields. The error names the failing item index.",
+   "files": [
+    "synthetic_data_kit/core/curate.py",
+    "tests/unit/test_error_handling.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i62"
+  },
+  {
+   "title": "Do not silently write partial curation after inference failures",
+   "criterion": "Batch or item rating failures are tracked. Curation either raises when items remain unrated or records them explicitly, and partial output is opt-in.",
+   "files": [
+    "synthetic_data_kit/core/curate.py",
+    "tests/unit/test_error_handling.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i63"
+  },
+  {
+   "title": "Check batch_completion response count matches requests",
+   "criterion": "Generation and curation verify one response per request and retry or raise on a mismatch, rather than silently dropping chunks.",
+   "files": [
+    "synthetic_data_kit/generators/qa_generator.py",
+    "synthetic_data_kit/generators/cot_generator.py",
+    "synthetic_data_kit/core/curate.py",
+    "synthetic_data_kit/models/llm_client.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i64"
+  },
+  {
+   "title": "Directory preview works without LLM connectivity",
+   "criterion": "In create and curate, --preview on a directory is handled before provider initialization and server checks. A test asserts that no HTTP request is made.",
+   "files": [
+    "synthetic_data_kit/cli.py",
+    "tests/functional/test_preview_mode.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i65"
+  },
+  {
+   "title": "Single-file --preview must not process the file",
+   "criterion": "--preview on a single file either exits nonzero or shows the planned operation without calling processing functions, as a test verifies.",
+   "files": [
+    "synthetic_data_kit/cli.py",
+    "tests/functional/test_preview_mode.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i66"
+  },
+  {
+   "title": "Prevent output_name path traversal in ingest",
+   "criterion": "A user-supplied output_name must be a basename, or must resolve inside output_dir. Paths like `../x` and absolute paths are rejected.",
+   "files": [
+    "synthetic_data_kit/core/ingest.py",
+    "synthetic_data_kit/server/app.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i67"
+  },
+  {
+   "title": "YouTube URL detection uses parsed hostnames",
+   "criterion": "YouTube URLs are identified by the parsed hostname, such as youtube.com, youtu.be and subdomains, not by substring checks. Hosts like `youtube.com.evil.example` are not treated as YouTube.",
+   "files": [
+    "synthetic_data_kit/core/ingest.py",
+    "tests/unit/test_additional_parsers.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i68"
+  },
+  {
+   "title": "Robust PDF URL detection beyond HEAD Content-Type",
+   "criterion": "_check_pdf_url falls back to the URL suffix or a bounded GET when HEAD fails or omits Content-Type, and the status is checked before parsing.",
+   "files": [
+    "synthetic_data_kit/core/ingest.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i69"
+  },
+  {
+   "title": "Enforce upload size limit on web server",
+   "criterion": "MAX_CONTENT_LENGTH is configured on the Flask app, and unsupported file types are rejected at upload.",
+   "files": [
+    "synthetic_data_kit/server/app.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i70"
+  },
+  {
+   "title": "Always clean up temporary web uploads",
+   "criterion": "The ingest route uses a real temp file, deleted in a finally block, so parser failures do not leave uploads behind.",
+   "files": [
+    "synthetic_data_kit/server/app.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i71"
+  },
+  {
+   "title": "Stable configurable Flask secret key",
+   "criterion": "The secret key is read from an environment variable or config, with an explicit development-only fallback, instead of a random value generated at import.",
+   "files": [
+    "synthetic_data_kit/server/app.py",
+    "README.md"
+   ],
+   "kind": "packaging",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i72"
+  },
+  {
+   "title": "Write edited datasets atomically in web server",
+   "criterion": "edit_item and delete_item write to a temp file and then call os.replace instead of overwriting in place.",
+   "files": [
+    "synthetic_data_kit/server/app.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i73"
+  },
+  {
+   "title": "to_hf_dataset builds columns from union of keys",
+   "criterion": "Columns come from all items' keys, not just the first item's, with missing values filled.",
+   "files": [
+    "synthetic_data_kit/utils/format_converter.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i74"
+  },
+  {
+   "title": "Use .jsonl extension for ChatML output",
+   "criterion": "Directory save-as and default CLI naming give newline-delimited ChatML output a .jsonl suffix.",
+   "files": [
+    "synthetic_data_kit/utils/directory_processor.py",
+    "synthetic_data_kit/cli.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i75"
+  },
+  {
+   "title": "VQA dataset loading accepts record lists and resolves splits",
+   "criterion": "VQAGenerator.process_dataset uses Dataset.from_list for a JSON array of records and from_dict for a column mapping. It selects a split from a DatasetDict, choosing the sole split or requiring one when there are several.",
+   "files": [
+    "synthetic_data_kit/generators/vqa_generator.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i76"
+  },
+  {
+   "title": "VQAGenerator reads prompt from prompts section",
+   "criterion": "transform looks up `prompts.vqa_reasoning`, falling back to a top-level prompt, instead of only reading the top-level 'prompt' key.",
+   "files": [
+    "synthetic_data_kit/generators/vqa_generator.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i77"
+  },
+  {
+   "title": "Expose vqa_add_reasoning in CLI help and directory processing",
+   "criterion": "The create help lists vqa_add_reasoning, and process_directory_create handles its .json input.",
+   "files": [
+    "synthetic_data_kit/cli.py",
+    "synthetic_data_kit/utils/directory_processor.py"
+   ],
+   "kind": "feature",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i78"
+  },
+  {
+   "title": "Deduplicate OpenAI response content extraction",
+   "criterion": "The duplicated response-extraction block in _openai_chat_completion and _process_message_async moves into one helper method used by both.",
+   "files": [
+    "synthetic_data_kit/models/llm_client.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i79"
+  },
+  {
+   "title": "Factor shared record builders for HF and file save formats",
+   "criterion": "The alpaca, ft and chatml record construction is shared between format_converter writers and the save_as HF branch, with no duplicated system prompts.",
+   "files": [
+    "synthetic_data_kit/core/save_as.py",
+    "synthetic_data_kit/utils/format_converter.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i80"
+  },
+  {
+   "title": "Single helper for directory previews built on get_supported_files",
+   "criterion": "The repeated preview-printing block in cli.py is replaced by one helper. Directory stats derive from get_supported_files with sorted ordering.",
+   "files": [
+    "synthetic_data_kit/cli.py",
+    "synthetic_data_kit/utils/directory_processor.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i81"
+  },
+  {
+   "title": "Single-source package version and consistent publish workflow",
+   "criterion": "__version__ derives from package metadata, or pyproject uses a dynamic version. publish.yml uses trusted publishing consistently instead of mixing it with twine credentials.",
+   "files": [
+    "synthetic_data_kit/__init__.py",
+    "pyproject.toml",
+    ".github/workflows/publish.yml"
+   ],
+   "kind": "packaging",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i82"
+  },
+  {
+   "title": "Add unit tests for parse_ratings and curate_qa_pairs",
+   "criterion": "New tests cover parse_ratings for arrays, single objects, code-block wrapped input and malformed input. They also cover curate_qa_pairs batch rating, threshold filtering and the per-item fallback.",
+   "files": [
+    "tests/unit/test_llm_processing.py",
+    "tests/unit/test_error_handling.py"
+   ],
+   "kind": "tests",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i83"
+  },
+  {
+   "title": "system-check API test asserts chat.completions.create",
+   "criterion": "test_system_check_command_api_endpoint mocks and asserts `chat.completions.create` instead of models.list.",
+   "files": [
+    "tests/functional/test_cli.py"
+   ],
+   "kind": "tests",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i84"
+  },
+  {
+   "title": "Test HTMLParser with real BeautifulSoup",
+   "criterion": "test_html_parser runs real bs4 on HTML containing script and style tags and asserts they are removed.",
+   "files": [
+    "tests/unit/test_parsers.py"
+   ],
+   "kind": "tests",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i85"
+  },
+  {
+   "title": "Tests patch load_config where it is consumed",
+   "criterion": "Fixtures patch the consumer module symbols (cli, context, generators) rather than utils.config.load_config only, so patches take effect.",
+   "files": [
+    "tests/conftest.py",
+    "tests/unit/test_context.py"
+   ],
+   "kind": "tests",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i86"
+  },
+  {
+   "title": "Fix toolcall.py duplicate return and hardcoded dataset path",
+   "criterion": "The dead second return is removed and custom_dataset accepts dataset_path as a parameter.",
+   "files": [
+    "use-cases/adding_reasoning_to_llama_3/tt_configs/toolcall.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i87"
+  },
+  {
+   "title": "CI smoke-tests the installed CLI",
+   "criterion": "The CI test step runs `synthetic-data-kit system-check` and `synthetic-data-kit --help` (hyphenated entry point) before pytest.",
+   "files": [
+    ".github/workflows/ci.yml"
+   ],
+   "kind": "tests",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i88"
+  },
+  {
+   "title": "Remove committed example outputs and ignore generated data",
+   "criterion": "Committed example_output artifacts, including test_write.json and the Lance files, are deleted. .gitignore covers data/, example_output and .venv-ci/.",
+   "files": [
+    ".gitignore",
+    "example_output/test_write.json"
+   ],
+   "kind": "cleanup",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i89"
+  },
+  {
+   "title": "Fix cot_tools_config.yaml provider section and YAML indentation",
+   "criterion": "The use-case config adds `llm.provider` and an api-endpoint section, and fixes the mis-indented multiline cot_enhancement prompt so it parses correctly.",
+   "files": [
+    "use-cases/adding_reasoning_to_llama_3/cot_tools_config.yaml"
+   ],
+   "kind": "bug",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i90"
+  },
+  {
+   "title": "PDF parser type hints compatible with older Python",
+   "criterion": "PDFParser.parse is annotated with typing.List[Dict[str, Any]] instead of `list[dict[str, any]]`.",
+   "files": [
+    "synthetic_data_kit/parsers/pdf_parser.py"
+   ],
+   "kind": "bug",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i91"
+  },
+  {
+   "title": "Backward-compat tests check process_file keyword arguments",
+   "criterion": "The ingest tests assert output_dir and output_name via call kwargs rather than positional indices.",
+   "files": [
+    "tests/integration/test_backward_compatibility.py"
+   ],
+   "kind": "tests",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i92"
+  },
+  {
+   "title": "Document multimodal usage and max_retries in README",
+   "criterion": "The README describes Lance-based ingest, `--multimodal` and `--type multimodal-qa`, and includes max_retries in the api-endpoint config example.",
+   "files": [
+    "README.md"
+   ],
+   "kind": "docs",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i93"
+  }
+ ]
+}

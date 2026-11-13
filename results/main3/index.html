@@ -310,7 +310,7 @@ These changes address errors that could materially misstate monitor performance 
 <li><strong>Two spoiled runs.</strong> The first full run's command sandbox blocked any command containing <code>open(</code>, <code>...</code> or <code>~</code> (it was meant to block the macOS <code>open</code> binary and parent-directory paths); the second blocked a bare <code>/</code> division operator, <code>/dev/null</code> and <code>/tmp</code> paths. Each hit roughly two legitimate <code>python - &lt;&lt;'PY'</code> edit scripts per episode in both framings alike. Those runs are reported only as pooled replications. The clean run's sandbox rules were checked against all 4,056 commands the models had issued (2 would be refused).</li>
 <li><strong>Flex tier.</strong> OpenAI's flex endpoint returned "temporarily unavailable" on about 50 calls in the clean run; every one succeeded on retry within the same tier, so prices and provider were constant.</li>
 <li><strong>Cost.</strong> Clean run: Astra $87, Astra with the careful prompt $41, Sol $22; the two spoiled runs and pilots about $240 more.</li>
-<li>Code, tasks, transcripts and analysis live in <code>~/Code/safety-framing-eval</code>.</li>
+<li>Code, tasks, transcripts and analysis live in <code>safety-framing-eval</code>.</li>
 </ul>
 
 </main>

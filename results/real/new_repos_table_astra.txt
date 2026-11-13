@@ -1,0 +1,8 @@
+pw_locked         use                        5      0     2     0         6   M    N   P        MISS
+sandbag_organism  use                        5      5     5     5         8   P    P   P        ok
+sleeper_agents    use                        5      2     4     0         7   P    M   P        MISS
+control_arena     use_attack_side            5      5     5     0         8   P    P   -        ok  [round 2]
+oml_fingerprint   use                        5      0     3     0         1   N    N   P        ok
+new_rl            safety                     5      5     5     5        10   P    P   P        ok
+round 1: calls right 3 of 5; mean Brier score 0.456 (0 = perfect, 0.667 = a uniform guess)
+round 2: calls right 1 of 1; mean Brier score 0.140 (0 = perfect, 0.667 = a uniform guess)

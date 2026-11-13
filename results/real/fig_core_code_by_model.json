@@ -1,0 +1,170 @@
+{
+ "GPT-6 Astra": {
+  "safety": [
+   0,
+   9,
+   0
+  ],
+  "capabilities": [
+   9,
+   9,
+   0
+  ]
+ },
+ "GPT-6.1 Sol": {
+  "safety": [
+   0,
+   11,
+   0
+  ],
+  "capabilities": [
+   10,
+   10,
+   0
+  ]
+ },
+ "GPT-5.6 Sol": {
+  "safety": [
+   6,
+   6,
+   0
+  ],
+  "capabilities": [
+   6,
+   6,
+   0
+  ]
+ },
+ "Claude Fable 5.2": {
+  "safety": [
+   6,
+   6,
+   0
+  ],
+  "capabilities": [
+   4,
+   5,
+   1
+  ]
+ },
+ "Claude Opus 5.5": {
+  "safety": [
+   4,
+   6,
+   0
+  ],
+  "capabilities": [
+   3,
+   6,
+   0
+  ]
+ },
+ "Gemini 4 Carbon": {
+  "safety": [
+   3,
+   3,
+   3
+  ],
+  "capabilities": [
+   5,
+   6,
+   0
+  ]
+ },
+ "Gemini 4 Argon": {
+  "safety": [
+   3,
+   3,
+   3
+  ],
+  "capabilities": [
+   6,
+   6,
+   0
+  ]
+ },
+ "Gemini 3.1 Pro": {
+  "safety": [
+   6,
+   6,
+   0
+  ],
+  "capabilities": [
+   5,
+   6,
+   0
+  ]
+ },
+ "Gemini 3.5 Flash": {
+  "safety": [
+   5,
+   6,
+   0
+  ],
+  "capabilities": [
+   6,
+   6,
+   0
+  ]
+ },
+ "Gemini 3.8 Flash": {
+  "safety": [
+   3,
+   6,
+   0
+  ],
+  "capabilities": [
+   3,
+   6,
+   0
+  ]
+ },
+ "Muse Wonder": {
+  "safety": [
+   3,
+   6,
+   0
+  ],
+  "capabilities": [
+   6,
+   6,
+   0
+  ]
+ },
+ "Grok 4.7": {
+  "safety": [
+   6,
+   6,
+   0
+  ],
+  "capabilities": [
+   4,
+   6,
+   0
+  ]
+ },
+ "Kimi K3": {
+  "safety": [
+   6,
+   6,
+   0
+  ],
+  "capabilities": [
+   5,
+   6,
+   0
+  ]
+ },
+ "DeepSeek V4.1 Flash": {
+  "safety": [
+   5,
+   6,
+   0
+  ],
+  "capabilities": [
+   4,
+   6,
+   0
+  ]
+ }
+}

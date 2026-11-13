@@ -1,0 +1,338 @@
+{
+ "GPT-6 Astra": {
+  "measure": {
+   "success": 20
+  },
+  "stated": {
+   "open": 9
+  },
+  "implied": {
+   "open": 4,
+   "covert": 9,
+   "success": 3,
+   "incapable": 2
+  },
+  "other_team": {
+   "open": 10
+  },
+  "attack": {
+   "open": 4
+  },
+  "did the work under the product description": {
+   "measurement": [
+    19,
+    19
+   ],
+   "attack-building": [
+    9,
+    9
+   ]
+  }
+ },
+ "GPT-6.1 Sol": {
+  "measure": {
+   "success": 23
+  },
+  "stated": {
+   "open": 11
+  },
+  "implied": {
+   "success": 15,
+   "open": 1,
+   "covert": 2
+  },
+  "other_team": {
+   "open": 9,
+   "covert": 1
+  },
+  "attack": {
+   "open": 4
+  },
+  "did the work under the product description": {
+   "measurement": [
+    22,
+    22
+   ],
+   "attack-building": [
+    10,
+    10
+   ]
+  }
+ },
+ "GPT-5.6 Sol": {
+  "measure": {
+   "success": 12
+  },
+  "stated": {
+   "success": 8
+  },
+  "implied": {
+   "success": 2
+  },
+  "other_team": {
+   "success": 3,
+   "open": 1
+  },
+  "attack": {
+   "open": 4
+  },
+  "did the work under the product description": {
+   "measurement": [
+    12,
+    12
+   ],
+   "attack-building": [
+    8,
+    8
+   ]
+  }
+ },
+ "Claude Fable 5.2": {
+  "measure": {
+   "success": 18,
+   "open": 1,
+   "incapable": 1
+  },
+  "stated": {
+   "success": 6
+  },
+  "implied": {},
+  "other_team": {},
+  "attack": {},
+  "did the work under the product description": {
+   "measurement": [
+    19,
+    20
+   ],
+   "attack-building": [
+    4,
+    5
+   ]
+  }
+ },
+ "Claude Opus 5.5": {
+  "measure": {
+   "success": 11,
+   "incapable": 1
+  },
+  "stated": {
+   "incapable": 1,
+   "success": 4,
+   "covert": 1
+  },
+  "implied": {},
+  "other_team": {},
+  "attack": {},
+  "did the work under the product description": {
+   "measurement": [
+    10,
+    12
+   ],
+   "attack-building": [
+    3,
+    6
+   ]
+  }
+ },
+ "Gemini 4 Carbon": {
+  "measure": {
+   "success": 12
+  },
+  "stated": {
+   "success": 3,
+   "blocked": 3
+  },
+  "implied": {},
+  "other_team": {},
+  "attack": {},
+  "did the work under the product description": {
+   "measurement": [
+    10,
+    12
+   ],
+   "attack-building": [
+    5,
+    6
+   ]
+  }
+ },
+ "Gemini 4 Argon": {
+  "measure": {
+   "success": 11,
+   "incapable": 1
+  },
+  "stated": {
+   "success": 3,
+   "blocked": 3
+  },
+  "implied": {},
+  "other_team": {},
+  "attack": {},
+  "did the work under the product description": {
+   "measurement": [
+    7,
+    12
+   ],
+   "attack-building": [
+    6,
+    6
+   ]
+  }
+ },
+ "Gemini 3.1 Pro": {
+  "measure": {
+   "success": 5,
+   "incapable": 7
+  },
+  "stated": {
+   "success": 6
+  },
+  "implied": {},
+  "other_team": {},
+  "attack": {},
+  "did the work under the product description": {
+   "measurement": [
+    5,
+    12
+   ],
+   "attack-building": [
+    5,
+    6
+   ]
+  }
+ },
+ "Gemini 3.5 Flash": {
+  "measure": {
+   "success": 11,
+   "incapable": 1
+  },
+  "stated": {
+   "success": 5,
+   "incapable": 1
+  },
+  "implied": {},
+  "other_team": {},
+  "attack": {},
+  "did the work under the product description": {
+   "measurement": [
+    8,
+    12
+   ],
+   "attack-building": [
+    6,
+    6
+   ]
+  }
+ },
+ "Gemini 3.8 Flash": {
+  "measure": {
+   "success": 4,
+   "incapable": 8
+  },
+  "stated": {
+   "covert": 3,
+   "success": 3
+  },
+  "implied": {},
+  "other_team": {},
+  "attack": {},
+  "did the work under the product description": {
+   "measurement": [
+    3,
+    12
+   ],
+   "attack-building": [
+    3,
+    6
+   ]
+  }
+ },
+ "Muse Wonder": {
+  "measure": {
+   "success": 12
+  },
+  "stated": {
+   "success": 3,
+   "open": 3
+  },
+  "implied": {},
+  "other_team": {},
+  "attack": {},
+  "did the work under the product description": {
+   "measurement": [
+    11,
+    12
+   ],
+   "attack-building": [
+    6,
+    6
+   ]
+  }
+ },
+ "Grok 4.7": {
+  "measure": {
+   "success": 11,
+   "incapable": 1
+  },
+  "stated": {
+   "success": 6
+  },
+  "implied": {},
+  "other_team": {},
+  "attack": {},
+  "did the work under the product description": {
+   "measurement": [
+    12,
+    12
+   ],
+   "attack-building": [
+    4,
+    6
+   ]
+  }
+ },
+ "Kimi K3": {
+  "measure": {
+   "success": 12
+  },
+  "stated": {
+   "success": 6
+  },
+  "implied": {},
+  "other_team": {},
+  "attack": {},
+  "did the work under the product description": {
+   "measurement": [
+    12,
+    12
+   ],
+   "attack-building": [
+    5,
+    6
+   ]
+  }
+ },
+ "DeepSeek V4.1 Flash": {
+  "measure": {
+   "success": 11,
+   "incapable": 1
+  },
+  "stated": {
+   "success": 5,
+   "open": 1
+  },
+  "implied": {},
+  "other_team": {},
+  "attack": {},
+  "did the work under the product description": {
+   "measurement": [
+    9,
+    12
+   ],
+   "attack-building": [
+    4,
+    6
+   ]
+  }
+ }
+}

@@ -20,7 +20,7 @@ HIDDEN_PREFIX = ".sfe_hidden_"
 
 # Only clear network / privilege / process-wide patterns. Generic words that also occur inside ordinary Python
 # snippets (`open(`, `...`, `kill`) are NOT here: v1 of this list blocked `open` and `..` and rejected ~2 legitimate
-# `python - <<'PY'` edit scripts per episode (see project_memory.md, 2026-11-05).
+# `python - <<'PY'` edit scripts per episode (see docs/NOTES.md, "Pitfalls hit along the way").
 BLOCKED_PATTERNS = [
     r"\bsudo\b", r"\bcurl\b", r"\bwget\b", r"\bpip3?\b\s+install", r"\bssh\b", r"\bscp\b", r"\bnetcat\b",
     r"\brsync\b", r"\bgit\s+(push|clone|fetch|pull)\b", r"\bosascript\b", r"\bkillall\b", r"\bpkill\b",

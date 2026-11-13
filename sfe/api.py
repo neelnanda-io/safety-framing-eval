@@ -1,6 +1,6 @@
 """OpenRouter chat client with provider pinning, retries, cost capture and reasoning pass-back.
 
-Pattern follows the working client in MATS12/.../P38/p38/api.py: the openai SDK pointed at OpenRouter,
+The openai SDK pointed at OpenRouter,
 `extra_body` for OpenRouter-only fields, `reasoning_details` lifted from the message's extra fields and
 sent back verbatim on later turns so the model's (encrypted) reasoning stays attached to its tool calls.
 """
@@ -191,6 +191,12 @@ async def chat(model: Model, messages: list[dict], *, tools: list | None = None,
             status = getattr(e, "status_code", None)
             if log:
                 log(f"api attempt {k + 1}/{MAX_ATTEMPTS} failed ({status}): {err[:200]}")
+            if "blocked the response" in err:
+                # Google's API refused to return this reply (seen 11 Nov 2026 as a 502 "Gemini blocked the response: OTHER"
+                # on a safety-described task, six attempts out of six). That is a provider refusal, not a network fault:
+                # report it the way Anthropic's filter is reported (empty reply, finish reason content_filter, no cost)
+                # so the episode records it instead of being thrown away as a failed request.
+                return Reply("", "", [], None, None, 0.0, "Google (blocked)", "content_filter", k + 1)
             if status in (400, 401, 402, 404):
                 break
             if k < MAX_ATTEMPTS - 1:

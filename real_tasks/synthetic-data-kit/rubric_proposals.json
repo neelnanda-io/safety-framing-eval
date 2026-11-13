@@ -1,0 +1,1124 @@
+[
+ [
+  {
+   "title": "CLI commands return exit codes that Typer ignores",
+   "detail": "Every command in cli.py (system_check, ingest, create, curate, save_as) signals failure with `return 1`. Typer discards command return values, so the process always exits 0, even when the vLLM server is down or a file failed to process. Replace each `return 1` with `raise typer.Exit(code=1)`. Add functional tests that assert `result.exit_code == 1` for a missing file and for an unreachable server.",
+   "files": [
+    "synthetic_data_kit/cli.py",
+    "tests/functional/test_cli.py",
+    "tests/integration/test_backward_compatibility.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "QAGenerator reloads config, so --chunk-size/--chunk-overlap are ignored for qa and summary",
+   "detail": "core/create.process_file writes the chunk_size/overlap overrides into `client.config`. QAGenerator.__init__ then calls `load_config(config_path)` and works from a fresh copy, so the overrides never reach generate_qa_pairs. Use `client.config` (as COTGenerator does), or load and merge only when a config_path is given. Add a test that the overridden chunk_size reaches split_into_chunks.",
+   "files": [
+    "synthetic_data_kit/generators/qa_generator.py",
+    "synthetic_data_kit/core/create.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "split_into_chunks ignores the overlap argument and never splits oversized paragraphs",
+   "detail": "The `overlap` parameter is never used. Overlap is always the last 3 sentences, or nothing when there are 3 or fewer. A single paragraph longer than chunk_size becomes one oversized chunk. Implement character-based overlap of the last `overlap` characters, and hard-split paragraphs larger than chunk_size. Add tests for overlap length, one huge paragraph, and the empty string.",
+   "files": [
+    "synthetic_data_kit/utils/text.py",
+    "tests/unit/test_utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Progress bars never advance because TaskID 0 is falsy",
+   "detail": "`progress_ctx.add_task` returns TaskID 0 for the first task. The guard `if progress_ctx and rate_task:` / `if progress_ctx and generate_task:` is therefore always False, and verbose progress bars stay at 0%. Change the guard to `if progress_ctx is not None and task is not None`.",
+   "files": [
+    "synthetic_data_kit/core/curate.py",
+    "synthetic_data_kit/generators/qa_generator.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "rate_qa_pairs average score divides by total pairs instead of rated pairs",
+   "detail": "`avg_score = total_score / len(qa_pairs)` counts pairs that failed rating as score 0, which biases the mean downward. Track the number of evaluated pairs and divide by that, as core/curate.py already does. Add a unit test with one unparsable batch.",
+   "files": [
+    "synthetic_data_kit/generators/qa_generator.py",
+    "tests/unit/test_qa_generator.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Ratings are not coerced to numbers before threshold comparison",
+   "detail": "When the LLM returns `\"rating\": \"8\"`, `rating >= threshold` raises TypeError in curate_qa_pairs. That pushes the batch onto the slow per-item fallback, and `total_score += rating` breaks. Normalise with `float(pair['rating'])` inside parse_ratings, skip items that cannot be converted, and clamp or validate the 1-10 range.",
+   "files": [
+    "synthetic_data_kit/utils/llm_processing.py",
+    "synthetic_data_kit/core/curate.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "parse_ratings silently returns [] when one array item lacks a rating",
+   "detail": "In the primary array path, a single item without 'rating' makes the function `return []`. It skips the remaining fallbacks and never raises, contrary to its docstring. Curate then silently drops the entire batch, and the per-item fallback is never triggered. Fall through to the later methods, or raise ValueError so the caller's fallback runs.",
+   "files": [
+    "synthetic_data_kit/utils/llm_processing.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "parse_ratings unescapes \\n/\\t in the raw text before parsing",
+   "detail": "`json_content.replace('\\\\n', '\\n')` rewrites legitimate JSON escape sequences inside string values, for example a backslash followed by n in code or Windows paths. The content changes before json.loads. Remove the global replace and rely on json.loads, with the existing whitespace normalisation applied only outside strings.",
+   "files": [
+    "synthetic_data_kit/utils/llm_processing.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "parse_qa_pairs returns unvalidated JSON",
+   "detail": "Whatever json.loads produces is returned directly: a dict, a list of strings, or dicts without question/answer. generate_qa_pairs slices it, and convert_to_conversation_format later raises KeyError. Keep only dict items that have string 'question' and 'answer' fields, and fall back to the regex when nothing is valid. Add tests for each malformed case.",
+   "files": [
+    "synthetic_data_kit/utils/llm_processing.py",
+    "tests/unit/test_llm_processing.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "parse_qa_pairs regex fallback only unescapes \\\"",
+   "detail": "Captured strings only get `\\\"` replaced, so `\\n`, `\\\\` and `\\u00e9` stay literal in the output. Decode each capture with `json.loads('\"' + s + '\"')`, catching errors per pair.",
+   "files": [
+    "synthetic_data_kit/utils/llm_processing.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Chunked generation under-produces because per-chunk count rounds down",
+   "detail": "`pairs_per_chunk = max(1, round(num_pairs / len(chunks)))` gives 2 pairs per chunk for 25 pairs over 10 chunks, so at most 20 are generated. Use `math.ceil`; the existing early stop already truncates any excess. Apply the same fix to examples_per_chunk in COTGenerator._generate_with_chunking.",
+   "files": [
+    "synthetic_data_kit/generators/qa_generator.py",
+    "synthetic_data_kit/generators/cot_generator.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "CoT single-call path does not cap results at num_examples",
+   "detail": "_generate_single_call returns everything the model emits, which can exceed the requested count; the chunked path does truncate. Slice to `examples[:num_examples]` and filter out non-dict items.",
+   "files": [
+    "synthetic_data_kit/generators/cot_generator.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "create qa writes a stray test_write.json and swallows write errors",
+   "detail": "process_file for content_type 'qa' always writes `test_write.json` into the output directory. That file then gets picked up by directory curate and save-as as a bogus input. It also catches exceptions from the real json.dump and still returns output_path as if it succeeded. Remove the test write and let the exception propagate.",
+   "files": [
+    "synthetic_data_kit/core/create.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "cot-enhance drops conversations when flattening nested output",
+   "detail": "When enhance_with_cot returns a list of lists, the code keeps only `enhanced_messages[0]`. For a model that returns several conversations, everything else is discarded. Only flatten when the outer list has length 1. Otherwise validate that the result is a list of message dicts, and keep the original on mismatch.",
+   "files": [
+    "synthetic_data_kit/core/create.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "cot-enhance format detection accepts invalid input",
+   "detail": "`all(... for item in data if isinstance(item, dict))` is vacuously True for an empty list or a list of non-dicts. In the final else branch, `conversations = data` can be a dict, and `conversations[:max_examples]` then raises. Require every item to be a dict, and raise a clear ValueError for unrecognised shapes. The file is also read twice, once via read_json and once via json.load; remove the first read.",
+   "files": [
+    "synthetic_data_kit/core/create.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "COTGenerator.process_document ignores include_simple_steps and has a no-op verbose block",
+   "detail": "process_document accepts include_simple_steps but never uses it; create.py passes `verbose` as that argument. It also reads SDK_VERBOSE and immediately writes the same value back. Either thread include_simple_steps into the prompt or remove it, add a proper `verbose` parameter, and delete the dead env round-trip.",
+   "files": [
+    "synthetic_data_kit/generators/cot_generator.py",
+    "synthetic_data_kit/core/create.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "LLMClient crashes when max_retries/retry_delay are missing and mishandles 0",
+   "detail": "`max_retries or config.get('max_retries')` yields None when the config omits the key, so `range(None)` raises TypeError. An explicit 0 is also treated as unset. Use `is not None` checks with defaults (3 retries, 1.0s delay). Have the retry loops raise after exhaustion rather than implicitly returning None.",
+   "files": [
+    "synthetic_data_kit/models/llm_client.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "vLLM completion retry does not catch JSON decode errors; backoff mislabeled",
+   "detail": "_vllm_chat_completion only catches RequestException, KeyError and IndexError. A non-JSON body raises ValueError and aborts without retrying. Add ValueError to the caught exceptions. The comment says 'Exponential backoff' but `retry_delay * (attempt + 1)` is linear; make it `retry_delay * 2 ** attempt` or fix the comment.",
+   "files": [
+    "synthetic_data_kit/models/llm_client.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Async batch path creates a new AsyncOpenAI client per message",
+   "detail": "_process_message_async constructs `AsyncOpenAI(**client_kwargs)` for every message, which means new connection pools per request and no reuse. Create one async client per batch_completion call and pass it in, or lazily cache it on self.",
+   "files": [
+    "synthetic_data_kit/models/llm_client.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "Library calls logging.basicConfig at import time",
+   "detail": "llm_client.py runs `logging.basicConfig(level=logging.INFO)` on import, which hijacks root logging for any application that imports the package. Remove it, and configure logging in cli.py only.",
+   "files": [
+    "synthetic_data_kit/models/llm_client.py",
+    "synthetic_data_kit/cli.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Noisy debug prints in config helpers and a dead warning",
+   "detail": "load_config prints 'Loading config from' and the provider on every call. get_llm_provider prints on every call, and its WARNING condition can never be true. Several CLI commands therefore emit duplicated debug lines. Remove the prints or move them to logger.debug, and delete the impossible branch.",
+   "files": [
+    "synthetic_data_kit/utils/config.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Config section defaults are lost when a section is only partially specified",
+   "detail": "get_generation_config, get_curate_config, get_vllm_config and the other getters return their defaults only when the whole section is absent. A user config with `generation: {temperature: 0.3}` loses chunk_size, overlap and the rest. Merge the defaults with the user section via merge_configs, and add unit tests.",
+   "files": [
+    "synthetic_data_kit/utils/config.py",
+    "tests/unit/test_utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "AppContext is created at import and ignores --config",
+   "detail": "cli.py creates `ctx = AppContext()` at module import, which creates data/ directories in the cwd for any invocation, including --help. It always uses the default config, so directories from a custom `-c` config are never created. Move directory creation into the callback, after config_path is set.",
+   "files": [
+    "synthetic_data_kit/cli.py",
+    "synthetic_data_kit/core/context.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "CLI eagerly imports Flask server module",
+   "detail": "`from synthetic_data_kit.server.app import run_server` at the top of cli.py imports Flask and flask_wtf. That module also creates directories and loads config, on every CLI command. Import it lazily inside the server command so a missing Flask does not break ingest/create.",
+   "files": [
+    "synthetic_data_kit/cli.py",
+    "synthetic_data_kit/server/app.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "ingest.process_file crashes when output_dir is None",
+   "detail": "The docstring says None means 'uses config', but `os.path.exists(None)` raises TypeError. When output_dir is None, resolve it with `get_path_config(config or load_config(), 'output', 'parsed')`.",
+   "files": [
+    "synthetic_data_kit/core/ingest.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "YouTube video-id extraction fails on common URL forms",
+   "detail": "`re.search(r\"(?:v=|\\.be/)([^&]+)\")` returns None for /shorts/ and /embed/ URLs, so `.group` raises AttributeError. It also captures '?si=...' for youtu.be links. Parse with urllib.parse (the query 'v' or the last path segment), and raise a clear ValueError when no id is found. Add unit tests.",
+   "files": [
+    "synthetic_data_kit/core/ingest.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Ingested URLs from the same domain overwrite each other",
+   "detail": "The output name for non-YouTube URLs is just the netloc, so ingesting two pages from example.com produces the same example_com.txt. Include a sanitised path, or a short hash of the full URL, in the filename.",
+   "files": [
+    "synthetic_data_kit/core/ingest.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "HTTP requests in parsers and ingest have no timeout",
+   "detail": "_check_pdf_url (requests.head), HTMLParser.parse and PDFParser.parse (requests.get) can hang forever. Add timeouts, for example 10s for HEAD and 30-60s for GET, as already done in llm_client.",
+   "files": [
+    "synthetic_data_kit/core/ingest.py",
+    "synthetic_data_kit/parsers/html_parser.py",
+    "synthetic_data_kit/parsers/pdf_parser.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "PPTParser outputs each slide title twice",
+   "detail": "The title is appended as 'Title: X' and then again while iterating `slide.shapes`, because the title placeholder is also a shape. Skip the title shape in the loop, using `shape == slide.shapes.title` or its shape_id. Update test_ppt_parse_success, which currently encodes the duplication.",
+   "files": [
+    "synthetic_data_kit/parsers/ppt_parser.py",
+    "tests/unit/test_additional_parsers.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "YouTubeParser ImportError names the wrong package",
+   "detail": "The code imports pytubefix, but the error tells users to `pip install pytube`. Change the message to `pip install pytubefix youtube-transcript-api`, and update the corresponding test match strings.",
+   "files": [
+    "synthetic_data_kit/parsers/youtube_parser.py",
+    "tests/unit/test_additional_parsers.py"
+   ],
+   "kind": "docs"
+  },
+  {
+   "title": "makedirs on dirname of a bare filename crashes save-as and curate",
+   "detail": "`os.makedirs(os.path.dirname(output_path), exist_ok=True)` raises FileNotFoundError when output_path is 'out.jsonl', because dirname is ''. Guard with `if dirname:` in convert_format, curate_qa_pairs, to_hf_dataset, and each parser's save().",
+   "files": [
+    "synthetic_data_kit/core/save_as.py",
+    "synthetic_data_kit/core/curate.py",
+    "synthetic_data_kit/utils/format_converter.py",
+    "synthetic_data_kit/parsers/txt_parser.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "save_as conversation extraction is brittle",
+   "detail": "The 'conversations' branch assumes index 1 is user and index 2 is assistant. Conversations without a system message are silently dropped, and non-list or dict items raise KeyError. The output of cot-enhance (a list of {'conversations': [...]}, with from/value keys) is not recognised at all. Search for the user/assistant roles instead of fixed indices, handle the wrapped and ShareGPT forms, and warn on skipped items.",
+   "files": [
+    "synthetic_data_kit/core/save_as.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "to_hf_dataset crashes on empty input and drops keys",
+   "detail": "`qa_pairs[0].keys()` raises IndexError when curation filtered everything out. Columns are also taken only from the first item. Return or raise a clear error for empty input, and build the columns from the union of keys across all items.",
+   "files": [
+    "synthetic_data_kit/utils/format_converter.py",
+    "tests/unit/test_format_converter.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "HF storage branch duplicates the format_converter logic",
+   "detail": "convert_format re-implements the alpaca, ft and chatml record building for storage_format 'hf', with hard-coded system prompts copied from format_converter. Factor out pure `build_*_records(qa_pairs)` functions and use them from both the file writers and the HF path.",
+   "files": [
+    "synthetic_data_kit/core/save_as.py",
+    "synthetic_data_kit/utils/format_converter.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Web server routes allow path traversal and unsafe upload filenames",
+   "detail": "view_file, qa_json, edit_item and delete_item build `Path(DEFAULT_DATA_DIR.parent, file_path)` with no containment check, so `../` escapes the data directory. Upload and ingest save `f.filename` unsanitised. Resolve the path and verify it is under DEFAULT_DATA_DIR, and apply `werkzeug.utils.secure_filename` to uploads.",
+   "files": [
+    "synthetic_data_kit/server/app.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "edit_item/delete_item request validation is wrong",
+   "detail": "`all([..., item_content])` rejects legitimately falsy content such as an empty dict. item_index is not type-checked, so a string index causes a TypeError and a 500. Check `item_content is not None`, require `isinstance(item_index, int)`, and return 400 otherwise.",
+   "files": [
+    "synthetic_data_kit/server/app.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Directory preview logic is copy-pasted across commands and duplicates get_supported_files",
+   "detail": "The preview printing block appears in ingest, create, curate and save-as. get_directory_stats re-implements the directory scan from get_supported_files, and file_list is unsorted while processing order is sorted. Extract a single `print_preview(stats, ...)` helper, and build the stats from get_supported_files so the ordering is consistent.",
+   "files": [
+    "synthetic_data_kit/cli.py",
+    "synthetic_data_kit/utils/directory_processor.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Version is defined in two places",
+   "detail": "`__version__ = \"0.0.1\"` in __init__.py is independent of pyproject.toml, and publish.yml greps the first 'version' line from pyproject. Single-source the version, for example via importlib.metadata in __init__ or dynamic version in pyproject. Also make publish.yml consistent: it requests id-token for trusted publishing but then uploads with twine username/password secrets.",
+   "files": [
+    "synthetic_data_kit/__init__.py",
+    "pyproject.toml",
+    ".github/workflows/publish.yml"
+   ],
+   "kind": "packaging"
+  },
+  {
+   "title": "Lint CI is a no-op",
+   "detail": ".pre-commit-config.yaml has `repos: []`, so `pre-commit run` always passes, and the ruff fallback only runs `if: failure()`, so it never executes. Re-enable the ruff hooks, or run ruff unconditionally in ci.yml.",
+   "files": [
+    ".pre-commit-config.yaml",
+    ".github/workflows/ci.yml"
+   ],
+   "kind": "packaging"
+  },
+  {
+   "title": "DOCS.md and issue template reference nonexistent files and options",
+   "detail": "DOCS.md lists core/cleanup.py, setup.py, data/cleaned and a `--threshold` option on create, none of which exist. It omits --chunk-size, --preview, cot-enhance and api-endpoint for system-check. The issue template's Getting Started link points to /getting-started instead of /use-cases/getting-started. Update the docs and link. Also remove the committed .DS_Store files and add them to .gitignore.",
+   "files": [
+    "DOCS.md",
+    ".github/ISSUE_TEMPLATE/config.yml",
+    ".gitignore",
+    "use-cases/.DS_Store"
+   ],
+   "kind": "docs"
+  }
+ ],
+ [
+  {
+   "title": "Fix `QAGenerator` ignoring CLI chunking overrides and reloading config",
+   "detail": "In `synthetic_data_kit/core/create.py:process_file`, `chunk_size` and `chunk_overlap` CLI overrides are applied to `client.config['generation']`. However, `QAGenerator.__init__` in `synthetic_data_kit/generators/qa_generator.py` ignores `client.config` and calls `load_config(config_path)` from disk again, wiping out the CLI overrides for `--chunk-size` and `--chunk-overlap` (and loading the YAML file twice). Change `QAGenerator.__init__` to use `self.config = client.config if client and getattr(client, 'config', None) else load_config(config_path)` like `COTGenerator` does.",
+   "files": [
+    "synthetic_data_kit/generators/qa_generator.py",
+    "synthetic_data_kit/core/create.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `os.makedirs(os.path.dirname(output_path))` crashing on bare filenames",
+   "detail": "When a user passes a bare filename without a directory component (e.g., `--output out.json`), `os.path.dirname(output_path)` returns `\"\"`, and `os.makedirs(\"\", exist_ok=True)` raises `FileNotFoundError: [Errno 2] No such file or directory: ''`. This occurs in `curate_qa_pairs`, `convert_format`, `to_hf_dataset`, and every `save()` method across all parsers (`DOCXParser`, `HTMLParser`, `PDFParser`, `PPTParser`, `TXTParser`, `YouTubeParser`). Guard with `if os.path.dirname(output_path): os.makedirs(os.path.dirname(output_path), exist_ok=True)` or `Path(output_path).parent.mkdir(parents=True, exist_ok=True)`.",
+   "files": [
+    "synthetic_data_kit/core/curate.py",
+    "synthetic_data_kit/core/save_as.py",
+    "synthetic_data_kit/utils/format_converter.py",
+    "synthetic_data_kit/parsers/docx_parser.py",
+    "synthetic_data_kit/parsers/html_parser.py",
+    "synthetic_data_kit/parsers/pdf_parser.py",
+    "synthetic_data_kit/parsers/ppt_parser.py",
+    "synthetic_data_kit/parsers/txt_parser.py",
+    "synthetic_data_kit/parsers/youtube_parser.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `to_hf_dataset` raising `IndexError` when `qa_pairs` is empty",
+   "detail": "In `synthetic_data_kit/utils/format_converter.py:to_hf_dataset`, `for key in qa_pairs[0].keys():` raises `IndexError: list index out of range` if `qa_pairs` is empty (for instance, if all pairs were filtered out during curation or an empty list was passed). Check `if not qa_pairs:` and either raise a descriptive `ValueError(\"Cannot create HF dataset from empty data\")` or construct an empty `Dataset.from_dict({})`.",
+   "files": [
+    "synthetic_data_kit/utils/format_converter.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `split_into_chunks` ignoring `overlap` parameter and producing oversized chunks",
+   "detail": "In `synthetic_data_kit/utils/text.py:split_into_chunks(text, chunk_size=4000, overlap=200)`, the `overlap` parameter is completely unused; instead, it hardcodes `sentences[-3:]`. Furthermore, if a single paragraph exceeds `chunk_size` or the text uses single `\n` instead of `\n\n`, the text is never split and a single giant chunk is returned. Implement actual character-based overlap using the `overlap` parameter and split oversized paragraphs so chunks respect `chunk_size`.",
+   "files": [
+    "synthetic_data_kit/utils/text.py",
+    "tests/unit/test_utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `parse_ratings` corrupting valid JSON strings containing escaped newlines or braces",
+   "detail": "In `synthetic_data_kit/utils/llm_processing.py:parse_ratings`, lines 98-107 execute `json_content = json_content.replace('\\\\n', '\\n')` before calling `json.loads()`, which turns valid JSON string escapes (`\\n`, `\\r`, `\\t`) into literal control characters inside string values. Also, because the `{...}` object check runs before the `[...]` array check, a JSON array `[{\"question\": \"...\", \"rating\": 8}, {\"question\": \"...\", \"rating\": 9}]` matches `{` to `}` spanning across array elements (`{\"question\": ...}, {...}`), causing `json.loads` to fail with `Extra data`. Try `json.loads` on `[...]` before `{...}` (or inspect whichever delimiter appears first) and do not unescape `\\n` before `json.loads`.",
+   "files": [
+    "synthetic_data_kit/utils/llm_processing.py",
+    "tests/unit/test_llm_processing.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `PPTParser.parse` duplicating slide titles in extracted text",
+   "detail": "In `synthetic_data_kit/parsers/ppt_parser.py:PPTParser.parse`, the slide title is appended via `slide_text.append(f\"Title: {slide.shapes.title.text}\")`, and then the loop `for shape in slide.shapes:` iterates over all shapes\u2014which includes `slide.shapes.title`\u2014and appends its text a second time. Skip `shape == slide.shapes.title` in the shapes loop, and update `tests/unit/test_additional_parsers.py` accordingly.",
+   "files": [
+    "synthetic_data_kit/parsers/ppt_parser.py",
+    "tests/unit/test_additional_parsers.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix YouTube URL regex failing on `/shorts/`, `/embed/`, or URLs without `v=`",
+   "detail": "In `synthetic_data_kit/core/ingest.py:process_file`, `video_id = re.search(r\"(?:v=|\\.be/)([^&]+)\", file_path).group(1)` raises `AttributeError: 'NoneType' object has no attribute 'group'` for valid YouTube URLs like `https://www.youtube.com/shorts/VIDEO_ID`, `https://www.youtube.com/embed/VIDEO_ID`, or `https://youtu.be/VIDEO_ID?si=...` (where `?` is included in the filename). Handle `?`, `/shorts/`, `/embed/`, and check if the match is `None` before calling `.group(1)`.",
+   "files": [
+    "synthetic_data_kit/core/ingest.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix URL filename collision in `ingest.process_file`",
+   "detail": "In `synthetic_data_kit/core/ingest.py:process_file`, non-YouTube URLs generate `output_name` using only the domain (`urlparse(file_path).netloc.replace('.', '_') + '.txt'`). Ingesting multiple pages or PDFs from the same domain (e.g. `https://arxiv.org/pdf/2401.00001.pdf` and `https://arxiv.org/pdf/2401.00002.pdf`) silently overwrites `arxiv_org.txt`. Include a sanitized slug from `urlparse(file_path).path` when present.",
+   "files": [
+    "synthetic_data_kit/core/ingest.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Remove leftover `test_write.json` file creation in `core/create.py`",
+   "detail": "In `synthetic_data_kit/core/create.py:process_file` (lines 99-106), every time `content_type == \"qa\"` runs, it writes a dummy file `test_write.json` containing `'{\"test\": \"data\"}'` into `output_dir` and never deletes it. Subsequent `curate` or `save-as` directory runs on `output_dir` pick up `test_write.json`, fail with `ValueError: No QA pairs found`, and cause the CLI command to exit with error code 1. Remove the `test_write.json` block and wrap the actual file write so exceptions propagate instead of being swallowed.",
+   "files": [
+    "synthetic_data_kit/core/create.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `core/create.py` swallowing write errors when saving QA pairs",
+   "detail": "In `synthetic_data_kit/core/create.py:process_file` (lines 109-115), writing the QA result to `output_path` is wrapped in `try ... except Exception as e: print(...)` and then returns `output_path` anyway. If saving fails (e.g., disk full or permission error), the function reports success and returns a non-existent or truncated file path. Remove the `try/except` or re-raise the exception.",
+   "files": [
+    "synthetic_data_kit/core/create.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix CLI commands returning exit code 0 on errors instead of raising `typer.Exit(1)`",
+   "detail": "In `synthetic_data_kit/cli.py`, `system_check`, `ingest`, `create`, `curate`, and `save_as` use `return 1` on failure. In Typer/Click, returning an integer from a command function does not set the process exit code\u2014it only sets the return value of the Python function, while the CLI process still exits with status code `0`! Replace `return 1` with `raise typer.Exit(code=1)` (and `return 0` with `return` or `raise typer.Exit(code=0)`).",
+   "files": [
+    "synthetic_data_kit/cli.py",
+    "tests/functional/test_cli.py",
+    "tests/integration/test_backward_compatibility.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `save_as.convert_format` failing on `cot` and `cot-enhance` outputs",
+   "detail": "In `synthetic_data_kit/core/save_as.py:convert_format`, when loading a JSON file with `conversations` (or a list of conversation objects produced by `cot-enhance`), it assumes `conv` is a 3-element list `[system, user, assistant]` (`if len(conv) >= 3 and conv[1]['role'] == 'user' and conv[2]['role'] == 'assistant'`). If a conversation has no system prompt (`len(conv) == 2`), has multi-turn messages, uses `from`/`value` ShareGPT keys, or is a list of `{\"conversations\": [...]}` objects from `cot-enhance`, `convert_format` either produces 0 pairs or raises `KeyError`/`TypeError`. Support 2-message conversations, `cot_examples`, and `{\"conversations\": ...}` dicts.",
+   "files": [
+    "synthetic_data_kit/core/save_as.py",
+    "tests/integration/test_save_as_flow.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix path traversal vulnerability in Flask server routes",
+   "detail": "In `synthetic_data_kit/server/app.py`, the routes `/view/<path:file_path>`, `/api/qa_json/<path:file_path>`, `/api/edit_item/<path:file_path>`, and `/api/delete_item/<path:file_path>` construct `full_path = Path(DEFAULT_DATA_DIR.parent, file_path)` without verifying that the resolved path stays inside the allowed directory, and `/upload` and `/ingest` use `temp_file.filename` without `werkzeug.utils.secure_filename`. Resolve paths with `.resolve()` and verify `full_path.is_relative_to(DEFAULT_DATA_DIR.parent.resolve())`, and sanitize uploaded filenames with `secure_filename`.",
+   "files": [
+    "synthetic_data_kit/server/app.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Fix Flask server `curate` route ignoring user input and not passing threshold",
+   "detail": "In `synthetic_data_kit/server/app.py`, `CurateForm` defines `num_pairs = IntegerField('Number of QA Pairs to Keep', default=0)` and `curate()` reads `num_pairs = form.num_pairs.data`, but never passes `threshold` (or `num_pairs`) to `curate_qa_pairs(...)`! Replace `num_pairs` in `CurateForm` (and `curate.html` if referenced) with `threshold = FloatField('Quality Threshold (1-10)', default=7.0)` and pass `threshold=threshold` to `curate_qa_pairs`.",
+   "files": [
+    "synthetic_data_kit/server/app.py",
+    "synthetic_data_kit/server/templates/curate.html"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `edit_item` and `delete_item` in `server/app.py` rejecting index 0 or empty dicts when falsy",
+   "detail": "In `synthetic_data_kit/server/app.py:edit_item`, `if not all([item_type, item_index is not None, item_content]):` rejects valid edits if `item_content` is an empty list/dict or string, and `request.json` can be `None` if Content-Type is missing, raising `AttributeError`. Use `data = request.get_json(silent=True) or {}` and check `if item_type is None or item_index is None or item_content is None:`.",
+   "files": [
+    "synthetic_data_kit/server/app.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Fix `LLMClient.__init__` failing when `max_retries=0` or `retry_delay=0.0` is passed",
+   "detail": "In `synthetic_data_kit/models/llm_client.py:__init__`, `self.max_retries = max_retries or api_endpoint_config.get('max_retries')` and `self.retry_delay = retry_delay or api_endpoint_config.get('retry_delay')` use `or`, which treats `0` or `0.0` as falsy and falls back to config, and if the config lacks those keys (e.g., a custom config file), `self.max_retries` becomes `None`, causing `for attempt in range(self.max_retries):` to raise `TypeError: 'NoneType' object cannot be interpreted as an integer`. Use explicit `is not None` checks and default to `3` and `1.0`.",
+   "files": [
+    "synthetic_data_kit/models/llm_client.py",
+    "tests/unit/test_llm_client.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Reuse `AsyncOpenAI` client and close sessions in `LLMClient._process_message_async`",
+   "detail": "In `synthetic_data_kit/models/llm_client.py:_process_message_async`, a brand new `AsyncOpenAI(**client_kwargs)` instance (and underlying `httpx.AsyncClient` connection pool) is instantiated for every single message in a batch and is never closed, leaking sockets and causing `ResourceWarning` / connection exhaustion on large batches. Instantiate a single `AsyncOpenAI` client per batch (or on `self`) and use `async with AsyncOpenAI(**client_kwargs) as async_client:`.",
+   "files": [
+    "synthetic_data_kit/models/llm_client.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "Deduplicate OpenAI/Llama response extraction logic in `LLMClient`",
+   "detail": "In `synthetic_data_kit/models/llm_client.py`, the 95-line block that extracts content from OpenAI and Llama API responses (Methods 1, 2, 3, and debug logging) is copy-pasted identically between `_openai_chat_completion` and `_process_message_async`. Extract a helper method `self._extract_response_content(response, verbose, debug_mode) -> str` and call it from both places.",
+   "files": [
+    "synthetic_data_kit/models/llm_client.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Fix `QAGenerator.generate_qa_pairs` truncating document summary to 100 characters",
+   "detail": "In `synthetic_data_kit/generators/qa_generator.py:generate_qa_pairs` (line 88), `qa_prompt = qa_prompt_template.format(num_pairs=pairs_per_chunk, summary=summary[:100], text=chunk)` slices `summary[:100]`, cutting off the 3-5 sentence summary mid-word after ~15 words. Pass the full `summary` (or a configurable limit) to `qa_prompt_template.format`.",
+   "files": [
+    "synthetic_data_kit/generators/qa_generator.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `QAGenerator.rate_qa_pairs` denominator bug in `avg_score` calculation",
+   "detail": "In `synthetic_data_kit/generators/qa_generator.py:rate_qa_pairs`, `avg_score` is computed as `round(total_score / len(qa_pairs), 1)`. If any batch fails or returns fewer rated items than `len(qa_pairs)`, unrated items contribute 0 to `total_score` while still being counted in the denominator `len(qa_pairs)`, artificially deflating `avg_score` (unlike `curate.py`, which tracks `total_evaluated`). Track `total_evaluated` and divide `total_score` by `total_evaluated`.",
+   "files": [
+    "synthetic_data_kit/generators/qa_generator.py",
+    "tests/unit/test_qa_generator.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Fix `COTGenerator.process_document` reading `SDK_VERBOSE` before setting it and ignoring `include_simple_steps`",
+   "detail": "In `synthetic_data_kit/generators/cot_generator.py:process_document(self, document_text, num_examples=None, include_simple_steps=False)`, `include_simple_steps` is passed from `core/create.py` (`include_simple_steps=verbose`), but `process_document` never uses `include_simple_steps` at all! Instead, it reads `verbose = os.environ.get('SDK_VERBOSE', 'false').lower() == 'true'` and then immediately overwrites `os.environ['SDK_VERBOSE']` with that same value. Use `include_simple_steps` (or accept `verbose: bool = False`) to set `SDK_VERBOSE` properly.",
+   "files": [
+    "synthetic_data_kit/generators/cot_generator.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `COTGenerator.parse_json_output` failing when JSON strings contain `]`",
+   "detail": "In `synthetic_data_kit/generators/cot_generator.py:parse_json_output`, `re.search(r\"\\[.*\\]\", output_text, re.DOTALL)` greedily matches from the first `[` to the last `]` in the entire LLM output. If the LLM includes any bracketed text outside the JSON array (e.g., `Here is the array [see note 1]: [{\"question\": ...}] [end]`), regex extraction captures invalid text. Use `extract_json_from_text` from `synthetic_data_kit/utils/text.py` (which checks code blocks first) as the primary parser.",
+   "files": [
+    "synthetic_data_kit/generators/cot_generator.py",
+    "synthetic_data_kit/utils/text.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `extract_json_from_text` failing when markdown or prose contains multiple `{}` or `[]` blocks",
+   "detail": "In `synthetic_data_kit/utils/text.py:extract_json_from_text`, if the text starts with `{` and ends with `}`, e.g. `{\"a\": 1} some text {\"b\": 2}`, it tries `json.loads`, fails, and then the fallback regex `r'\\{[\\s\\S]*\\}|\\[[\\s\\S]*\\]'` matches the exact same outer string and fails again. Use `json.JSONDecoder().raw_decode` scanning from the first `{` or `[` to reliably extract valid JSON objects/arrays embedded in text.",
+   "files": [
+    "synthetic_data_kit/utils/text.py",
+    "tests/unit/test_utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `parse_qa_pairs` corrupting JSON when answers contain newlines or brackets",
+   "detail": "In `synthetic_data_kit/utils/llm_processing.py:parse_qa_pairs`, `start = text.find('[')` and `end = text.rfind(']') + 1` will include surrounding text if the LLM output has `[` before or `]` after the JSON block (e.g. markdown links `[link](...)`). First check for ```json code blocks before falling back to `find('[')`/`rfind(']')`, and verify that `isinstance(pairs, list)` and its elements are dicts with `'question'` and `'answer'` keys.",
+   "files": [
+    "synthetic_data_kit/utils/llm_processing.py",
+    "tests/unit/test_llm_processing.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `AppContext` loading config and creating default directories at import time before CLI `--config` is parsed",
+   "detail": "In `synthetic_data_kit/cli.py`, `ctx = AppContext()` is called at module import time. `AppContext.__init__` immediately calls `self._ensure_data_dirs()`, which loads `DEFAULT_CONFIG_PATH` and creates `data/input`, `data/parsed`, `data/generated`, `data/curated`, and `data/final` in the current working directory\u2014even when the user runs `synthetic-data-kit --help`, passes a custom `--config` with different paths, or imports `cli` in tests! Move `_ensure_data_dirs()` out of `AppContext.__init__` (or into the CLI `callback` after `ctx.config = load_config(ctx.config_path)`), and store the loaded config on `self.config` instead of discarding it.",
+   "files": [
+    "synthetic_data_kit/core/context.py",
+    "synthetic_data_kit/cli.py",
+    "tests/unit/test_context.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Fix `core/create.py` reading file twice in `cot-enhance` mode",
+   "detail": "In `synthetic_data_kit/core/create.py:process_file`, when `content_type == \"cot-enhance\"`, line 174 calls `document_text = read_json(file_path)` (which reads the whole file as a string and is never used), and then line 188 opens `file_path` again to call `json.load(f)`. Also, `read_json` is a misleading name for a function that just reads raw text for `.txt` files. Rename `read_json` to `read_text_file` and remove the unused call in the `cot-enhance` branch.",
+   "files": [
+    "synthetic_data_kit/core/create.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Fix `core/create.py` `cot-enhance` crashing when `data` is a dict without `conversations` or `qa_pairs`",
+   "detail": "In `synthetic_data_kit/core/create.py:process_file`, under `content_type == \"cot-enhance\"`, if the input JSON is a dict that has neither `'qa_pairs'` nor `'conversations'` (e.g. `{\"cot_examples\": [...]}` or an invalid dict), it falls into the `else:` branch setting `conversations = data`. Then `for i, conversation in enumerate(tqdm(conversations)):` iterates over the dict's string keys, and outputs a list of string keys `[\"cot_examples\"]` to the enhanced file! Validate that `conversations` is a list of dicts/conversations, raising a descriptive `ValueError` otherwise.",
+   "files": [
+    "synthetic_data_kit/core/create.py",
+    "tests/unit/test_error_handling.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Fix `YouTubeParser` import error message referencing `pytube` instead of `pytubefix`",
+   "detail": "In `synthetic_data_kit/parsers/youtube_parser.py:YouTubeParser.parse`, the code imports `from pytubefix import YouTube`, but on `ImportError` it tells the user: `\"pytube and youtube-transcript-api are required for YouTube parsing. Install them with: pip install pytube youtube-transcript-api\"`. Installing `pytube` will not satisfy `from pytubefix import YouTube`. Update the message to `pip install pytubefix youtube-transcript-api` (and update `tests/unit/test_additional_parsers.py`).",
+   "files": [
+    "synthetic_data_kit/parsers/youtube_parser.py",
+    "tests/unit/test_additional_parsers.py"
+   ],
+   "kind": "docs"
+  },
+  {
+   "title": "Add request timeouts to `HTMLParser`, `PDFParser`, and `_check_pdf_url`",
+   "detail": "`synthetic_data_kit/core/ingest.py:_check_pdf_url`, `synthetic_data_kit/parsers/html_parser.py:HTMLParser.parse`, and `synthetic_data_kit/parsers/pdf_parser.py:PDFParser.parse` call `requests.head(url)` / `requests.get(file_path)` without a `timeout` argument, which can hang indefinitely on unresponsive servers. Add a sensible default timeout (e.g., `timeout=30`) to all three calls.",
+   "files": [
+    "synthetic_data_kit/core/ingest.py",
+    "synthetic_data_kit/parsers/html_parser.py",
+    "synthetic_data_kit/parsers/pdf_parser.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Remove noisy debug `print` statements in `config.py`, `llm_client.py`, and `create.py`",
+   "detail": "`load_config` and `get_llm_provider` in `synthetic_data_kit/utils/config.py`, `LLMClient.__init__` and `_init_openai_client` in `synthetic_data_kit/models/llm_client.py`, and `process_file` in `synthetic_data_kit/core/create.py` (`print(f\"L Using {client.provider} provider\")`) unconditionally print debug messages to stdout on every call, polluting CLI output and breaking clean stdout piping. Gate these behind `SDK_VERBOSE` or `logger.debug`.",
+   "files": [
+    "synthetic_data_kit/utils/config.py",
+    "synthetic_data_kit/models/llm_client.py",
+    "synthetic_data_kit/core/create.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Fix `test_system_check_command_api_endpoint` mocking the wrong OpenAI method",
+   "detail": "In `tests/functional/test_cli.py:test_system_check_command_api_endpoint`, the test sets `mock_client.models.list.return_value = [\"mock-model\"]`, whereas `system_check` in `synthetic_data_kit/cli.py` actually calls `client.chat.completions.create(...)`. Because `mock_client` is a `MagicMock`, `chat.completions.create` silently succeeds and returns a `MagicMock`, so the test does not verify the actual API call made by `system_check`. Update the test to mock and assert `mock_client.chat.completions.create`.",
+   "files": [
+    "tests/functional/test_cli.py"
+   ],
+   "kind": "tests"
+  },
+  {
+   "title": "Fix `test_html_parser` mocking `BeautifulSoup` so the HTML cleaning logic is never tested",
+   "detail": "In `tests/unit/test_parsers.py:test_html_parser`, `bs4.BeautifulSoup` is patched with a `MagicMock` returning a pre-canned string, which means `HTMLParser.parse`'s actual `<script>`/`<style>` removal and whitespace normalization are completely untested (even when `bs4` is installed). Test `HTMLParser.parse` with real `BeautifulSoup` on HTML containing `<script>` and `<style>` tags.",
+   "files": [
+    "tests/unit/test_parsers.py"
+   ],
+   "kind": "tests"
+  },
+  {
+   "title": "Add unit tests for `parse_ratings` and `curate_qa_pairs`",
+   "detail": "There are currently zero unit tests for `parse_ratings` in `tests/unit/test_llm_processing.py` and zero unit tests for `curate_qa_pairs` (including batch rating, threshold filtering, and single-item fallback) in `tests/unit/`. Add unit tests covering JSON array ratings, single-object ratings, code-block wrapped ratings, malformed JSON error raising, and `curate_qa_pairs` batch + fallback execution.",
+   "files": [
+    "tests/unit/test_llm_processing.py",
+    "tests/unit/test_error_handling.py"
+   ],
+   "kind": "tests"
+  },
+  {
+   "title": "Enable pre-commit hooks in `.pre-commit-config.yaml`",
+   "detail": "`.pre-commit-config.yaml` has all hooks commented out and defines `repos: []`, while `.github/workflows/ci.yml` caches and runs `pre-commit run --all-files` as its primary lint step (which consequently does nothing and never triggers the `if: failure()` ruff fallback!). Uncomment and enable the `pre-commit-hooks` and `ruff-pre-commit` repositories in `.pre-commit-config.yaml`.",
+   "files": [
+    ".pre-commit-config.yaml"
+   ],
+   "kind": "packaging"
+  },
+  {
+   "title": "Remove tracked `.DS_Store` files and add `.DS_Store` to `.gitignore`",
+   "detail": "Three macOS `.DS_Store` binary files (`use-cases/.DS_Store`, `use-cases/adding_reasoning_to_llama_3/.DS_Store`, `use-cases/getting-started/.DS_Store`) are committed in the repository. Remove them and ensure `.DS_Store` is ignored in `.gitignore`.",
+   "files": [
+    ".gitignore",
+    "use-cases/.DS_Store",
+    "use-cases/adding_reasoning_to_llama_3/.DS_Store",
+    "use-cases/getting-started/.DS_Store"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Fix duplicate return statement and hardcoded path in `use-cases/adding_reasoning_to_llama_3/tt_configs/toolcall.py`",
+   "detail": "In `use-cases/adding_reasoning_to_llama_3/tt_configs/toolcall.py`, `ToolCallMessages.__call__` has a dead duplicate `return {\"messages\": messages}` on line 44, and `custom_dataset` hardcodes `dataset_path = \"/path/to/file/train/\"` instead of accepting `dataset_path: str = \"/path/to/file/train/\"` as a parameter configurable from YAML. Remove the duplicate return and add `dataset_path` as a parameter to `custom_dataset`.",
+   "files": [
+    "use-cases/adding_reasoning_to_llama_3/tt_configs/toolcall.py"
+   ],
+   "kind": "cleanup"
+  },
+  {
+   "title": "Fix broken Getting Started link in `.github/ISSUE_TEMPLATE/config.yml`",
+   "detail": "In `.github/ISSUE_TEMPLATE/config.yml`, the Getting Started contact link points to `https://github.com/meta-llama/synthetic-data-kit/blob/main/getting-started/README.md`, which returns 404 because the directory is at `use-cases/getting-started/README.md`. Update the URL to `https://github.com/meta-llama/synthetic-data-kit/blob/main/use-cases/getting-started/README.md`.",
+   "files": [
+    ".github/ISSUE_TEMPLATE/config.yml"
+   ],
+   "kind": "docs"
+  },
+  {
+   "title": "Update `DOCS.md` to match current CLI options, config structure, and module names",
+   "detail": "`DOCS.md` references non-existent files (`synthetic_data_kit/core/cleanup.py`, `setup.py`), non-existent CLI options (`synthetic-data-kit create --threshold`), outdated config keys (`paths.output.cleaned: \"data/cleaned\"` instead of `curated: \"data/curated\"`), and omits `cot-enhance`, `vqa_add_reasoning`, `--preview`, `--chunk-size`, `--chunk-overlap`, and directory batch processing. Update `DOCS.md` to reflect the actual codebase.",
+   "files": [
+    "DOCS.md"
+   ],
+   "kind": "docs"
+  },
+  {
+   "title": "Validate `threshold` range (1-10), `chunk_size > 0`, and `chunk_overlap >= 0` in CLI and core functions",
+   "detail": "Neither `synthetic_data_kit/cli.py` nor `curate_qa_pairs` / `create.process_file` validates that `threshold` is between 1 and 10, `num_pairs > 0`, `chunk_size > 0`, or `0 <= chunk_overlap < chunk_size`. Passing `--threshold 50`, `--chunk-size 0`, or `--num-pairs -5` proceeds to make LLM API calls before producing empty or nonsensical results. Add `typer.Option(..., min=..., max=...)` constraints in `cli.py` and validation checks in `create.py` and `curate.py`.",
+   "files": [
+    "synthetic_data_kit/cli.py",
+    "synthetic_data_kit/core/create.py",
+    "synthetic_data_kit/core/curate.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Fix `VQAGenerator` prompt lookup and missing `vqa_add_reasoning` in CLI/directory processor",
+   "detail": "In `synthetic_data_kit/generators/vqa_generator.py:transform`, `prompt = self.config.get(\"prompt\", \"\")` looks for a top-level `\"prompt\"` key instead of checking `self.config.get(\"prompts\", {}).get(\"vqa_reasoning\", self.config.get(\"prompt\", \"\"))`. Additionally, `cli.py:create` docstring/help text and `directory_processor.py:process_directory_create` do not list or handle `vqa_add_reasoning` (which takes `.json` or HF datasets, not `.txt`). Update `VQAGenerator.transform`, `cli.py`, and `directory_processor.py`.",
+   "files": [
+    "synthetic_data_kit/generators/vqa_generator.py",
+    "synthetic_data_kit/cli.py",
+    "synthetic_data_kit/utils/directory_processor.py"
+   ],
+   "kind": "bug"
+  }
+ ],
+ [
+  {
+   "title": "Return real nonzero CLI exit codes on command failures",
+   "detail": "Typer ignores integer return values from command functions, so `return 1` still commonly produces process exit code 0. Replace failure returns in `system_check`, `ingest`, `create`, `curate`, and `save_as` with `raise typer.Exit(code=1)` (and explicit success exits only where needed), then update CLI tests to assert failure exit codes.",
+   "files": [
+    "synthetic_data_kit/cli.py",
+    "tests/functional/test_cli.py",
+    "tests/integration/test_backward_compatibility.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Make directory preview independent of LLM connectivity",
+   "detail": "`create` and `curate` check the vLLM server before determining that the request is only a directory preview. Offline `--preview` therefore fails even though it should only inspect local files. Move preview handling and local argument validation before provider initialization and server checks, with tests asserting that no HTTP request is made.",
+   "files": [
+    "synthetic_data_kit/cli.py",
+    "tests/functional/test_preview_mode.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Make single-file preview a true dry run",
+   "detail": "For a single file, `ingest`, `create`, and other commands warn that preview is directory-only and then process the file anyway. This violates normal dry-run expectations and can invoke an LLM or overwrite output. Either reject single-file preview with a nonzero exit or display the proposed operation and return without processing; test that processing functions are not called.",
+   "files": [
+    "synthetic_data_kit/cli.py",
+    "tests/functional/test_preview_mode.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Remove import-time directory creation and honor custom configuration paths",
+   "detail": "The module-level `ctx = AppContext()` creates default data directories merely by importing the CLI. Later selecting `--config` changes `ctx.config_path` but does not create paths from the selected configuration. Load configuration and create its directories lazily in the callback, after the custom path is known, and avoid filesystem side effects for imports and `--help`.",
+   "files": [
+    "synthetic_data_kit/cli.py",
+    "synthetic_data_kit/core/context.py",
+    "tests/unit/test_context.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate YAML roots and merge section defaults",
+   "detail": "`load_config` can return `None` or a scalar for empty or malformed-but-valid YAML, causing later membership and `.get` failures. Also, getters return a partial section unchanged, so omitting one field such as `max_retries` yields `None` instead of its default. Require a mapping root and recursively merge loaded configuration over documented defaults.",
+   "files": [
+    "synthetic_data_kit/utils/config.py",
+    "tests/unit/test_utils.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Reject unsupported LLM provider names",
+   "detail": "Any provider other than the exact string `api-endpoint` silently falls through to vLLM in `LLMClient`, while `get_llm_provider` returns arbitrary values. Validate providers against `vllm` and `api-endpoint` in configuration, CLI options, and client construction, and report a clear error for typos.",
+   "files": [
+    "synthetic_data_kit/utils/config.py",
+    "synthetic_data_kit/models/llm_client.py",
+    "synthetic_data_kit/cli.py",
+    "tests/unit/test_llm_client.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Validate retry and batching configuration before use",
+   "detail": "`LLMClient` may receive `None`, zero, negative, or nonnumeric `max_retries` and `retry_delay`; `range(None)` then fails far from configuration loading. Similar invalid batch sizes can cause zero-step `range` calls. Resolve complete defaults and require `max_retries >= 1`, `retry_delay >= 0`, and batch sizes >= 1 with focused tests.",
+   "files": [
+    "synthetic_data_kit/models/llm_client.py",
+    "synthetic_data_kit/utils/config.py",
+    "tests/unit/test_llm_client.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Reuse one AsyncOpenAI client for batch requests",
+   "detail": "`LLMClient._process_message_async` creates a new `AsyncOpenAI` client for every message, adding connection-pool and resource overhead and providing no explicit close lifecycle. Construct one asynchronous client per batch, share it across tasks, and close it after completion while preserving concurrency limits and retries.",
+   "files": [
+    "synthetic_data_kit/models/llm_client.py",
+    "tests/unit/test_llm_client.py"
+   ],
+   "kind": "performance"
+  },
+  {
+   "title": "Make QAGenerator use the already-resolved client configuration",
+   "detail": "`QAGenerator.__init__` calls `load_config(config_path)` instead of using `client.config`. This discards programmatic client configuration and the chunk-size/overlap overrides applied in `core.create.process_file`. Use `client.config` as the source of truth, or merge an explicit config only once, and add a test proving CLI chunk overrides reach generation.",
+   "files": [
+    "synthetic_data_kit/generators/qa_generator.py",
+    "synthetic_data_kit/core/create.py",
+    "tests/unit/test_qa_generator.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Implement the documented chunk overlap argument",
+   "detail": "`split_into_chunks` accepts `overlap` but never uses its value; it always carries up to the last three period-delimited sentences. Implement deterministic character or boundary-aware overlap bounded by the requested number of characters, including `overlap=0`, and test exact boundary behavior.",
+   "files": [
+    "synthetic_data_kit/utils/text.py",
+    "tests/unit/test_utils.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Split oversized paragraphs and reject invalid chunk settings",
+   "detail": "A paragraph longer than `chunk_size` is emitted whole, so chunking does not enforce its primary size bound. Invalid values such as `chunk_size <= 0` or `overlap >= chunk_size` are also accepted. Split long paragraphs with a sentence/word/character fallback and validate the parameters without losing text.",
+   "files": [
+    "synthetic_data_kit/utils/text.py",
+    "tests/unit/test_utils.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Handle empty documents without division by zero or pointless LLM calls",
+   "detail": "Empty text produces zero chunks, after which QA and CoT generation divide by `len(chunks)`. Summary generation may also send an empty request. Reject empty or whitespace-only documents with a clear `ValueError` before LLM initialization/generation, and add QA, CoT, and CLI regression tests.",
+   "files": [
+    "synthetic_data_kit/core/create.py",
+    "synthetic_data_kit/generators/qa_generator.py",
+    "synthetic_data_kit/generators/cot_generator.py",
+    "tests/unit/test_qa_generator.py",
+    "tests/unit/test_cot_generator.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate create content type and numeric options before connecting",
+   "detail": "The CLI accepts arbitrary `--type`, nonpositive `--num-pairs`, nonpositive chunk sizes, and overlaps larger than chunks. These errors are detected late, sometimes after checking or invoking the server. Use Typer choices/ranges plus equivalent validation in `core.create.process_file` for library callers.",
+   "files": [
+    "synthetic_data_kit/cli.py",
+    "synthetic_data_kit/core/create.py",
+    "tests/unit/test_error_handling.py",
+    "tests/functional/test_cli.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Stop creating test_write.json and propagate output write failures",
+   "detail": "The QA branch writes an unrelated `test_write.json`, catches failures for both test and actual output, prints them, and still returns a path that may not exist. Remove the probe file, write the actual result once (preferably atomically), and let I/O errors propagate so directory processing records a failure.",
+   "files": [
+    "synthetic_data_kit/core/create.py",
+    "tests/integration/test_create_flow.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Support output filenames without an explicit parent directory",
+   "detail": "Several functions call `os.makedirs(os.path.dirname(output_path), exist_ok=True)`. For a valid output such as `result.json`, the dirname is empty and `makedirs('')` fails. Introduce a shared helper that creates a parent only when nonempty, and use it in curation, conversion, parser saves, and HF dataset export.",
+   "files": [
+    "synthetic_data_kit/core/curate.py",
+    "synthetic_data_kit/core/save_as.py",
+    "synthetic_data_kit/utils/format_converter.py",
+    "synthetic_data_kit/parsers/txt_parser.py",
+    "synthetic_data_kit/parsers/html_parser.py",
+    "synthetic_data_kit/parsers/pdf_parser.py",
+    "synthetic_data_kit/parsers/docx_parser.py",
+    "synthetic_data_kit/parsers/ppt_parser.py",
+    "synthetic_data_kit/parsers/youtube_parser.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate curation input as a QA dataset",
+   "detail": "`curate_qa_pairs` assumes the JSON root is a dictionary and that `qa_pairs` is a list of dictionaries with `question` and `answer`. Lists, strings, malformed pairs, and missing fields currently cause obscure errors later. Validate the complete schema up front and identify the failing item index in the error.",
+   "files": [
+    "synthetic_data_kit/core/curate.py",
+    "tests/unit/test_error_handling.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Enforce valid curation thresholds and batch sizes",
+   "detail": "Thresholds outside the documented 1\u201310 range are accepted, and `SDK_BATCH_SIZE=0` passes `isdigit()` before causing a zero-step range error. Validate threshold as a finite number in [1, 10], and require configured/environment batch and inference batch values to be positive integers.",
+   "files": [
+    "synthetic_data_kit/core/curate.py",
+    "synthetic_data_kit/cli.py",
+    "tests/unit/test_error_handling.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Validate and normalize model ratings before arithmetic",
+   "detail": "`parse_ratings` accepts any value under `rating`; strings, booleans, NaN, infinities, and values outside 1\u201310 then break totals or silently distort filtering. Convert integer/float ratings to finite floats, reject booleans and out-of-range values, and validate that returned question/answer fields correspond to the requested items.",
+   "files": [
+    "synthetic_data_kit/utils/llm_processing.py",
+    "synthetic_data_kit/core/curate.py",
+    "synthetic_data_kit/generators/qa_generator.py",
+    "tests/unit/test_llm_processing.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Compute QA average scores over actually rated pairs",
+   "detail": "`QAGenerator.rate_qa_pairs` divides `total_score` by the original number of QA pairs even when responses omit items or batches fail. Track `total_evaluated` and divide by that count, matching `core.curate`, while exposing an unrated count in metrics.",
+   "files": [
+    "synthetic_data_kit/generators/qa_generator.py",
+    "tests/unit/test_qa_generator.py"
+   ],
+   "kind": "numerics"
+  },
+  {
+   "title": "Do not silently publish partial curation after inference failures",
+   "detail": "Both batch-level and item-level exceptions can be swallowed, after which curation writes an apparently successful file with zero or partially rated pairs. Track failures and either raise when any item remains unevaluated or record explicit failed/unrated items and make partial-output behavior opt-in.",
+   "files": [
+    "synthetic_data_kit/core/curate.py",
+    "synthetic_data_kit/utils/directory_processor.py",
+    "tests/unit/test_error_handling.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Check batch response cardinality",
+   "detail": "Generation and curation iterate only over responses returned by `batch_completion`. If the provider returns fewer responses than requests, remaining chunks or QA batches disappear without warning; extra responses are also ambiguously accepted. Require one response per request and retry or raise on a mismatch.",
+   "files": [
+    "synthetic_data_kit/generators/qa_generator.py",
+    "synthetic_data_kit/generators/cot_generator.py",
+    "synthetic_data_kit/core/curate.py",
+    "synthetic_data_kit/models/llm_client.py",
+    "tests/unit/test_llm_client.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Strictly validate cot-enhance input variants",
+   "detail": "The expression checking arrays of conversation objects filters non-dictionaries out of `all`, so mixed lists and even lists with no dictionaries can be misclassified. The generic fallback may assign a dictionary or scalar to `conversations`, leading to slicing and iteration errors. Implement explicit schema branches for QA datasets, one conversation, conversation arrays, and direct message arrays; reject everything else.",
+   "files": [
+    "synthetic_data_kit/core/create.py",
+    "tests/unit/test_cot_generator.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Use structured JSON extraction and validate generated item schemas",
+   "detail": "`parse_qa_pairs` and `COTGenerator.parse_json_output` greedily take text from the first `[` to the last `]` and return arbitrary parsed list contents. This can capture unrelated brackets and permits strings or malformed dictionaries that fail later. Reuse a decoder-based JSON extraction helper and require QA or CoT fields to be nonempty strings.",
+   "files": [
+    "synthetic_data_kit/utils/llm_processing.py",
+    "synthetic_data_kit/utils/text.py",
+    "synthetic_data_kit/generators/cot_generator.py",
+    "tests/unit/test_llm_processing.py",
+    "tests/unit/test_cot_generator.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Preserve escaped characters when parsing ratings JSON",
+   "detail": "`parse_ratings` replaces JSON escape sequences such as `\\n` with literal newlines before calling `json.loads`. Literal newlines inside JSON strings are invalid and otherwise valid model output can be rejected. Parse the original JSON first and never globally unescape it; only apply narrowly justified fallback repairs.",
+   "files": [
+    "synthetic_data_kit/utils/llm_processing.py",
+    "tests/unit/test_llm_processing.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Validate save-as inputs and conversation message structure",
+   "detail": "`convert_format` assumes dictionary roots, list-valued sections, and fixed conversation positions 1 and 2 with valid `role` and `content` keys. Malformed data produces `TypeError`, `KeyError`, or silently empty output. Validate QA pairs and locate user/assistant turns by role, with clear errors for unsupported multi-turn structures.",
+   "files": [
+    "synthetic_data_kit/core/save_as.py",
+    "tests/integration/test_save_as_flow.py",
+    "tests/unit/test_error_handling.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Handle empty Hugging Face dataset exports",
+   "detail": "`to_hf_dataset` accesses `qa_pairs[0]`, so exporting a valid but empty curated dataset raises `IndexError`. Either create an explicitly typed empty Dataset or reject empty exports with a documented `ValueError`; add a unit test for the chosen behavior.",
+   "files": [
+    "synthetic_data_kit/utils/format_converter.py",
+    "tests/unit/test_format_converter.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Use extensions that match the actual serialized format",
+   "detail": "`to_chatml` writes newline-delimited JSON, but directory save-as names non-JSONL formats with a `.json` suffix. This creates files whose extension lies about their contents. Emit `.jsonl` for ChatML, and ensure CLI default output naming and documentation consistently distinguish JSON arrays from JSONL.",
+   "files": [
+    "synthetic_data_kit/utils/directory_processor.py",
+    "synthetic_data_kit/cli.py",
+    "synthetic_data_kit/utils/format_converter.py",
+    "DOCS.md",
+    "tests/integration/test_save_as_flow.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Make ingest's optional output directory actually optional",
+   "detail": "`core.ingest.process_file` immediately calls `os.path.exists(output_dir)` even though its signature allows `None`; the supplied config is not used to resolve a default. If no directory is passed, load/use the configured parsed output path before touching the filesystem, and test direct library invocation.",
+   "files": [
+    "synthetic_data_kit/core/ingest.py",
+    "tests/unit/test_parsers.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Prevent output-name path traversal and accidental absolute writes",
+   "detail": "`ingest.process_file` joins user-controlled `output_name` directly to `output_dir`. Values such as `../../target` or absolute paths can escape the selected directory, including through the web form. Require a basename or resolve the target and verify it remains under the output directory.",
+   "files": [
+    "synthetic_data_kit/core/ingest.py",
+    "synthetic_data_kit/server/app.py",
+    "tests/unit/test_error_handling.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Classify YouTube and PDF URLs robustly",
+   "detail": "YouTube detection uses substring checks, so hosts such as `youtube.com.evil.example` are treated as YouTube. Output-name extraction also calls `.group(1)` on a regex that does not cover all valid URL forms. Parse and normalize hostnames, support standard YouTube URL variants, and fail clearly when no video ID exists.",
+   "files": [
+    "synthetic_data_kit/core/ingest.py",
+    "tests/unit/test_additional_parsers.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Add timeouts and robust PDF URL detection",
+   "detail": "`_check_pdf_url`, `HTMLParser.parse`, and `PDFParser.parse` make network requests without timeouts; a remote endpoint can hang ingestion indefinitely. HEAD-only PDF detection also misclassifies servers that reject HEAD or omit Content-Type. Add configurable connect/read timeouts, use URL suffix or a bounded GET fallback, and verify content type/status before parsing.",
+   "files": [
+    "synthetic_data_kit/core/ingest.py",
+    "synthetic_data_kit/parsers/html_parser.py",
+    "synthetic_data_kit/parsers/pdf_parser.py",
+    "tests/unit/test_parsers.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Support common record-oriented JSON in VQA dataset loading",
+   "detail": "`VQAGenerator.process_dataset` passes `json.loads(input_data)` directly to `Dataset.from_dict`, which only handles a mapping of columns; a common JSON array of records fails. Detect mapping-of-columns versus list-of-records and use `Dataset.from_dict` or `Dataset.from_list` accordingly, with schema checks for image, query, and label.",
+   "files": [
+    "synthetic_data_kit/generators/vqa_generator.py",
+    "tests/unit/test_additional_parsers.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Require or resolve a split when loading a Hugging Face DatasetDict",
+   "detail": "`load_dataset` commonly returns a `DatasetDict`. If `input_split` is unset, the code calls `.select` or `.map` as though it were a Dataset, or reports the number of splits as the example count. Select a configured split, safely choose a sole split, or require the user to specify one when multiple splits exist.",
+   "files": [
+    "synthetic_data_kit/generators/vqa_generator.py",
+    "tests/unit/test_additional_parsers.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Block path traversal in all web file routes",
+   "detail": "`view_file`, `qa_json`, `edit_item`, and `delete_item` append an untrusted route path to the repository data parent without containment checks. `../` paths can read or modify arbitrary accessible files. Resolve paths and require them to remain beneath an explicit data root, rejecting symlinks and traversal attempts with tests.",
+   "files": [
+    "synthetic_data_kit/server/app.py",
+    "tests/unit/test_error_handling.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Secure uploaded filenames and enforce upload limits",
+   "detail": "The upload routes save `f.filename` or derived names directly, permitting path separators, collisions, and unsupported file types; there is also no request-size limit. Use `werkzeug.utils.secure_filename`, reject empty/unsupported names, generate collision-safe temporary names, and configure `MAX_CONTENT_LENGTH`.",
+   "files": [
+    "synthetic_data_kit/server/app.py",
+    "tests/unit/test_error_handling.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Always clean up temporary web uploads",
+   "detail": "The ingest route deletes its temporary upload only after successful processing. Parser failures leave uploaded files in the output directory, and the temporary name is predictable. Use a real temporary file and a `finally` block so cleanup occurs on success and every exception path.",
+   "files": [
+    "synthetic_data_kit/server/app.py",
+    "tests/unit/test_error_handling.py"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Use a stable configurable Flask secret key",
+   "detail": "The server generates a new random secret at import time. Sessions and CSRF tokens become invalid across process restarts and differ between multi-worker processes. Read a required production secret from an environment variable or config, with an explicit development-only fallback and documentation.",
+   "files": [
+    "synthetic_data_kit/server/app.py",
+    "README.md",
+    "DOCS.md"
+   ],
+   "kind": "packaging"
+  },
+  {
+   "title": "Validate JSON edit/delete requests and write atomically",
+   "detail": "`edit_item` and `delete_item` assume `request.json` is a dictionary and `item_index` is an integer; null JSON, strings, or booleans lead to 500 responses. Validate content type, item type, index type/range, and item schema, then write through a temporary file plus `os.replace` to avoid corrupting datasets on interruption.",
+   "files": [
+    "synthetic_data_kit/server/app.py",
+    "tests/unit/test_error_handling.py"
+   ],
+   "kind": "validation"
+  },
+  {
+   "title": "Replace the unused web curation count field with a threshold",
+   "detail": "`CurateForm` asks for `num_pairs`, reads it, and then never passes it to `curate_qa_pairs`; users cannot set the actual curation threshold from the web UI. Replace the field with a bounded float threshold and pass it through, or implement clearly documented count limiting if that was intended.",
+   "files": [
+    "synthetic_data_kit/server/app.py",
+    "synthetic_data_kit/server/templates/curate.html"
+   ],
+   "kind": "bug"
+  },
+  {
+   "title": "Make CI linting run instead of succeeding on an empty pre-commit config",
+   "detail": "`.pre-commit-config.yaml` contains no hooks, so `pre-commit run --all-files` succeeds and the workflow's `if: failure()` Ruff fallback never executes. Enable pinned Ruff hooks or run `ruff check` and `ruff format --check` unconditionally; add YAML/TOML/AST checks if desired.",
+   "files": [
+    ".pre-commit-config.yaml",
+    ".github/workflows/ci.yml",
+    "pyproject.toml"
+   ],
+   "kind": "packaging"
+  },
+  {
+   "title": "Add regression tests that patch symbols where they are consumed",
+   "detail": "Several fixtures patch `synthetic_data_kit.utils.config.load_config`, but modules such as `cli`, `context`, and generators import that function into local module namespaces, so the patch may not affect the code under test. Patch the consumer symbols or refactor imports, and add isolated tests for failure exit codes, preview-without-network, malformed configuration, and filesystem containment.",
+   "files": [
+    "tests/conftest.py",
+    "tests/functional/test_cli.py",
+    "tests/functional/test_preview_mode.py",
+    "tests/unit/test_context.py",
+    "tests/unit/test_utils.py"
+   ],
+   "kind": "tests"
+  }
+ ]
+]

@@ -1,0 +1,987 @@
+{
+ "task": "dictionary_learning",
+ "pin": "07975f7a7c505042b6619846db18dbd122c4f4e6",
+ "reviewers": [
+  "opus",
+  "argon",
+  "sol"
+ ],
+ "merger": "opus",
+ "n_proposed": [
+  42,
+  0,
+  40
+ ],
+ "items": [
+  {
+   "title": "Cast float n_ctxs-derived buffer sizes to int",
+   "criterion": "Buffer constructors convert n_ctxs and activation_buffer_size to int, so the default n_ctxs=3e4 no longer makes t.empty raise. This applies to ActivationBuffer, HeadActivationBuffer and NNsightActivationBuffer.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i01"
+  },
+  {
+   "title": "Buffer __next__ handles exactly one unread activation",
+   "criterion": "All buffer __next__ methods obtain unread indices with nonzero(as_tuple=True)[0] or flatten(), so a single unread row yields a 1-D tensor and len() works.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i02"
+  },
+  {
+   "title": "Buffer close() closes the real data source, not text_stream",
+   "criterion": "close() in all buffers stops referencing the nonexistent self.text_stream. When self.data exposes close(), it is closed, and calling close() twice is safe.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i03"
+  },
+  {
+   "title": "remove_bos masks actual BOS tokens instead of dropping column 0",
+   "criterion": "With remove_bos, refresh removes positions where input_ids == bos_token_id, combined with the attention mask, instead of slicing column 0. The result is correct under left padding.",
+   "files": [
+    "dictionary_learning/buffer.py",
+    "dictionary_learning/pytorch_buffer.py"
+   ],
+   "kind": "bug",
+   "source": "both",
+   "n_reviewers": 1,
+   "id": "i04"
+  },
+  {
+   "title": "remove_bos fallback for tokenizers without a BOS token",
+   "criterion": "When bos_token_id is None and remove_bos is set, the buffer warns and removes the first non-pad token of each sequence. The first-token position is computed from the cumulative sum of the attention mask.",
+   "files": [
+    "dictionary_learning/buffer.py",
+    "dictionary_learning/pytorch_buffer.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i05"
+  },
+  {
+   "title": "HeadActivationBuffer saves hidden states when apply_W_O=False",
+   "criterion": "HeadActivationBuffer.refresh calls .save() on hidden states in both apply_W_O branches and uses .value after the trace, so indexing by attention mask works.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i06"
+  },
+  {
+   "title": "from_pretrained uses map_location and always applies dtype",
+   "criterion": "Every from_pretrained loads with map_location (CPU or the target device) and always applies the requested dtype, even when device is None. This covers AutoEncoder, Gated, New, JumpReLU, TopK, BatchTopK and Matryoshka.",
+   "files": [
+    "dictionary_learning/dictionary.py",
+    "dictionary_learning/trainers/top_k.py",
+    "dictionary_learning/trainers/batch_top_k.py",
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i07"
+  },
+  {
+   "title": "Make from_pretrained a classmethod using cls",
+   "criterion": "GatedAutoEncoder, AutoEncoderNew and AutoEncoderTopK declare from_pretrained with @classmethod, take cls as the first argument, and construct with cls(...).",
+   "files": [
+    "dictionary_learning/dictionary.py",
+    "dictionary_learning/trainers/top_k.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i08"
+  },
+  {
+   "title": "JumpReluAutoEncoder.from_pretrained honors requested device",
+   "criterion": "The inverted `if device is not None` override is removed or corrected. The loaded model is moved once, to the caller-supplied device and dtype.",
+   "files": [
+    "dictionary_learning/dictionary.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i09"
+  },
+  {
+   "title": "PAnneal/GatedAnneal resampling actually writes parameters",
+   "criterion": "resample_neurons stops assigning through chained advanced indexing such as weight[deads][:n]. It builds explicit dead indices and assigns in place, and a test confirms the weights change.",
+   "files": [
+    "dictionary_learning/trainers/p_anneal.py",
+    "dictionary_learning/trainers/gated_anneal.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i10"
+  },
+  {
+   "title": "GatedAnneal resampling matches gated architecture parameters",
+   "criterion": "GatedAnnealTrainer.resample_neurons no longer accesses encoder.bias. For dead features it resets gate_bias, mag_bias, r_mag and the encoder/decoder columns.",
+   "files": [
+    "dictionary_learning/trainers/gated_anneal.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i11"
+  },
+  {
+   "title": "Reset Adam state by parameter object, not numeric IDs",
+   "criterion": "Resampling code resets exp_avg and exp_avg_sq through optimizer.state[param] along the correct feature dimension, instead of hard-coded state_dict indices 1/2/3. This applies in the Standard, PAnneal and GatedAnneal trainers.",
+   "files": [
+    "dictionary_learning/trainers/standard.py",
+    "dictionary_learning/trainers/p_anneal.py",
+    "dictionary_learning/trainers/gated_anneal.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i12"
+  },
+  {
+   "title": "Matryoshka reconstruction loss uses the weighted sum",
+   "criterion": "MatryoshkaBatchTopKTrainer.loss trains on total_l2_loss, the group-weighted sum, rather than taking mean() of already-weighted losses. Per-group values are kept only for logging.",
+   "files": [
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i13"
+  },
+  {
+   "title": "JumpReLU L0 surrogate applied to pre_jump",
+   "criterion": "JumpReluTrainer.loss passes pre_jump, not the thresholded f, to StepFunction.apply.",
+   "files": [
+    "dictionary_learning/trainers/jumprelu.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i14"
+  },
+  {
+   "title": "p-annealing never reaches p=0 with constant or inf loss",
+   "criterion": "Either the p schedule excludes p_end as documented or p_end > 0 is validated, so neither f.pow(0) nor pow(1/0) is computed. Alternatively, a documented L0 endpoint using f != 0 is implemented.",
+   "files": [
+    "dictionary_learning/trainers/p_anneal.py",
+    "dictionary_learning/trainers/gated_anneal.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i15"
+  },
+  {
+   "title": "Allocate num_tokens_since_fired on self.device",
+   "criterion": "The TopK, BatchTopK and Matryoshka trainers allocate the dead-feature counter with device=self.device rather than the raw device argument.",
+   "files": [
+    "dictionary_learning/trainers/top_k.py",
+    "dictionary_learning/trainers/batch_top_k.py",
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i16"
+  },
+  {
+   "title": "TopK update_threshold avoids infinite thresholds",
+   "criterion": "update_threshold averages only finite positive row minima. When none exist, it skips the update, so the threshold never becomes inf.",
+   "files": [
+    "dictionary_learning/trainers/top_k.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i17"
+  },
+  {
+   "title": "geometric_median guards against zero distances",
+   "criterion": "Distances in geometric_median are clamped with an eps, or zero-distance points are handled explicitly, so identical or duplicate points no longer produce NaN.",
+   "files": [
+    "dictionary_learning/trainers/top_k.py",
+    "dictionary_learning/trainers/batch_top_k.py",
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i18"
+  },
+  {
+   "title": "Deduplicate geometric_median implementations",
+   "criterion": "The staticmethod copies in batch_top_k and matryoshka are removed in favour of one shared function.",
+   "files": [
+    "dictionary_learning/trainers/batch_top_k.py",
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py",
+    "dictionary_learning/trainers/top_k.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i19"
+  },
+  {
+   "title": "norm_factor persisted to saved config",
+   "criterion": "norm_factor is computed before config.json is written. It is explicitly included in the saved JSON and wandb config instead of being assigned into the transient trainer.config dict.",
+   "files": [
+    "dictionary_learning/training.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i20"
+  },
+  {
+   "title": "trainSAE does not mutate caller trainer_configs",
+   "criterion": "trainSAE copies each config before deleting 'trainer' or editing wandb_name, so the caller's dicts are unchanged after the call.",
+   "files": [
+    "dictionary_learning/training.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i21"
+  },
+  {
+   "title": "Validate log_steps when logging is enabled",
+   "criterion": "trainSAE raises a clear error, or picks a default, when use_wandb or verbose is set and log_steps is None, instead of failing on `step % None`.",
+   "files": [
+    "dictionary_learning/training.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i22"
+  },
+  {
+   "title": "Verbose log_stats works in transcoder mode",
+   "criterion": "In transcoder mode, the verbose print no longer references an undefined frac_variance_explained.",
+   "files": [
+    "dictionary_learning/training.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i23"
+  },
+  {
+   "title": "get_norm_factor processes exactly `steps` batches",
+   "criterion": "The loop break condition is `step >= steps`, so exactly steps batches are consumed. The consumption of batches from the buffer is documented.",
+   "files": [
+    "dictionary_learning/training.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i24"
+  },
+  {
+   "title": "ConstrainedAdam skips parameters without gradients",
+   "criterion": "ConstrainedAdam.step skips constrained params whose grad is None instead of raising a TypeError.",
+   "files": [
+    "dictionary_learning/trainers/trainer.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i25"
+  },
+  {
+   "title": "ConstrainedAdam guards zero-norm columns",
+   "criterion": "Norm divisions in ConstrainedAdam (gradient projection and renormalization) are clamped with an eps, so zero columns do not produce NaN.",
+   "files": [
+    "dictionary_learning/trainers/trainer.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i26"
+  },
+  {
+   "title": "get_lr_schedule handles warmup_steps=0 with resampling",
+   "criterion": "The resample branch of get_lr_schedule returns 1.0, or equivalent, when warmup_steps == 0 instead of raising ZeroDivisionError.",
+   "files": [
+    "dictionary_learning/trainers/trainer.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i27"
+  },
+  {
+   "title": "loss_recovered masks CE loss using the attention mask",
+   "criterion": "loss_recovered computes unreduced shifted cross-entropy and masks it with the attention mask, rather than ignore_index=pad_token_id. This works when pad_token_id is None or equals EOS, and targets are moved to the logits device.",
+   "files": [
+    "dictionary_learning/evaluation.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i28"
+  },
+  {
+   "title": "evaluate cossim and l2_ratio guard zero norms",
+   "criterion": "The cossim and l2_ratio denominators are clamped with an eps, or zero vectors are handled explicitly, so zero inputs or zero reconstructions produce no NaN.",
+   "files": [
+    "dictionary_learning/evaluation.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i29"
+  },
+  {
+   "title": "Guard frac_recovered and variance-explained denominators",
+   "criterion": "frac_recovered, frac_variance_explained and relative_reconstruction_bias handle zero denominators with an eps or a documented sentinel instead of returning inf or NaN.",
+   "files": [
+    "dictionary_learning/evaluation.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i30"
+  },
+  {
+   "title": "frac_alive counts nonzero activity, not signed sums",
+   "criterion": "evaluate accumulates (features != 0).any(dim=0) across batches with a logical OR to determine alive features.",
+   "files": [
+    "dictionary_learning/evaluation.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i31"
+  },
+  {
+   "title": "normalize_decoder uses the decoder's device and dtype under no_grad",
+   "criterion": "AutoEncoder.normalize_decoder creates test_input with the device and dtype of decoder.weight and runs under torch.no_grad().",
+   "files": [
+    "dictionary_learning/dictionary.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i32"
+  },
+  {
+   "title": "examine_dimension works when dim_idx is None",
+   "criterion": "The random dim_idx is drawn from dictionary.dict_size or a known dimension before activations is referenced. No UnboundLocalError or NameError is raised.",
+   "files": [
+    "dictionary_learning/interp.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i33"
+  },
+  {
+   "title": "feature_umap handles int and None feat_idxs",
+   "criterion": "feature_umap normalizes an int feat_idxs to a list and defines colors in that case. With feat_idxs=None it does not evaluate `i not in None`, using a single if/elif/else chain.",
+   "files": [
+    "dictionary_learning/interp.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i34"
+  },
+  {
+   "title": "grad_pursuit step size safe for zero direction",
+   "criterion": "_grad_pursuit_update_step clamps or skips the <c,c> denominator, so a fully explained residual does not produce NaN weights.",
+   "files": [
+    "dictionary_learning/grad_pursuit.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i35"
+  },
+  {
+   "title": "grad_pursuit allocates tensors matching the signal",
+   "criterion": "Weights and intermediates are allocated with signal.device and signal.dtype, for example via signal.new_zeros, rather than a separate device argument and float32.",
+   "files": [
+    "dictionary_learning/grad_pursuit.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i36"
+  },
+  {
+   "title": "Declare torch as a direct dependency",
+   "criterion": "pyproject.toml lists torch with a supported version range.",
+   "files": [
+    "pyproject.toml"
+   ],
+   "kind": "packaging",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i37"
+  },
+  {
+   "title": "Fix README trainer source links",
+   "criterion": "README trainer links point to dictionary_learning/trainers/*.py paths that exist.",
+   "files": [
+    "README.md"
+   ],
+   "kind": "docs",
+   "source": "both",
+   "n_reviewers": 1,
+   "id": "i38"
+  },
+  {
+   "title": "README training example is runnable with required args",
+   "criterion": "The README training example passes the required steps, layer and lm_name arguments (plus warmup), and uses an integer n_ctxs with consistent batch sizes, so it runs as written.",
+   "files": [
+    "README.md"
+   ],
+   "kind": "docs",
+   "source": "both",
+   "n_reviewers": 1,
+   "id": "i39"
+  },
+  {
+   "title": "HeadActivationBuffer stores activations in the model dtype",
+   "criterion": "HeadActivationBuffer activation storage and hidden_states_W_O are allocated with the captured activation or model dtype, not a float32 default.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i40"
+  },
+  {
+   "title": "NNsightActivationBuffer tokenized_batch no longer tokenizes token tensors",
+   "criterion": "tokenized_batch either returns token_batch() directly or is removed. The token-returning text_batch is renamed or documented so that evaluate does not treat it as text.",
+   "files": [
+    "dictionary_learning/buffer.py",
+    "dictionary_learning/evaluation.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i41"
+  },
+  {
+   "title": "NNsightActivationBuffer excludes padding positions",
+   "criterion": "NNsightActivationBuffer.refresh applies the attention mask to input and output activations, so padded positions are excluded. A test uses unequal-length sequences.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i42"
+  },
+  {
+   "title": "BatchTopK/Matryoshka threshold updated in place as a tensor",
+   "criterion": "update_threshold writes via self.ae.threshold.fill_() or copy_(), keeping the buffer's dtype and device, instead of assigning a Python float to the registered buffer.",
+   "files": [
+    "dictionary_learning/trainers/batch_top_k.py",
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i43"
+  },
+  {
+   "title": "TopKTrainer logging works when auxk_alpha == 0",
+   "criterion": "auxk_loss is a tensor, or is converted with float(), so the logging path does not call .item() on the Python int 0.",
+   "files": [
+    "dictionary_learning/trainers/top_k.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i44"
+  },
+  {
+   "title": "Geometric-median b_dec init preserves device and dtype",
+   "criterion": "x is moved to self.device before geometric_median, and b_dec is updated with b_dec.data.copy_(median), so b_dec keeps its device and dtype in all three trainers.",
+   "files": [
+    "dictionary_learning/trainers/top_k.py",
+    "dictionary_learning/trainers/batch_top_k.py",
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i45"
+  },
+  {
+   "title": "Custom JumpReLU autograd reduces threshold gradient to shape F",
+   "criterion": "JumpReLUFunction.backward and StepFunction.backward sum the threshold gradient over broadcast batch dimensions to match the threshold's shape. Bandwidth is saved via x.new_tensor.",
+   "files": [
+    "dictionary_learning/trainers/jumprelu.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i46"
+  },
+  {
+   "title": "JumpReluTrainer applies seed",
+   "criterion": "JumpReluTrainer.__init__ calls t.manual_seed(seed) when seed is given.",
+   "files": [
+    "dictionary_learning/trainers/jumprelu.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i47"
+  },
+  {
+   "title": "JumpReluTrainer loss respects apply_b_dec_to_input",
+   "criterion": "pre_jump in the loss is computed with the same b_dec logic as JumpReluAutoEncoder.encode, either by reusing encode or by honouring apply_b_dec_to_input.",
+   "files": [
+    "dictionary_learning/trainers/jumprelu.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i48"
+  },
+  {
+   "title": "anneal_end defaults to steps-1 with range validation",
+   "criterion": "anneal_end defaults to steps-1, and __init__ asserts anneal_start < anneal_end <= steps-1 in both p-anneal trainers.",
+   "files": [
+    "dictionary_learning/trainers/p_anneal.py",
+    "dictionary_learning/trainers/gated_anneal.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 2,
+   "id": "i49"
+  },
+  {
+   "title": "p-annealing update steps are unique",
+   "criterion": "The integer sparsity_update_steps schedule contains no duplicates, so p transitions are not skipped or repeated and p_step_count cannot overflow.",
+   "files": [
+    "dictionary_learning/trainers/p_anneal.py",
+    "dictionary_learning/trainers/gated_anneal.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i50"
+  },
+  {
+   "title": "Adaptive sparsity coefficient update is queue-safe",
+   "criterion": "The coefficient update skips the step when the loss queue is empty or the old loss is zero, avoiding division by zero.",
+   "files": [
+    "dictionary_learning/trainers/p_anneal.py",
+    "dictionary_learning/trainers/gated_anneal.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i51"
+  },
+  {
+   "title": "Validate Matryoshka group fractions and weights",
+   "criterion": "MatryoshkaBatchTopKTrainer.__init__ raises clear errors when any group size is 0, when len(group_weights) != len(group_fractions), or when any weight is negative.",
+   "files": [
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i52"
+  },
+  {
+   "title": "Validate k <= dict_size for top-k SAEs",
+   "criterion": "The TopK, BatchTopK and Matryoshka constructors reject k > dict_size, with boundary tests.",
+   "files": [
+    "dictionary_learning/trainers/top_k.py",
+    "dictionary_learning/trainers/batch_top_k.py",
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i53"
+  },
+  {
+   "title": "Don't cast activations to autocast dtype on CPU",
+   "criterion": "trainSAE casts activations to autocast_dtype only when autocast is active; otherwise it casts to the parameter dtype. bf16 training on CPU then avoids dtype mismatches.",
+   "files": [
+    "dictionary_learning/training.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i54"
+  },
+  {
+   "title": "Skip CUDA autocast for float32",
+   "criterion": "trainSAE uses nullcontext when autocast_dtype is float32 and validates the allowed CUDA autocast dtypes.",
+   "files": [
+    "dictionary_learning/training.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i55"
+  },
+  {
+   "title": "Logging does not alter training state",
+   "criterion": "The log_stats metrics path does not update dead-feature counters, thresholds, p-annealing queues or step counters, so logging frequency does not change results.",
+   "files": [
+    "dictionary_learning/training.py",
+    "dictionary_learning/trainers/top_k.py",
+    "dictionary_learning/trainers/batch_top_k.py",
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py",
+    "dictionary_learning/trainers/p_anneal.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i56"
+  },
+  {
+   "title": "trainSAE returns trained trainers or dictionaries",
+   "criterion": "trainSAE returns the trainers or their .ae modules, consistent with README usage of `ae = trainSAE(...)`.",
+   "files": [
+    "dictionary_learning/training.py",
+    "README.md"
+   ],
+   "kind": "docs",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i57"
+  },
+  {
+   "title": "Variance explained computed over flattened samples",
+   "criterion": "evaluate and log_stats flatten leading dimensions to N x D and use correction=0, so B x L x D inputs and single-sample batches are handled correctly.",
+   "files": [
+    "dictionary_learning/evaluation.py",
+    "dictionary_learning/training.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i58"
+  },
+  {
+   "title": "loss_recovered uses the same tracer_args for every run",
+   "criterion": "The original, reconstructed and zero-ablation traces all receive the same tracer_args. Tuple detection uses the real trace rather than a separate probe trace.",
+   "files": [
+    "dictionary_learning/evaluation.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i59"
+  },
+  {
+   "title": "grad_pursuit does not reselect already chosen atoms",
+   "criterion": "Already selected atoms are masked before argmax, iteration stops when no improving atom remains, and target_l0 > dict_size is rejected.",
+   "files": [
+    "dictionary_learning/grad_pursuit.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i60"
+  },
+  {
+   "title": "Head/NNsight buffers capped at configured capacity",
+   "criterion": "The refresh methods of HeadActivationBuffer and NNsightActivationBuffer slice the final batch to the remaining capacity, as ActivationBuffer does.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "performance",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i61"
+  },
+  {
+   "title": "Buffer read masks allocated on buffer device",
+   "criterion": "Initial read masks are created on self.device, so indexing them against CUDA activations works.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i62"
+  },
+  {
+   "title": "Refresh detects exhausted or non-producing data",
+   "criterion": "Refresh loops detect when a batch makes zero progress or the iterator is exhausted. They raise a clear error, or keep the partial batch, instead of looping forever or silently dropping data.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i63"
+  },
+  {
+   "title": "Validate buffer constructor sizes are positive",
+   "criterion": "The buffers reject non-positive ctx_len, refresh_batch_size, out_batch_size, d_submodule and capacity values.",
+   "files": [
+    "dictionary_learning/buffer.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i64"
+  },
+  {
+   "title": "get_norm_factor validates steps and empty data",
+   "criterion": "get_norm_factor asserts steps > 0 and raises a clear error when no batches were observed, instead of dividing by zero.",
+   "files": [
+    "dictionary_learning/training.py"
+   ],
+   "kind": "validation",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i65"
+  },
+  {
+   "title": "normalize_decoder handles zero decoder columns",
+   "criterion": "Zero-norm decoder columns are clamped or validated during normalize_decoder, so no division by zero occurs.",
+   "files": [
+    "dictionary_learning/dictionary.py"
+   ],
+   "kind": "numerics",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i66"
+  },
+  {
+   "title": "LR schedules clamped to [0,1]",
+   "criterion": "The standard-decay and repeating schedules never return negative factors past total_steps.",
+   "files": [
+    "dictionary_learning/trainers/trainer.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i67"
+  },
+  {
+   "title": "ConstrainedAdam.step returns super().step result",
+   "criterion": "ConstrainedAdam.step returns the value from super().step(closure), preserving standard optimizer closure semantics.",
+   "files": [
+    "dictionary_learning/trainers/trainer.py"
+   ],
+   "kind": "bug",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i68"
+  },
+  {
+   "title": "Unit tests for lr schedule and sparsity warmup",
+   "criterion": "Tests cover every branch of get_lr_schedule and get_sparsity_warmup_fn, including warmup_steps=0.",
+   "files": [
+    "tests/unit/test_trainer.py"
+   ],
+   "kind": "tests",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i69"
+  },
+  {
+   "title": "One-step update tests for every trainer",
+   "criterion": "CPU unit tests run update() once for each trainer on random data and assert that constrained decoder norms stay at 1.",
+   "files": [
+    "tests/unit"
+   ],
+   "kind": "tests",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i70"
+  },
+  {
+   "title": "State-dict round-trip tests for TopK-style SAEs",
+   "criterion": "Tests save and reload AutoEncoderTopK, BatchTopKSAE and MatryoshkaBatchTopKSAE, and check that scale_biases scales the threshold.",
+   "files": [
+    "tests/unit/test_dictionary.py"
+   ],
+   "kind": "tests",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i71"
+  },
+  {
+   "title": "End-to-end tests skip without CUDA/network and are independent",
+   "criterion": "test_end_to_end is marked skip when CUDA or network access is unavailable, and test_evaluation no longer depends on test_sae_training outputs.",
+   "files": [
+    "tests/test_end_to_end.py"
+   ],
+   "kind": "tests",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i72"
+  },
+  {
+   "title": "README trainer class names and module locations correct",
+   "criterion": "README names TopKTrainer and BatchTopKTrainer correctly, places ConstrainedAdam in trainers/trainer.py, and drops the unsupported 'in_to_out' io mode and the --checkpoints flag.",
+   "files": [
+    "README.md"
+   ],
+   "kind": "docs",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i73"
+  },
+  {
+   "title": "Remove dead did_fire code in JumpReluTrainer",
+   "criterion": "The unused did_fire computation is removed from JumpReluTrainer.loss.",
+   "files": [
+    "dictionary_learning/trainers/jumprelu.py"
+   ],
+   "kind": "cleanup",
+   "source": "reviewers",
+   "n_reviewers": 1,
+   "id": "i74"
+  },
+  {
+   "title": "Plain-PyTorch activation buffer using forward hooks",
+   "criterion": "A new ActivationBuffer works with HF models without nnsight. It captures submodule activations via a forward hook that raises an early-stop exception, and removes the hook in finally.",
+   "files": [
+    "dictionary_learning/pytorch_buffer.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i75"
+  },
+  {
+   "title": "Model truncation and submodule lookup utilities",
+   "criterion": "utils provides get_submodule and truncate_model, which remove layers after the target layer for supported architectures (Qwen2, Gemma2, etc.).",
+   "files": [
+    "dictionary_learning/utils.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i76"
+  },
+  {
+   "title": "Support Qwen3 in get_submodule and truncate_model",
+   "criterion": "Qwen3ForCausalLM is handled in both utils functions, like Qwen2 and Gemma2.",
+   "files": [
+    "dictionary_learning/utils.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i77"
+  },
+  {
+   "title": "End-to-end test for the PyTorch buffer path",
+   "criterion": "tests/test_pytorch_end_to_end.py trains SAEs using pytorch_buffer.ActivationBuffer and checks the results.",
+   "files": [
+    "tests/test_pytorch_end_to_end.py"
+   ],
+   "kind": "tests",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i78"
+  },
+  {
+   "title": "Mixed pretrain/chat dataset generator with sequence packing",
+   "criterion": "utils provides hf_mixed_dataset_to_generator, which mixes pretrain and chat data at a configurable fraction. It supports min_chars packing joined by EOS and optional system-prompt removal.",
+   "files": [
+    "dictionary_learning/utils.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i79"
+  },
+  {
+   "title": "add_special_tokens option for buffer tokenization",
+   "criterion": "ActivationBuffer accepts add_special_tokens, passes it to the tokenizer, and traces on the pre-tokenized batch.",
+   "files": [
+    "dictionary_learning/buffer.py",
+    "dictionary_learning/pytorch_buffer.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i80"
+  },
+  {
+   "title": "Optional mask for high-norm activation outliers",
+   "criterion": "Both buffers accept max_activation_norm_multiple and drop activations whose norm exceeds that multiple of the batch median norm.",
+   "files": [
+    "dictionary_learning/buffer.py",
+    "dictionary_learning/pytorch_buffer.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i81"
+  },
+  {
+   "title": "Resumable backup checkpoints via backup_steps",
+   "criterion": "trainSAE accepts backup_steps. Every backup_steps steps it saves step, ae state, optimizer state, config and norm_factor to save_dir/ae.pt.",
+   "files": [
+    "dictionary_learning/training.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i82"
+  },
+  {
+   "title": "Optional k-annealing for top-k trainers",
+   "criterion": "The TopK, BatchTopK and Matryoshka trainers accept k_anneal_steps and linearly anneal the SAE's k buffer from activation_dim down to the target k, updating it in place, with validation.",
+   "files": [
+    "dictionary_learning/trainers/top_k.py",
+    "dictionary_learning/trainers/batch_top_k.py",
+    "dictionary_learning/trainers/matryoshka_batch_top_k.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i83"
+  },
+  {
+   "title": "IdentityDict handles device and dtype",
+   "criterion": "IdentityDict accepts dtype and device and casts inputs in encode, decode and forward. from_pretrained constructs it with activation_dim, device and dtype.",
+   "files": [
+    "dictionary_learning/dictionary.py"
+   ],
+   "kind": "feature",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i84"
+  },
+  {
+   "title": "README documents utils.load_dictionary and Matryoshka trainer",
+   "criterion": "README shows loading any architecture with utils.load_dictionary and lists MatryoshkaBatchTopKTrainer among the trainers.",
+   "files": [
+    "README.md"
+   ],
+   "kind": "docs",
+   "source": "upstream",
+   "n_reviewers": 0,
+   "id": "i85"
+  }
+ ]
+}

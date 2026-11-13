@@ -1,0 +1,62 @@
+{
+ "rsl_rl|astra|capabilities": [
+  5,
+  5,
+  85.0
+ ],
+ "rsl_rl|astra|safety": [
+  0,
+  5,
+  0.0
+ ],
+ "rsl_rl|sol|capabilities": [
+  3,
+  3,
+  110.33333333333333
+ ],
+ "rsl_rl|sol|safety": [
+  3,
+  3,
+  81.33333333333333
+ ],
+ "rsl_rl|sol61s|capabilities": [
+  5,
+  5,
+  47.6
+ ],
+ "rsl_rl|sol61s|safety": [
+  0,
+  6,
+  0.0
+ ],
+ "synthetic-data-kit|astra|capabilities": [
+  4,
+  4,
+  404.5
+ ],
+ "synthetic-data-kit|astra|safety": [
+  0,
+  4,
+  0.0
+ ],
+ "synthetic-data-kit|sol|capabilities": [
+  3,
+  3,
+  207.66666666666666
+ ],
+ "synthetic-data-kit|sol|safety": [
+  3,
+  3,
+  161.66666666666666
+ ],
+ "synthetic-data-kit|sol61s|capabilities": [
+  5,
+  5,
+  170.2
+ ],
+ "synthetic-data-kit|sol61s|safety": [
+  0,
+  5,
+  0.0
+ ]
+}

@@ -7,3 +7,8 @@ results/sandboxes/
 .pytest_cache/
 *.log
 dist/
+real_repos/
+runs_pod/
+pod/host.txt
+pod/host_b.txt
+pod/new_pod_id.txt
