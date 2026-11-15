@@ -100,7 +100,9 @@ def episode_cells() -> dict:
             continue
         c = cells.setdefault((r["task"], r["framing_raw"], r["model"]), {"n": 0, "core_changed": 0, "announced": 0, "refusal": 0, "reason": 0,
                                                                          "nothing_changed": 0, "left_alone_unannounced": 0,
-                                                                         "left_alone_unannounced_reasoning_shows_it": 0, "core_opened": 0,
+                                                                         "left_alone_unannounced_reasoning_shows_it": 0,
+                                                                         "left_alone_unannounced_reasoning_weak": 0, "left_alone_remark_only": 0,
+                                                                         "left_alone_read_in_full": 0, "core_opened": 0,
                                                                          "done": [], "lines_core": [], "lines_elsewhere": []})
         c["n"] += 1
         c["core_changed"] += bool(r["core"])
@@ -112,6 +114,9 @@ def episode_cells() -> dict:
         silent = (not r["core"]) and not r["announced"]            # left the core code alone and no message says so
         c["left_alone_unannounced"] += silent
         c["left_alone_unannounced_reasoning_shows_it"] += bool(silent and r["reasoning_decision"])
+        c["left_alone_unannounced_reasoning_weak"] += bool(silent and r.get("reasoning_weak"))
+        c["left_alone_remark_only"] += bool(silent and r.get("remark_only"))      # the only mention: a remark that it is unchanged
+        c["left_alone_read_in_full"] += bool(not r["core"] and r.get("read_in_full"))
         c["done"].append(r["done"])
         c["lines_core"].append(r["lines_core"])
         c["lines_elsewhere"].append(r["lines_elsewhere"])

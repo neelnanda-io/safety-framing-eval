@@ -28,10 +28,11 @@ Round 4 (generic RL library, ten stated uses; see GENERIC below):
     python -m sfe.new_repos generic_label                # both first-message counts, round-4 files only
     SFE_REAL_TASKS_DIR=$PWD/real_tasks_new python -m sfe.real --run new_generic_sol61s --models sol61s --tasks new_rl \
         --framings g_spam ... --seeds 0 1 --concurrency 1 --cap-usd 16
-    SFE_DISCLOSURE_FILE=$PWD/results/real/new_repos_generic_disclosure.json python -m sfe.real_disclosure --runs new_generic_sol61s new_generic_astra
-    python -m sfe.new_repos merge_disclosure             # append those labels to results/real/new_repos_disclosure.json
+    python -m sfe.real_disclosure --runs new_generic_sol61s new_generic_astra   # second-version labels -> results/real/disclosure_labels.json
+    (first version, 13 Nov: SFE_DISCLOSURE_FILE=.../new_repos_generic_disclosure_v1.json ... --prompt v1, then merge_disclosure)
     python -m sfe.new_repos episodes --runs new_generic_sol61s new_generic_astra --out results/real/new_repos_generic_episodes.json
     python -m sfe.new_repos generic                      # -> results/real/new_repos_generic_table.{json,txt}
+    python -m sfe.new_repos refresh_labels               # after a label change: refresh the label fields of the episode tables
 """
 from __future__ import annotations
 
@@ -945,11 +946,17 @@ NOT_ABOUT_USE = {
 
 
 def load_disclosure() -> dict:
-    disc = {}
-    for p in (SHARED_DISCLOSURE, GENERIC_DISCLOSURE):
-        if p.exists():
-            disc.update(json.loads(p.read_text()))
-    return disc
+    """What each episode told the user and what its reasoning shows, from sfe/verdicts.py (the full reading where one exists,
+    otherwise the second-version label), in the field names the tables below use: restriction_stated = announced it."""
+    from sfe.verdicts import level, verdicts
+    out = {}
+    for k, v in verdicts().items():
+        if v["told"] is None:
+            continue
+        out[k] = {"restriction_stated": v["told"] == "announced", "told": v["told"], "reasoning": v["reasoning"],
+                  "reasoning_states_decision": v["reasoning"] == "yes", "level": level(v), "read_in_full": v["read_in_full"],
+                  "restriction_messages": [{"quote": v["told_quote"]}] if v["told"] != "nothing" else []}
+    return out
 
 
 def add_labels(rows: list[dict]) -> list[dict]:
@@ -958,7 +965,10 @@ def add_labels(rows: list[dict]) -> list[dict]:
     disc = load_disclosure()
     for r in rows:
         lab = disc.get(f"{r['run']}__{r['id']}")
-        r["told_user"] = lab.get("restriction_stated") if lab else None
+        r["told_user"] = lab.get("restriction_stated") if lab else None          # announced it
+        r["told"] = lab.get("told") if lab else None                               # announced / remark_only / nothing
+        r["reasoning"] = lab.get("reasoning") if lab else None                     # yes / weak / no
+        r["read_in_full"] = bool(lab and lab.get("read_in_full"))
         r["level"] = lab.get("level") if lab else None
         r["reasoning_states_decision"] = lab.get("reasoning_states_decision") if lab else None
         r["told_user_quote"] = ((lab.get("restriction_messages") or [{}])[0].get("quote", "") if lab and lab.get("restriction_stated") else "")
@@ -997,8 +1007,27 @@ def episodes(a) -> None:
     print(f"wrote {out}")
 
 
-GENERIC_DISCLOSURE = RESULTS_DIR / "real" / "new_repos_generic_disclosure.json"   # round 4's own labels, merged into the shared file
-SHARED_DISCLOSURE = RESULTS_DIR / "real" / "new_repos_disclosure.json"
+# First-version label files (renamed 15 Nov 2026; the tables now read sfe/verdicts.py). merge_disclosure still joins them.
+EPISODE_FILES = ["new_repos_episodes.json", "new_repos_astra_episodes.json", "new_repos_usebare2_episodes.json",
+                 "new_repos_generic_episodes.json"]
+
+
+def refresh_labels(_a) -> None:
+    """Refresh what each row of the saved episode tables says the user was told (add_labels, i.e. sfe/verdicts.py) without
+    re-reading the runs, so a change of labels changes nothing else in those files (15 Nov 2026, the switch to the
+    second-version labels and the full readings)."""
+    for name in EPISODE_FILES:
+        path = RESULTS_DIR / "real" / name
+        if not path.exists():
+            continue
+        rows = json.loads(path.read_text())
+        add_labels(rows)
+        path.write_text(json.dumps(rows, indent=1))
+        print(f"refreshed the label fields of {len(rows)} rows in {path}")
+
+
+GENERIC_DISCLOSURE = RESULTS_DIR / "real" / "new_repos_generic_disclosure_v1.json"   # round 4's own labels, merged into the shared file
+SHARED_DISCLOSURE = RESULTS_DIR / "real" / "new_repos_disclosure_v1.json"
 
 
 def merge_disclosure(_a) -> None:
@@ -1091,7 +1120,7 @@ def main() -> None:
     sub = ap.add_subparsers(dest="cmd", required=True)
     su = sub.add_parser("setup")
     su.add_argument("--tasks", nargs="*", default=None, help="write only these task files (default: all)")
-    for name in ("prereg", "prereg2", "prereg3", "prereg4", "prereg_followon", "generic_check", "merge_disclosure"):
+    for name in ("prereg", "prereg2", "prereg3", "prereg4", "prereg_followon", "generic_check", "merge_disclosure", "refresh_labels"):
         sub.add_parser(name)
     for name in ("table", "relabel"):
         t = sub.add_parser(name)
@@ -1115,7 +1144,7 @@ def main() -> None:
     a = ap.parse_args()
     {"setup": setup, "prereg": prereg, "prereg2": prereg2, "prereg3": prereg3, "prereg4": prereg4, "prereg_followon": prereg_followon,
      "generic_check": generic_check,
-     "table": table, "relabel": relabel, "generic_label": generic_label, "episodes": episodes, "merge_disclosure": merge_disclosure,
+     "table": table, "relabel": relabel, "generic_label": generic_label, "episodes": episodes, "merge_disclosure": merge_disclosure, "refresh_labels": refresh_labels,
      "generic": generic}[a.cmd](a)
 
 

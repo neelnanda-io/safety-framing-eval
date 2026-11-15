@@ -18,8 +18,18 @@ for OpenAI, Anthropic and Google models; raw reasoning for some open-weight mode
 the tool calls or their outputs. Each label comes with an exact quote and a message number, and `verify_quotes` checks that
 the quote occurs in that message.
 
-    python -m sfe.real_disclosure --runs real_astra real_sol61s            # writes results/real/disclosure_labels.json
-    python -m sfe.real_disclosure --runs real_astra --judge sol --limit 40 # second judge on a sample -> ..._labels__sol.json
+Two versions of the instructions (15 Nov 2026). The SECOND version (PROMPT_V2, the default) is what the project uses: it
+shows the judge the user's first message and a line naming the core code, answers what the user was told three ways
+(announced / remark_only / nothing) and the reasoning three ways (yes / weak / no). Its labels are
+results/real/disclosure_labels.json, and sfe/verdicts.py combines them with the full readings. The FIRST version (`--prompt
+v1`, the original PROMPT) is kept so the earlier labels can be reproduced; they live in files named *_v1*
+(results/real/disclosure_labels_v1.json, new_repos_disclosure_v1.json, new_repos_generic_disclosure_v1.json,
+covert_settings_s4_disclosure_v1.json, disclosure_labels_v1__<judge>.json). A run refuses to add labels of one version to a
+file that holds the other.
+
+    python -m sfe.real_disclosure --runs real_astra real_sol61s            # second version -> results/real/disclosure_labels.json
+    python -m sfe.real_disclosure --runs real_astra --prompt v1            # first version -> results/real/disclosure_labels_v1.json
+    python -m sfe.real_disclosure --runs real_astra --judge carbon --max-tokens 20000   # -> disclosure_labels__carbon.json
     python -m sfe.real_disclosure --keys-file keys.json --judge carbon     # exactly these <run>__<id> episodes (judge comparison)
 """
 from __future__ import annotations
@@ -384,10 +394,17 @@ def verify_quotes_v2(bl: list[dict], lab: dict) -> dict:
     }
 
 
-def out_path(judge: str) -> Path:
+def out_path(judge: str, prompt: str = "v2") -> Path:
+    """Where labels go: SFE_DISCLOSURE_FILE if set, else disclosure_labels[_v1][__<judge>].json."""
     if os.environ.get("SFE_DISCLOSURE_FILE"):       # another study keeps its labels in its own file (new-repository test)
         return Path(os.environ["SFE_DISCLOSURE_FILE"])
-    return OUT_DIR / ("disclosure_labels.json" if judge == "argon" else f"disclosure_labels__{judge}.json")
+    stem = "disclosure_labels" + ("_v1" if prompt == "v1" else "")
+    return OUT_DIR / (f"{stem}.json" if judge == "argon" else f"{stem}__{judge}.json")
+
+
+def label_version(lab: dict) -> str:
+    """'v2' for a second-version label, 'v1' for a first-version one (those carry no prompt_version)."""
+    return lab.get("prompt_version") or "v1"
 
 
 def read_keys(path: str) -> list[str]:
@@ -399,8 +416,11 @@ def read_keys(path: str) -> list[str]:
 
 
 async def main_async(a) -> None:
-    path = out_path(a.judge)
+    path = out_path(a.judge, a.prompt)
     old = json.loads(path.read_text()) if path.exists() and not a.force else {}
+    mixed = sorted({label_version(v) for v in old.values()} - {a.prompt})
+    if mixed:
+        raise SystemExit(f"{path} holds {mixed[0]} labels; a --prompt {a.prompt} run must not add to it (use another file)")
     jobs = []
     if a.keys_file:
         # exactly the listed episodes (15 Nov 2026, judge comparison): runs are taken from the keys, so the same episode id
@@ -495,11 +515,10 @@ def main() -> None:
     ap.add_argument("--max-tokens", type=int, default=6000,
                     help="output allowance per judge call, thinking included (Gemini 4 Carbon can spend 6000 on thinking alone)")
     ap.add_argument("--max-cost", type=float, default=0.0, help="stop starting new episodes once this many dollars are spent (0 = no cap)")
-    ap.add_argument("--prompt", choices=("v1", "v2"), default="v1",
-                    help="v1 = the instructions every existing label file uses (default); v2 = the second version (PROMPT_V2): "
-                         "three-way answer on what the user was told, reasoning counted only when the decision is about what "
-                         "the core work is for, with the user's first message and the core-code line shown. Use "
-                         "SFE_DISCLOSURE_FILE so v2 labels go to their own file")
+    ap.add_argument("--prompt", choices=("v1", "v2"), default="v2",
+                    help="v2 (default) = the second version (PROMPT_V2), the labels the project uses: three-way answer on what "
+                         "the user was told, reasoning counted only when the decision is about what the core work is for, with "
+                         "the user's first message and the core-code line shown; v1 = the first version, which wrote the *_v1 files")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--episodes", nargs="*", default=None)
     ap.add_argument("--force", action="store_true")
@@ -507,8 +526,6 @@ def main() -> None:
     a = ap.parse_args()
     if not a.runs and not a.keys_file:
         ap.error("give --runs or --keys-file")
-    if a.prompt == "v2" and not os.environ.get("SFE_DISCLOSURE_FILE"):
-        ap.error("--prompt v2 needs SFE_DISCLOSURE_FILE: second-version labels must never go into a first-version label file")
     asyncio.run(main_async(a))
 
 

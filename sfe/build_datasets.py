@@ -36,7 +36,7 @@ from sfe.judge import PROMPT as TOY_JUDGE_PROMPT
 from sfe.real import PAUSE_MSG, SYSTEM_PROMPT, TURN_NEXT, first_message, note_block
 from sfe.real_analyze import CORE, core_opened, core_touched, diff_lines_by_area
 from sfe.real_analyze import NAMES as REAL_NAMES
-from sfe.real_disclosure import PROMPT as DISCLOSURE_PROMPT
+from sfe.real_disclosure import PROMPT_V2 as DISCLOSURE_PROMPT
 from sfe.real_grade import PROMPT as GRADE_PROMPT
 from sfe.real_rubric import MERGE_PROMPT, REVIEW_PROMPT
 from sfe.render import load_task, render_task
@@ -544,7 +544,9 @@ def real_outcome(key: str, disc: dict) -> str:
     else:
         bits = ["core code changed: no (" + ("never opened" if not opened else "opened, not changed") + ")"]
     d = disc.get(f"{run}__{r['id']}") or {}
-    if d.get("restriction_stated"):
+    if d.get("told") == "remark_only":
+        bits.append("told the user it would hold back: only a remark that it was unchanged")
+    elif d.get("restriction_stated"):
         where = {"opening": "in its first reply", "end-of-turn": f"at the end of turn {d.get('first_turn')}",
                  "mid-turn": f"while working in turn {d.get('first_turn')}"}.get(d.get("first_kind"), "")
         if d.get("first_before_any_tool_result") and d.get("first_turn") == 1:
@@ -555,6 +557,8 @@ def real_outcome(key: str, disc: dict) -> str:
         bits.append("told the user it would hold back: no")
     if d.get("reasoning_states_decision") and not core_touched(task, r["final_diff"]):
         bits.append("recorded reasoning states the decision: yes")
+    elif d.get("reasoning") == "weak" and not core_touched(task, r["final_diff"]):
+        bits.append("recorded reasoning states the decision: only a weak line")
     return " · ".join(bits)
 
 
@@ -906,8 +910,10 @@ as a refusal and whether a reason is given. Every label needs an exact quote, wh
                  "Sent once to merge the reviewers’ lists with the project’s later commits"),
            ),
         dd("Prompt of the judge that marks the checklist", block(filled(GRADE_PROMPT, items="the checklist items", diff="the agent’s final diff"))),
-        dd("Prompt of the judge that labels what the agent told the user",
-           block(filled(DISCLOSURE_PROMPT, record="every message the agent wrote to the user, each tagged by where it came, and any reasoning the provider returned"))),
+        dd("Prompt of the judge that labels what the agent told the user (second version, 15 Nov 2026; a full reading replaces the label where one exists)",
+           block(DISCLOSURE_PROMPT.replace("<<CORE>>", "<one line naming the repository’s core code>")
+                 .replace("<<USER>>", "<the user’s first message>")
+                 .replace("<<RECORD>>", "<every message the agent wrote to the user, each tagged by where it came, and any reasoning the provider returned>"))),
         dd("Which descriptions the providers’ own filters refuse", '<p class="small">Refusals of the exact opening request, three tries '
            "per cell, original descriptions. A cell that is always refused cannot measure the model.</p>" + filter_table(),
            sub="an empty reply from the provider, before the model answers")])}
@@ -1181,7 +1187,11 @@ def glance(eps: list[dict], ctx: dict) -> str:
 
 def main() -> None:
     eps = scan()
-    disc = jload(RES / "real" / "disclosure_labels.json", {})
+    from sfe.verdicts import verdicts           # the full reading where one exists, otherwise the second-version label
+    disc = {k: {"restriction_stated": v["told"] == "announced", "told": v["told"], "reasoning": v["reasoning"],
+                "reasoning_states_decision": v["reasoning"] == "yes", "first_kind": v["first_kind"], "first_turn": v["first_turn"],
+                "first_before_any_tool_result": v["first_tools_before"] == 0, "refusal_wording": v["refusal_wording"],
+                "reason_given": v["reason_given"]} for k, v in verdicts().items() if v["told"] is not None}
     ctx = {"n_transcripts": 0}
     for e in eps:
         assert e["model"] in NAME, f"no display name for model key {e['model']}"

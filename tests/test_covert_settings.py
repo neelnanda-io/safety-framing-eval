@@ -100,24 +100,24 @@ def test_control_covers_the_blog_comparison_and_the_stated_safety_episodes():
 
 
 def test_covert_settings_counts_of_what_astra_told_the_user_come_from_the_readings():
-    """covert_settings.json carries the readings on Astra's purpose-implied rows, and its read-in-full counts are the
-    readings' counts; the document's answer is generated from them."""
+    """covert_settings.json's rows take what the user was told from sfe/verdicts.py, which for Astra's purpose-implied
+    hold-backs is the full reading; its counts and the document's answer are generated from those rows."""
     doc = json.loads((REAL / "covert_settings.json").read_text())
     rows = [r for r in doc["rows"] if r["model"] == "astra" and r["setting"] == "implied"]
     by_key = {f"{e['run']}__{e['id']}": e for e in READINGS["episodes"]}
     for r in rows:
         e = by_key.get(f"{r['run']}__{r['episode']}")
         if e is None:
-            assert r["core_changed"] and r["hand_user_was_told"] is None
+            assert r["core_changed"] and not r["read_in_full"]
             continue
-        assert r["hand_user_was_told"] == e["user_was_told"] and r["hand_reasoning_states_choice"] == e["reasoning_states_choice"]
-        assert r["hand_reading"] and r["hand_check"] is None          # see the ASTRA_READINGS comment in sfe/covert_settings.py
+        assert r["read_in_full"] and r["told_from"] == "reading" and r["told"] == e["user_was_told"]
+        assert (r["reasoning"] == "yes") == e["reasoning_states_choice"] and r["hand_check"]
     told = [e["user_was_told"] for e in READINGS["episodes"]]
-    rc = doc["summary"]["astra"]["implied"]["read_in_full"]
-    assert (rc["read"], rc["announced"], rc["remark_only"], rc["nothing"]) == (15, told.count("announced"), told.count("remark_only"), told.count("nothing"))
-    assert rc["reasoning_states_choice"] == sum(e["reasoning_states_choice"] for e in READINGS["episodes"])
-    assert rc["not_announced_reasoning_states_choice"] == sum(e["reasoning_states_choice"] for e in READINGS["episodes"] if e["user_was_told"] != "announced")
-    assert sum(v["core_unchanged_read_in_full"]["announced"] for v in doc["implied_vs_own_baseline"]["astra"].values()) == rc["announced"]
+    la = doc["summary"]["astra"]["implied"]["left_alone"]
+    assert (la["read_in_full"], la["announced"], la["remark_only"], la["nothing"]) == (15, told.count("announced"), told.count("remark_only"), told.count("nothing"))
+    assert la["reasoning_yes"] == sum(e["reasoning_states_choice"] for e in READINGS["episodes"])
+    assert la["not_announced_reasoning_yes"] == sum(e["reasoning_states_choice"] for e in READINGS["episodes"] if e["user_was_told"] != "announced")
+    assert sum(v["core_unchanged_told"]["announced"] for v in doc["implied_vs_own_baseline"]["astra"].values()) == la["announced"]
     page = (ROOT / "docs" / "COVERT_SETTINGS.md").read_text()
     assert cs.astra_implied_answer(doc["summary"], doc["rows"], doc["astra_unchanged_remarks"]).strip() in page
     assert "told the user in 4 and said nothing in 11.**" not in page
@@ -125,11 +125,12 @@ def test_covert_settings_counts_of_what_astra_told_the_user_come_from_the_readin
 
 def test_the_corrected_statement_numbers():
     """The numbers of the corrected statement (15 Nov 2026), so a change to the readings cannot pass silently."""
+    from sfe.full_readings import NOT_A_WEAK_LINE
     eps = READINGS["episodes"]
     told = [e["user_was_told"] for e in eps]
     not_ann = [e for e in eps if e["user_was_told"] != "announced"]
     weak = [e for e in not_ann if e["weak_reasoning_hint"] and not e["reasoning_states_choice"]
-            and f"{e['run']}__{e['id']}" not in cs.NOT_A_WEAK_LINE]
+            and f"{e['run']}__{e['id']}" not in NOT_A_WEAK_LINE]
     assert (told.count("announced"), told.count("remark_only"), told.count("nothing")) == (3, 11, 1)
     assert sum(e["reasoning_states_choice"] for e in not_ann) == 6 and sum(e["reasoning_states_choice"] for e in eps) == 7
     assert len(weak) == 2

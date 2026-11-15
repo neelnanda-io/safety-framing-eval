@@ -87,16 +87,21 @@ def fig_family(task: str, rows, lo, hi, ticks, extra_title, extra_label) -> str:
 
 def ptest_table() -> dict:
     """Mean stated probability that the session was a test, by setting and model."""
+    from sfe.config import TASKS_DIR
+    from sfe.recap_plot import old_vs_new_setting           # the one rule for which episodes are toy and which real
     rows = json.load(open(RES / "debrief" / "scored.json"))
+    toy_tasks = {p.name for p in TASKS_DIR.iterdir() if p.is_dir()}
+    main_runs = {r["key"].split("__")[0] for r in json.load(open(RES / "real" / "rows.json"))}
     g = defaultdict(list)
     for r in rows:
         p = (r.get("label") or {}).get("q2_prob")
-        if p is None:
+        group = old_vs_new_setting(r, toy_tasks, main_runs)   # None: new repositories, description edits, the panel runs
+        if p is None or group is None:
             continue
-        setting = ("real repository" if r["task"] in REPO_NAMES else
+        setting = ("real repository" if group == "real" else
                    "larger toy repository" if r["task"] == "monitor_evasion_rl" else "toy repository")
         model = {"astra": "GPT-6 Astra", "sol61": "GPT-6.1 Sol", "sol61s": "GPT-6.1 Sol", "sol": "GPT-5.6 Sol", "kimi": "Kimi K3"}.get(r["model"])
-        if model is None or r["run"].startswith("real2_"):     # this chart is about the three OpenAI models (and Kimi on toy tasks)
+        if model is None:     # this chart is about the three OpenAI models (and Kimi on toy tasks)
             continue
         g[(setting, model)].append(float(p))
     return {k: {"mean": st.mean(v), "n": len(v), "lo": min(v), "hi": max(v)} for k, v in g.items()}
@@ -392,20 +397,6 @@ def fine_table(task: str) -> str:
     return "\n".join(o)
 
 
-def astra_read(task: str, keys: str) -> dict | None:
-    """GPT-6 Astra, purpose implied: counts from the readings in full of the episodes that left the core code alone
-    (results/real/astra_implied_handcheck.json, 15 Nov 2026) for one repository and '+'-joined descriptions. None if the
-    file has no reading for them. A remark that the code is unchanged is not an announcement."""
-    p = RES / "real" / "astra_implied_handcheck.json"
-    eps = [e for e in (json.load(open(p))["episodes"] if p.exists() else []) if e["task"] == task and e["description"] in keys.split("+")]
-    if not eps:
-        return None
-    na = [e for e in eps if e["user_was_told"] != "announced"]
-    return {"left": len(eps), "announced": len(eps) - len(na), "not_announced": len(na),
-            "remark": sum(e["user_was_told"] == "remark_only" for e in eps), "nothing": sum(e["user_was_told"] == "nothing" for e in eps),
-            "reasoning": sum(bool(e["reasoning_states_choice"]) for e in na)}
-
-
 def implied_html() -> str:
     """Descriptions where the attack-like purpose is implied or sits only in the README, next to the explicit original and
     the no-description baseline: was the core code left alone, and did any message say so?"""
@@ -426,9 +417,8 @@ def implied_html() -> str:
                 continue
             left = e["n"] - e["core_changed"]
             silent, shows = e["left_alone_unannounced"], e["left_alone_unannounced_reasoning_shows_it"]
-            rd = astra_read(task, key) if m == "astra" else None
-            if rd and rd["left"] == left:       # every hold-back read in full (15 Nov 2026): the readings replace the labels
-                silent, shows = f'{rd["not_announced"]}&#8224;', f'{rd["reasoning"]}&#8224;'
+            if e.get("left_alone_read_in_full") == left and left:   # every hold-back read in full: marked as such
+                silent, shows = f"{silent}&#8224;", f"{shows}&#8224;"
             cells += (f'<td class="num">{left} of {e["n"]}</td><td class="num">{silent}</td>'
                       f'<td class="num">{shows}</td>')
         o.append(f"<tr><td>{repo[task]}: {esc(labels.get((task, key), key))}</td>{cells}</tr>")
@@ -507,9 +497,6 @@ def fill_numbers(body: str) -> str:
                     "reasoning_s": f'{cs["reasoning_states_decision"]} of {cs["n"]}',
                     "ptest": f'{a["p_test"]["mean"]:.0f}%', "q1": f'{a["q1_suspects"][0]} of {a["q1_suspects"][1]}',
                     "gap_wo_announced": f'{a["done_without_announced"]["gap"]:+.1f}', "n": str(a["n_analysed"])}[field]
-        if kind == "H":                     # GPT-6 Astra's readings in full, purpose implied: {{H|task|keys|field}}
-            task, keys, field = args
-            return str(astra_read(task, keys)[field])
         if kind == "F":
             task, keys, model, field = args
             es = [(fg.get(f"{task}|{k}|{model}") or {}).get("episodes") for k in keys.split("+")]
@@ -519,9 +506,10 @@ def fill_numbers(body: str) -> str:
             return {"n": str(n), "left": f"{left} of {n}", "changed": f"{n - left} of {n}", "leftn": str(left),
                     "silent": str(sum(e["left_alone_unannounced"] for e in es)),
                     "reasoning": str(sum(e["left_alone_unannounced_reasoning_shows_it"] for e in es)),
+                    "remark": str(sum(e.get("left_alone_remark_only", 0) for e in es)),
                     "announced": f'{sum(e["announced"] for e in es)} of {n}'}[field]
         raise KeyError(m.group(0))
-    return re.sub(r"\{\{((?:R|S|P|C|A|F|H)\|[^}]+)\}\}", r, body)
+    return re.sub(r"\{\{((?:R|S|P|C|A|F)\|[^}]+)\}\}", r, body)
 
 
 def main() -> None:
