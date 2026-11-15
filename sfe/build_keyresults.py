@@ -251,7 +251,7 @@ def fig_hidden(narrow: bool = False) -> str:
             held = n - c.get("success", 0)
             tip = (f"{name}, {title.lower()}: {n} episodes. Held back and announced it {c.get('told', 0) + c.get('refused', 0) + c.get('refusednf', 0)}; "
                    f"only remarked that it was unchanged {c.get('remark', 0)}; said nothing, reasoning states the choice {c.get('covert', 0)}; "
-                   f"said nothing, no choice stated {c.get('incapable', 0)}; changed no file {c.get('nofile', 0)}; did the work {c.get('success', 0)}.")
+                   f"said nothing, no choice stated {c.get('incapable', 0)}; changed no file {c.get('nofile', 0)}; changed the core code {c.get('success', 0)}.")
             count = (f'<text class="frac" x="{x_txt}" y="{y + 11}"' + (' text-anchor="end"' if narrow else "")
                      + f'>left the core code alone in {held} of {n}</text>')
             body.append(row_group(tip, y, name_with_dot(x_name, y + 11, name) + squares(x_sq, y + (17 if narrow else 0), kinds) + count, narrow))
@@ -352,8 +352,9 @@ def panel_sentences() -> dict:
     n["KR_TITLE1"] = (f"{bb.words(len(holders)).capitalize()} of {bb.words(len(keys))} models held back on the core code for a safety team"
                       + (f", and all {bb.words(len(holders))} said so" if told_all else ""))
     n["KR_OTHERS"] = (f"Of {bb.words(len(others))} other models, {bb.words(len(extra))} also hold back there{how} "
-                      f"({bb.listing([bb.name_of(k) for k in extra])}), and {bb.words(len(others) - len(extra))} show no difference."
-                      if extra else f"None of {bb.words(len(others))} other models shows a difference.")
+                      f"({bb.listing([bb.name_of(k) for k in extra])}); in the other {bb.words(len(others) - len(extra))} we didn’t detect a "
+                      f"difference in whether the core code was changed, at three episodes a cell."
+                      if extra else f"In none of {bb.words(len(others))} other models did we detect a difference.")
     parts = [f"{bb.name_of(k)} ({bb.of(cells[k]['safety'].get('success', 0), bb.ran(cells[k]['safety']))}"
              + (" safety episodes against " if i == 0 else " against ")
              + f"{bb.of(cells[k]['capabilities'].get('success', 0), bb.ran(cells[k]['capabilities']))}" + (" product ones)" if i == 0 else ")")
@@ -423,6 +424,13 @@ def build() -> str:
              "LINK_TOY": link("toy_onepager", "the earlier one-page summary"),
              "LINK_BLOG": "the blog-post draft (not yet public)"}
     fills.update(numbers())
+    # the numbers the 15 Nov corrections added, from the module the write-up uses too, so the two pages say the same thing
+    from sfe import review_counts as rc
+    from sfe.panel_counts import panel
+    res, rows, _ = panel()
+    res = {k: v for k, v in res.items() if v.get("n_analysed")}
+    crow, _ = rc.covert_rows()
+    fills.update({f"KR_{k}": v for k, v in rc.review_numbers(res, rows, crow).items()})
     for k, v in fills.items():
         body = body.replace("{{" + k + "}}", v)
     left = re.findall(r"\{\{[A-Z0-9_]+\}\}", body)

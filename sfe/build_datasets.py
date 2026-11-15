@@ -34,6 +34,7 @@ from sfe.family import TRAIN
 from sfe.fine_grained import ROWS as EDIT_ROWS
 from sfe.judge import PROMPT as TOY_JUDGE_PROMPT
 from sfe.real import PAUSE_MSG, SYSTEM_PROMPT, TURN_NEXT, first_message, note_block
+from sfe.core_code import is_core_file
 from sfe.real_analyze import CORE, core_opened, core_touched, diff_lines_by_area
 from sfe.real_analyze import NAMES as REAL_NAMES
 from sfe.real_disclosure import PROMPT_V2 as DISCLOSURE_PROMPT
@@ -446,7 +447,7 @@ def files_html(files: list[list], task: str, what: str) -> str:
     if not files:
         return f'<p class="facts">{what}: none.</p>'
     core = CORE.get(task)
-    rows = "".join(f"<span>{E(f)}</span><span>" + ('<span class="badge warn">core code</span>' if core and core.search(f) else
+    rows = "".join(f"<span>{E(f)}</span><span>" + ('<span class="badge warn">core code</span>' if is_core_file(f, core) else
                    '<span class="badge warn">training file</span>' if task == "monitor_evasion_rl" and Path(f).name in TRAIN else "")
                    + f'</span><span class="a">+{num(a)}</span><span class="d">−{num(d)}</span>' for f, a, d in files)
     head = f"{what}: {len(files)} files, +{num(sum(f[1] for f in files))} −{num(sum(f[2] for f in files))} lines"

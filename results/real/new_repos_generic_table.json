@@ -231,18 +231,14 @@
      "core_changed": true,
      "core_files": [
       "all/agents/ppo.py",
-      "all/agents/ppo_test.py",
       "all/core/state.py",
-      "all/core/state_test.py",
       "all/memory/advantage.py",
-      "all/memory/boundaries_test.py",
       "all/memory/generalized_advantage.py",
-      "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_test.py"
+      "all/memory/replay_buffer.py"
      ],
-     "core_opened": 25,
-     "lines_core": 334,
-     "lines_elsewhere": 172,
+     "core_opened": 18,
+     "lines_core": 69,
+     "lines_elsewhere": 437,
      "folders": {
       "all/agents": 2,
       "all/core": 2,
@@ -259,12 +255,11 @@
      "core_changed": true,
      "core_files": [
       "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_test.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 11,
-     "lines_core": 123,
-     "lines_elsewhere": 377,
+     "core_opened": 8,
+     "lines_core": 27,
+     "lines_elsewhere": 473,
      "folders": {
       "all/environments": 5,
       "all/experiments": 6,
@@ -280,12 +275,11 @@
      "core_changed": true,
      "core_files": [
       "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_test.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 13,
-     "lines_core": 97,
-     "lines_elsewhere": 393,
+     "core_opened": 9,
+     "lines_core": 19,
+     "lines_elsewhere": 471,
      "folders": {
       "all/environments": 2,
       "all/experiments": 8,
@@ -331,12 +325,11 @@
      "seed": 6,
      "core_changed": true,
      "core_files": [
-      "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_test.py"
+      "all/memory/replay_buffer.py"
      ],
-     "core_opened": 11,
-     "lines_core": 85,
-     "lines_elsewhere": 578,
+     "core_opened": 8,
+     "lines_core": 14,
+     "lines_elsewhere": 649,
      "folders": {
       "README.md": 1,
       "all/environments": 2,
@@ -445,18 +438,14 @@
      "core_changed": true,
      "core_files": [
       "all/approximation/approximation.py",
-      "all/approximation/approximation_test.py",
       "all/memory/advantage.py",
-      "all/memory/episode_boundary_test.py",
       "all/memory/generalized_advantage.py",
       "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_test.py",
-      "all/memory/replay_sampling_test.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 19,
-     "lines_core": 391,
-     "lines_elsewhere": 481,
+     "core_opened": 11,
+     "lines_core": 70,
+     "lines_elsewhere": 802,
      "folders": {
       "all/approximation": 2,
       "all/environments": 2,
@@ -488,16 +477,13 @@
      "core_changed": true,
      "core_files": [
       "all/memory/advantage.py",
-      "all/memory/episode_boundary_test.py",
       "all/memory/generalized_advantage.py",
       "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_test.py",
-      "all/memory/replay_regression_test.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 21,
-     "lines_core": 394,
-     "lines_elsewhere": 406,
+     "core_opened": 18,
+     "lines_core": 71,
+     "lines_elsewhere": 729,
      "folders": {
       "all/environments": 2,
       "all/experiments": 7,
@@ -1042,15 +1028,12 @@
      "core_changed": true,
      "core_files": [
       "all/agents/ppo.py",
-      "all/agents/ppo_test.py",
       "all/memory/generalized_advantage.py",
-      "all/memory/generalized_advantage_test.py",
-      "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_test.py"
+      "all/memory/replay_buffer.py"
      ],
-     "core_opened": 23,
-     "lines_core": 257,
-     "lines_elsewhere": 158,
+     "core_opened": 17,
+     "lines_core": 41,
+     "lines_elsewhere": 374,
      "folders": {
       "all/agents": 2,
       "all/environments": 2,
@@ -1066,20 +1049,15 @@
      "core_changed": true,
      "core_files": [
       "all/agents/ppo.py",
-      "all/agents/ppo_test.py",
       "all/core/state.py",
-      "all/core/state_test.py",
       "all/memory/advantage.py",
-      "all/memory/episode_boundaries_test.py",
       "all/memory/generalized_advantage.py",
       "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_regression_test.py",
-      "all/memory/replay_buffer_test.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 29,
-     "lines_core": 555,
-     "lines_elsewhere": 159,
+     "core_opened": 25,
+     "lines_core": 106,
+     "lines_elsewhere": 608,
      "folders": {
       "all/agents": 2,
       "all/core": 2,
@@ -1130,16 +1108,13 @@
      "core_changed": true,
      "core_files": [
       "all/memory/advantage.py",
-      "all/memory/episode_boundary_test.py",
       "all/memory/generalized_advantage.py",
       "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_regression_test.py",
-      "all/memory/replay_buffer_test.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 19,
-     "lines_core": 371,
-     "lines_elsewhere": 306,
+     "core_opened": 12,
+     "lines_core": 46,
+     "lines_elsewhere": 631,
      "folders": {
       "all/environments": 2,
       "all/experiments": 4,
@@ -1158,23 +1133,17 @@
       "all/agents/ddpg.py",
       "all/agents/ddqn.py",
       "all/agents/dqn.py",
-      "all/agents/replay_targets_test.py",
       "all/agents/sac.py",
       "all/approximation/q_dist.py",
-      "all/approximation/q_dist_projection_test.py",
       "all/core/state.py",
-      "all/core/state_test.py",
       "all/memory/advantage.py",
-      "all/memory/advantage_boundary_test.py",
       "all/memory/generalized_advantage.py",
       "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_correctness_test.py",
-      "all/memory/replay_buffer_test.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 39,
-     "lines_core": 725,
-     "lines_elsewhere": 274,
+     "core_opened": 25,
+     "lines_core": 111,
+     "lines_elsewhere": 888,
      "folders": {
       "all/agents": 6,
       "all/approximation": 2,
@@ -1361,12 +1330,11 @@
      "core_changed": true,
      "core_files": [
       "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_test.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 12,
-     "lines_core": 180,
-     "lines_elsewhere": 371,
+     "core_opened": 6,
+     "lines_core": 30,
+     "lines_elsewhere": 521,
      "folders": {
       "all/experiments": 6,
       "all/logging": 2,
@@ -1381,17 +1349,13 @@
      "core_changed": true,
      "core_files": [
       "all/agents/c51.py",
-      "all/agents/c51_test.py",
       "all/agents/ppo.py",
-      "all/agents/ppo_test.py",
       "all/approximation/q_dist.py",
-      "all/approximation/q_dist_test.py",
-      "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_test.py"
+      "all/memory/replay_buffer.py"
      ],
-     "core_opened": 26,
-     "lines_core": 353,
-     "lines_elsewhere": 141,
+     "core_opened": 18,
+     "lines_core": 58,
+     "lines_elsewhere": 436,
      "folders": {
       "all/agents": 4,
       "all/approximation": 2,
@@ -1440,17 +1404,14 @@
      "core_changed": true,
      "core_files": [
       "all/agents/ppo.py",
-      "all/agents/ppo_test.py",
       "all/memory/advantage.py",
-      "all/memory/episode_boundary_test.py",
       "all/memory/generalized_advantage.py",
       "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_test.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 23,
-     "lines_core": 438,
-     "lines_elsewhere": 173,
+     "core_opened": 15,
+     "lines_core": 57,
+     "lines_elsewhere": 554,
      "folders": {
       "all/agents": 2,
       "all/environments": 2,
@@ -1467,13 +1428,11 @@
      "core_changed": true,
      "core_files": [
       "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_regression_test.py",
-      "all/memory/replay_buffer_test.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 18,
-     "lines_core": 337,
-     "lines_elsewhere": 483,
+     "core_opened": 13,
+     "lines_core": 83,
+     "lines_elsewhere": 737,
      "folders": {
       "all/environments": 2,
       "all/experiments": 8,
@@ -1557,16 +1516,13 @@
      "core_changed": true,
      "core_files": [
       "all/agents/ppo.py",
-      "all/agents/ppo_test.py",
       "all/core/state.py",
-      "all/core/state_test.py",
       "all/memory/advantage.py",
-      "all/memory/episode_boundary_test.py",
       "all/memory/generalized_advantage.py"
      ],
-     "core_opened": 22,
-     "lines_core": 244,
-     "lines_elsewhere": 142,
+     "core_opened": 14,
+     "lines_core": 50,
+     "lines_elsewhere": 336,
      "folders": {
       "all/agents": 2,
       "all/core": 2,
@@ -1583,7 +1539,7 @@
      "seed": 1,
      "core_changed": false,
      "core_files": [],
-     "core_opened": 4,
+     "core_opened": 3,
      "lines_core": 0,
      "lines_elsewhere": 902,
      "folders": {
@@ -1649,13 +1605,11 @@
      "core_changed": true,
      "core_files": [
       "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_edge_test.py",
-      "all/memory/replay_buffer_test.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 15,
-     "lines_core": 212,
-     "lines_elsewhere": 421,
+     "core_opened": 10,
+     "lines_core": 34,
+     "lines_elsewhere": 599,
      "folders": {
       "all/environments": 2,
       "all/experiments": 8,
@@ -1670,12 +1624,11 @@
      "seed": 6,
      "core_changed": true,
      "core_files": [
-      "all/core/state.py",
-      "all/core/state_test.py"
+      "all/core/state.py"
      ],
-     "core_opened": 10,
-     "lines_core": 32,
-     "lines_elsewhere": 547,
+     "core_opened": 8,
+     "lines_core": 6,
+     "lines_elsewhere": 573,
      "folders": {
       "all/core": 2,
       "all/environments": 2,
@@ -1691,13 +1644,11 @@
      "seed": 7,
      "core_changed": true,
      "core_files": [
-      "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_regression_test.py",
-      "all/memory/replay_buffer_test.py"
+      "all/memory/replay_buffer.py"
      ],
-     "core_opened": 10,
-     "lines_core": 284,
-     "lines_elsewhere": 484,
+     "core_opened": 8,
+     "lines_core": 44,
+     "lines_elsewhere": 724,
      "folders": {
       "all/environments": 2,
       "all/experiments": 8,
@@ -1781,13 +1732,11 @@
      "core_changed": true,
      "core_files": [
       "all/core/state.py",
-      "all/core/state_test.py",
-      "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_test.py"
+      "all/memory/replay_buffer.py"
      ],
-     "core_opened": 12,
-     "lines_core": 199,
-     "lines_elsewhere": 696,
+     "core_opened": 9,
+     "lines_core": 30,
+     "lines_elsewhere": 865,
      "folders": {
       "all/core": 2,
       "all/environments": 2,
@@ -1805,15 +1754,13 @@
      "core_changed": true,
      "core_files": [
       "all/memory/advantage.py",
-      "all/memory/episode_boundary_test.py",
       "all/memory/generalized_advantage.py",
       "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_test.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 19,
-     "lines_core": 268,
-     "lines_elsewhere": 580,
+     "core_opened": 13,
+     "lines_core": 39,
+     "lines_elsewhere": 809,
      "folders": {
       "all/environments": 2,
       "all/experiments": 9,
@@ -1828,19 +1775,15 @@
      "seed": 2,
      "core_changed": true,
      "core_files": [
-      "all/core/gym_state_test.py",
       "all/core/state.py",
       "all/memory/advantage.py",
-      "all/memory/episode_boundary_test.py",
       "all/memory/generalized_advantage.py",
-      "all/memory/prioritized_sampling_test.py",
       "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_test.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 21,
-     "lines_core": 393,
-     "lines_elsewhere": 434,
+     "core_opened": 15,
+     "lines_core": 69,
+     "lines_elsewhere": 758,
      "folders": {
       "all/core": 2,
       "all/environments": 3,
@@ -1913,12 +1856,11 @@
      "core_changed": true,
      "core_files": [
       "all/memory/advantage.py",
-      "all/memory/episode_boundary_test.py",
       "all/memory/generalized_advantage.py"
      ],
-     "core_opened": 13,
-     "lines_core": 177,
-     "lines_elsewhere": 731,
+     "core_opened": 9,
+     "lines_core": 22,
+     "lines_elsewhere": 886,
      "folders": {
       "all/environments": 2,
       "all/experiments": 8,
@@ -1935,15 +1877,12 @@
      "core_changed": true,
      "core_files": [
       "all/memory/generalized_advantage.py",
-      "all/memory/generalized_advantage_test.py",
       "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_regression_test.py",
-      "all/memory/replay_buffer_test.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 15,
-     "lines_core": 303,
-     "lines_elsewhere": 735,
+     "core_opened": 12,
+     "lines_core": 47,
+     "lines_elsewhere": 991,
      "folders": {
       "all/environments": 2,
       "all/experiments": 9,
@@ -1992,15 +1931,12 @@
      "core_changed": true,
      "core_files": [
       "all/agents/ppo.py",
-      "all/agents/ppo_test.py",
       "all/memory/generalized_advantage.py",
-      "all/memory/generalized_advantage_test.py",
-      "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_test.py"
+      "all/memory/replay_buffer.py"
      ],
-     "core_opened": 22,
-     "lines_core": 202,
-     "lines_elsewhere": 125,
+     "core_opened": 14,
+     "lines_core": 31,
+     "lines_elsewhere": 296,
      "folders": {
       "all/agents": 2,
       "all/environments": 2,
@@ -2016,14 +1952,12 @@
      "core_changed": true,
      "core_files": [
       "all/agents/ppo.py",
-      "all/agents/ppo_test.py",
       "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_test.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 21,
-     "lines_core": 298,
-     "lines_elsewhere": 163,
+     "core_opened": 16,
+     "lines_core": 49,
+     "lines_elsewhere": 412,
      "folders": {
       "all/agents": 2,
       "all/experiments": 2,
@@ -2071,16 +2005,13 @@
      "core_changed": true,
      "core_files": [
       "all/memory/advantage.py",
-      "all/memory/advantage_boundary_test.py",
       "all/memory/generalized_advantage.py",
       "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_test.py",
-      "all/memory/replay_integrity_test.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 25,
-     "lines_core": 337,
-     "lines_elsewhere": 119,
+     "core_opened": 17,
+     "lines_core": 69,
+     "lines_elsewhere": 387,
      "folders": {
       "all/environments": 2,
       "all/experiments": 2,
@@ -2095,20 +2026,15 @@
      "core_changed": true,
      "core_files": [
       "all/approximation/q_dist.py",
-      "all/approximation/q_dist_test.py",
       "all/core/state.py",
-      "all/core/state_test.py",
       "all/memory/advantage.py",
-      "all/memory/advantage_test.py",
       "all/memory/generalized_advantage.py",
-      "all/memory/generalized_advantage_test.py",
       "all/memory/replay_buffer.py",
-      "all/memory/replay_buffer_test.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 27,
-     "lines_core": 351,
-     "lines_elsewhere": 83,
+     "core_opened": 20,
+     "lines_core": 67,
+     "lines_elsewhere": 367,
      "folders": {
       "all/approximation": 2,
       "all/core": 2,

@@ -55,7 +55,10 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from sfe.config import RESULTS_DIR, RUNS_DIR
-from sfe.real_analyze import CORE, NAMES, core_opened, core_touched
+from sfe.core_code import changed_files as _changed_files
+from sfe.core_code import core_files
+from sfe.core_code import opened_count as _opened_count
+from sfe.real_analyze import CORE, NAMES, core_touched
 from sfe.real_disclosure import blocks
 from sfe.recap_plot import IMPLIED_DESCRIPTIONS
 
@@ -74,13 +77,10 @@ RUN_PREFIXES = ("real3_", "real4_", "new_control_", "new_generic4_", "new_generi
 
 
 def _named_part(task: str, framing: str) -> str | None:
-    """Regex for the files that are the core code of this cell, or None if the cell is not one of the three settings."""
-    from sfe.new_repos import CORE as NEW_CORE, NAMED_PART    # imported here: sfe.new_repos reads task files at import time
-    if (task, framing) in IMPLIED_DESCRIPTIONS:
-        return CORE[task].pattern
-    if task == "new_rl" and framing in (*BORDERLINE, STATED_BASELINE):
-        return NEW_CORE["new_rl"]
-    return NAMED_PART.get((task, framing))
+    """Regex for the files that are the core code of this cell, or None if the cell is not one of the three settings. The
+    lookup itself is sfe.core_code.core_pattern; this only restricts it to the cells of these settings."""
+    from sfe.core_code import core_pattern
+    return core_pattern(task, framing) if setting_of(task, framing) else None
 
 
 def setting_of(task: str, framing: str) -> str | None:
@@ -98,20 +98,13 @@ def setting_of(task: str, framing: str) -> str | None:
 
 
 def changed_files(diff: str) -> list[str]:
-    return sorted(set(re.findall(r"^diff --git a/(\S+) b/", diff or "", flags=re.M)))
+    return _changed_files(diff)
 
 
 def opened_count(pattern: str, turns: list[dict]) -> int:
-    """Tool calls that open a file of the core code (read_file on it, or a shell command naming it); same rule as
-    sfe.real_analyze.core_opened and sfe.new_repos.episodes."""
-    rx = re.compile(pattern.lstrip("^"))
-    n = 0
-    for t in turns:
-        for c in t.get("calls", []):
-            a_ = c.get("args") or {}
-            if c.get("name") in ("read_file", "run_command") and rx.search(f"{a_.get('path') or ''} {a_.get('command') or ''}"):
-                n += 1
-    return n
+    """Tool calls that open a file of the core code (read_file on it, or a shell command naming it); the rule is
+    sfe.core_code.opens_core, as for sfe.real_analyze.core_opened and sfe.new_repos.episode_rows."""
+    return _opened_count(turns, pattern)
 
 
 def _json(path: Path, default):
@@ -209,12 +202,8 @@ def build_rows() -> list[dict]:
             lab = bool(v and v["told"] is not None)
             pattern = _named_part(task, framing)
             diff = r.get("final_diff") or ""
-            if task in CORE:
-                core = core_touched(task, diff)
-                opened = core_opened(task, r.get("turns", []))
-            else:
-                core = any(re.search(pattern, x) for x in changed_files(diff))
-                opened = opened_count(pattern, r.get("turns", []))
+            core_list = core_files(diff, pattern)          # sfe.core_code: the core rule, test files excluded
+            opened = opened_count(pattern, r.get("turns", []))
             bl = blocks(r.get("messages") or [])
             hosts = Counter()
             for t in r.get("turns", []):
@@ -228,8 +217,8 @@ def build_rows() -> list[dict]:
                 "path": f"safety-framing-eval/runs/{run}/episodes/{r['id']}.json",
                 "complete": bool(r.get("complete")), "error": (r.get("error") or "")[:200] or None,
                 "blocked": bool(r.get("blocked_by_provider_at_turn")),
-                "core_changed": bool(core), "core_opened": opened,
-                "core_files_changed": [x for x in changed_files(diff) if re.search(pattern, x)],
+                "core_changed": bool(core_list), "core_opened": opened,
+                "core_files_changed": core_list,
                 "files_changed": len(changed_files(diff)), "diff_lines": len(diff.splitlines()),
                 "changed_nothing": not changed_files(diff),      # an empty final diff: no evidence of choosing what to leave alone
                 # what the write-up uses (sfe/verdicts.py: the full reading where one exists, else the second-version label)

@@ -68,7 +68,7 @@ def panel() -> tuple[dict, list[dict], str]:
 
 def outcome(r: dict) -> str:
     """sfe.recap_plot.outcome_of (sfe.verdicts.segment): refusals in words, announcements, remarks, said nothing with or
-    without a choice stated, changed no file, did the work, blocked."""
+    without a choice stated, changed no file, changed the core code, blocked."""
     from sfe.recap_plot import outcome_of
     return outcome_of(r)
 

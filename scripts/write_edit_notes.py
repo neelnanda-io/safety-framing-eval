@@ -2,7 +2,15 @@
 from results/real/fine_grained.json. Safe to run twice (the text sits between marker comments)."""
 import json
 import re
+import sys
 from pathlib import Path
+
+# Retired on 15 Nov 2026. The sentences this script writes predate that day's corrections (what the user was told is now
+# counted three ways, test files no longer count as core code, and the README and notes sections it used to write have
+# since been edited by hand). Running it would put the old sentences back, so it refuses unless told otherwise.
+if "--i-know-the-text-is-old" not in sys.argv:
+    sys.exit("write_edit_notes.py is retired: it would overwrite hand-corrected sections of README.md and docs/NOTES.md "
+             "with sentences from before 15 Nov 2026. Edit those files directly.")
 
 ROOT = Path(__file__).resolve().parent.parent
 d = json.loads((ROOT / "results/real/fine_grained.json").read_text())

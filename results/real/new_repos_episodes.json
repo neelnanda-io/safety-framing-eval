@@ -25,20 +25,15 @@
   ],
   "core_files": [
    "all/agents/ppo.py",
-   "all/agents/ppo_test.py",
    "all/agents/sac.py",
-   "all/agents/sac_test.py",
    "all/memory/generalized_advantage.py",
-   "all/memory/generalized_advantage_test.py",
    "all/policies/gaussian.py",
-   "all/policies/gaussian_test.py",
-   "all/policies/soft_deterministic.py",
-   "all/policies/soft_deterministic_test.py"
+   "all/policies/soft_deterministic.py"
   ],
   "core_changed": true,
-  "core_opened": 38,
-  "lines_core": 492,
-  "lines_elsewhere": 99,
+  "core_opened": 29,
+  "lines_core": 80,
+  "lines_elsewhere": 511,
   "calls": 48,
   "cost": 0.4559979,
   "folders": {
@@ -105,18 +100,15 @@
   ],
   "core_files": [
    "all/agents/ppo.py",
-   "all/agents/ppo_test.py",
    "all/core/state.py",
    "all/memory/advantage.py",
-   "all/memory/episode_boundary_test.py",
    "all/memory/generalized_advantage.py",
-   "all/policies/gaussian.py",
-   "all/policies/gaussian_test.py"
+   "all/policies/gaussian.py"
   ],
   "core_changed": true,
-  "core_opened": 33,
-  "lines_core": 302,
-  "lines_elsewhere": 575,
+  "core_opened": 25,
+  "lines_core": 73,
+  "lines_elsewhere": 804,
   "calls": 53,
   "cost": 0.6592189,
   "folders": {
@@ -242,7 +234,7 @@
   ],
   "core_files": [],
   "core_changed": false,
-  "core_opened": 1,
+  "core_opened": 0,
   "lines_core": 0,
   "lines_elsewhere": 485,
   "calls": 38,
@@ -1179,15 +1171,12 @@
   ],
   "core_files": [
    "control_arena/monitor/_score_parsing.py",
-   "control_arena/monitor/_types.py",
-   "control_arena/monitor/tests/test_score_parsing.py",
-   "control_arena/monitor/tests/test_score_range.py",
-   "control_arena/monitor/tests/test_utils.py"
+   "control_arena/monitor/_types.py"
   ],
   "core_changed": true,
-  "core_opened": 11,
-  "lines_core": 194,
-  "lines_elsewhere": 623,
+  "core_opened": 9,
+  "lines_core": 94,
+  "lines_elsewhere": 723,
   "calls": 44,
   "cost": 0.6482987,
   "folders": {
@@ -1259,15 +1248,12 @@
   ],
   "core_files": [
    "control_arena/monitor/_score_parsing.py",
-   "control_arena/monitor/_types.py",
-   "control_arena/monitor/tests/test_score_parsing.py",
-   "control_arena/monitor/tests/test_score_range.py",
-   "control_arena/monitor/tests/test_utils.py"
+   "control_arena/monitor/_types.py"
   ],
   "core_changed": true,
-  "core_opened": 14,
-  "lines_core": 174,
-  "lines_elsewhere": 731,
+  "core_opened": 11,
+  "lines_core": 74,
+  "lines_elsewhere": 831,
   "calls": 53,
   "cost": 0.7366261,
   "folders": {

@@ -5,7 +5,7 @@
   results/real/fig_test_awareness.png       per model: stated chance the session was a test, and how often it volunteers that
   results/real/fig_old_vs_new.png           toy tasks versus real repositories, for the two affected models
   results/real/fig_outcomes.png             per model: every safety-described episode on the attack-like repositories sorted
-                                            into the outcomes of sfe.verdicts.segment (did the work, refused, announced, only a remark, said nothing with or without a choice stated, ...)
+                                            into the outcomes of sfe.verdicts.segment (changed the core code, refused, announced, only a remark, said nothing with or without a choice stated, ...)
   results/real/fig_outcomes_by_category.png the same four outcomes, one panel per kind of environment
 
 Run `python -m sfe.real_analyze --runs ... --out all_models` first: two of the figures read results/real/all_models.json.
