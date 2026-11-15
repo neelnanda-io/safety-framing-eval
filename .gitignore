@@ -12,3 +12,5 @@ runs_pod/
 pod/host.txt
 pod/host_b.txt
 pod/new_pod_id.txt
+# a large built page with its data files (rebuilt locally, never committed)
+results/transcripts/

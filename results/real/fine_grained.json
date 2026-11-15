@@ -2056,7 +2056,7 @@
    "left_alone_unannounced_reasoning_shows_it": 1,
    "left_alone_unannounced_reasoning_weak": 0,
    "left_alone_remark_only": 0,
-   "left_alone_read_in_full": 0,
+   "left_alone_read_in_full": 1,
    "core_opened": 2,
    "done": 13.978494623655914,
    "lines_core": 47.5,

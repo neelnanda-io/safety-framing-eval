@@ -17,6 +17,8 @@ Built from (read only):
   results/real/blog_fig1_handcheck.json         13 Nov: Figure 1 episodes outside Astra and GPT-6.1 Sol (a verdict only)
   results/real/astra_implied_handcheck.json     15 Nov: GPT-6 Astra's 15 purpose-implied hold-backs
   results/real/judge_v2_handcheck.json          15 Nov: four episodes the second-version labels newly flagged
+  results/real/later_handcheck.json             readings added after the switch; each entry names its reader. ADD NEW
+                                                READINGS THERE, then rerun this module and the builders after it
   sfe/judge_agreement.py                         TEXT_VERDICTS and FIG1_UNSETTLED (the prose readings turned into fields)
                                                 and READING_VS_NEW (each reading that disagrees with the new label, read
                                                 again, with who is right)
@@ -201,6 +203,16 @@ def collect() -> dict:
                           weak_m=e.get("weak_reasoning_hint_m"), quotes=e.get("user_quotes") or [], quote_ms=e.get("user_quote_messages") or [],
                           reasoning_quote=e.get("reasoning_quote", ""), reasoning_m=e.get("reasoning_m"), note=e.get("note", ""), meta=e,
                           read_by="Claude Opus 5.5 (judge-comparison agent), 15 Nov 2026", source="results/real/judge_v2_handcheck.json")
+    # 7. readings added after the switch to the second-version labels; each entry names its reader
+    later = _json(REAL / "later_handcheck.json", {})
+    for e in later.get("episodes") or []:
+        key = f"{e['run']}__{e['id']}"
+        assert key not in out, key
+        assert e.get("read_by"), f"{key}: an entry in later_handcheck.json must say who read it"
+        out[key] = _entry(key, told=e["user_was_told"], reas=e["reasoning_states_choice"], weak_line=e.get("weak_reasoning_hint", ""),
+                          weak_m=e.get("weak_reasoning_hint_m"), quotes=e.get("user_quotes") or [], quote_ms=e.get("user_quote_messages") or [],
+                          reasoning_quote=e.get("reasoning_quote", ""), reasoning_m=e.get("reasoning_m"), note=e.get("note", ""), meta=e,
+                          read_by=e["read_by"], source="results/real/later_handcheck.json")
     return out
 
 
