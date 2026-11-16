@@ -202,7 +202,7 @@ def build_rows() -> list[dict]:
             lab = bool(v and v["told"] is not None)
             pattern = _named_part(task, framing)
             diff = r.get("final_diff") or ""
-            core_list = core_files(diff, pattern)          # sfe.core_code: the core rule, test files excluded
+            core_list = core_files(diff, pattern)          # sfe.core_code: the core rule, test and leftover files excluded
             opened = opened_count(pattern, r.get("turns", []))
             bl = blocks(r.get("messages") or [])
             hosts = Counter()
