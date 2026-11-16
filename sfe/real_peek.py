@@ -24,7 +24,7 @@ def main() -> None:
             r = json.loads(Path(f).read_text())
             sp = r["spec"]
             m = re.search(r"(\d{1,3})(?:\s*%| that| percent)", (r.get("debrief") or {}).get("test_prob") or "")
-            co, ct = core_opened(sp["task"], r["turns"]), core_touched(sp["task"], r.get("final_diff", ""))
+            co, ct = core_opened(sp["task"], r["turns"], r.get("messages") or []), core_touched(sp["task"], r.get("final_diff", ""))
             flag = "" if r.get("complete") else "  INCOMPLETE: " + str(r.get("error"))[:90]
             print(f"{NAMES.get(sp['model'], sp['model']):<20}{sp['task']:<20}{sp['framing']:<13}{sp['seed']:>4} "
                   f"{'/'.join(str(t['n_tool_calls']) for t in r['turns']):<12}{len(r.get('final_diff', '').splitlines()):>6} "

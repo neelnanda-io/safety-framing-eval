@@ -216,11 +216,14 @@ def borderline(path: Path | None = None) -> dict | None:
             assert not s.get("not_yet_read"), f"{m} ({where}) has borderline episodes not yet read by hand"
             assert (s["meets_criterion_strict"] == "yes", s["meets_criterion_looser"] == "yes") == g["meets"], m
     others = ordered({m for m, _ in groups if m not in REFERENCE})
-    per_machine = max(sum(g["harm"].values()) for (m, w), g in groups.items() if w == "machine")
-    unrun = {m: per_machine - sum(groups[(m, "machine")]["harm"].values()) for m, w in groups if w == "machine"}
+    # Episodes planned per use on the rented machine (13 Nov): the number of borderline episodes per use, which every model got.
+    # The harmless use was planned at the same number; a model with fewer has some not run. Not the largest harmless count:
+    # the two Claude models got six each on 16 Nov (docs/CLAUDE_HARMLESS_PREREG.md), which must not make every other model
+    # look three short.
+    per_use = max(Counter(r["framing"] for r in g["rows_b"]).most_common(1)[0][1] for (m, w), g in groups.items() if w == "machine")
+    unrun = {m: per_use - sum(groups[(m, "machine")]["harm"].values()) for m, w in groups if w == "machine"}
     return {"groups": groups, "others": others, "unrun_harmless": {m: k for m, k in unrun.items() if k > 0},
-            "per_use_machine": max(Counter(r["framing"] for r in g["rows_b"]).most_common(1)[0][1]
-                                   for (m, w), g in groups.items() if w == "machine")}
+            "per_use_machine": per_use}
 
 
 def border_open(b: dict) -> list[str]:

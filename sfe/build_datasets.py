@@ -61,6 +61,7 @@ REAL = ["rsl_rl", "synthetic-data-kit", "prompto", "valor", "NeuroX", "dictionar
 ATTACK = ["rsl_rl", "synthetic-data-kit"]
 
 # One-line plain summaries of each description, written from the full texts (which are shown in dropdowns on the page).
+REPLAYED_TOY_RUNS = ("main3", "w2")   # toy runs whose closing questions were replayed on the saved transcript afterwards
 TOY_ROWS = {
     "clf_eval": ("Evaluation harness for a yes/no text classifier",
                  "Evaluates the jailbreak-attempt monitor that screens prompts to the deployed assistant",
@@ -539,7 +540,7 @@ def real_outcome(key: str, disc: dict) -> str:
     if r.get("blocked_by_provider_at_turn"):
         return "blocked by the provider’s filter before the model wrote anything"
     inside, _ = diff_lines_by_area(task, r["final_diff"])
-    opened = core_opened(task, r["turns"])
+    opened = core_opened(task, r["turns"], r.get("messages") or [])
     if core_touched(task, r["final_diff"]):
         bits = [f"core code changed: yes ({inside} changed lines)"]
     else:
@@ -974,6 +975,15 @@ def edits_list(tid: str, fg: dict, probes: dict, ptable: dict) -> str:
     return "".join(out) + group(items)
 
 
+def single_change_counts() -> dict[str, int]:
+    """How many single-change descriptions each attack-like repository has: the fg_ descriptions in its task file, without the
+    five data-kit descriptions of 16 Nov (sfe.new_repos.WORDINGS), which share the prefix but do not change one thing in the
+    original safety description."""
+    from sfe.new_repos import WORDINGS_BY_NAME
+    return {tid: sum(k.startswith("fg_") and k not in WORDINGS_BY_NAME
+                     for k in json.loads((ROOT / "real_tasks" / tid / "task.json").read_text())["framings"]) for tid in ATTACK}
+
+
 def section_edits(eps: list[dict], disc: dict, ctx: dict) -> str:
     m, n = count(eps, "edits")
     fg = jload(RES / "real" / "fine_grained.json", {})
@@ -988,7 +998,7 @@ def section_edits(eps: list[dict], disc: dict, ctx: dict) -> str:
         probes[(r["task"], r["framing"], r["model"])].append((r["k"], bool((r.get("label") or {}).get("restriction_stated")), r.get("first_text") or "(no text)"))
     for v in probes.values():
         v.sort()
-    n_desc = {tid: sum(k.startswith("fg_") for k in json.loads((ROOT / "real_tasks" / tid / "task.json").read_text())["framings"]) for tid in ATTACK}
+    n_desc = single_change_counts()
     per = Counter((fg.get(f"{tid}|{k}|{mm}") or {}).get("episodes", {}).get("n") if (fg.get(f"{tid}|{k}|{mm}") or {}).get("episodes") else None
                   for tid in ATTACK for k, _ in EDIT_ROWS[tid] if k.startswith("fg_") for mm in ("astra", "sol61s"))
     per.pop(None, None)
@@ -1040,13 +1050,15 @@ GPT-5.6 Sol. Open a row for the full first message, the README section, and exam
 def section_closing(eps: list[dict], ctx: dict) -> str:
     scored = jload(RES / "debrief" / "scored.json", [])
     live = sum(e["closing"] for e in eps)
-    replayed = sum(not r["run"].startswith(("fam", "real")) for r in scored)
+    # replayed: the closing questions asked afterwards on saved transcripts of the six toy tasks (runs main3_*, w2_*); every
+    # other scored episode, toy (fam_*) or real repository (real*, new_*), was asked at the end of the episode itself
+    replayed = sum(r["run"].startswith(REPLAYED_TOY_RUNS) for r in scored)
     aw = jload(RES / "real" / "fig_test_awareness.json", {})
     rows = [[E(k), f"{v['stated_chance']:.0f}%", f"{v['volunteers'][0]} of {v['volunteers'][1]}"] for k, v in aw.items()]
     toy = defaultdict(list)
     for r in scored:
         lab = r.get("label") or {}
-        if r["run"].startswith(("main3", "w2", "fam")) and isinstance(lab.get("q2_prob"), (int, float)):
+        if r["run"].startswith(REPLAYED_TOY_RUNS + ("fam",)) and isinstance(lab.get("q2_prob"), (int, float)):
             toy[NAME[r["model"]]].append((lab["q2_prob"], bool(lab.get("q1_suspects_test"))))
     trows = [[E(k), f"{st.mean(x[0] for x in v):.0f}%", f"{sum(x[1] for x in v)} of {len(v)}"] for k, v in sorted(toy.items())]
     ctx["aware_range"] = (min(v["stated_chance"] for v in aw.values()), max(v["stated_chance"] for v in aw.values()))

@@ -1,13 +1,14 @@
 # Runs in the data release
 
-Every folder in the `data-v2` release, by archive. Each archive unpacks at the repository root into
+Every folder in the `data-v3` release, by archive. Each archive unpacks at the repository root into
 `runs/<run>/episodes/*.json` (plus `replaced/` and `superseded/` where noted) or `results/real/<folder>/*.json`.
 `MANIFEST.md` in the release gives the number of files and the size of every run. "Primary" runs are the ones the
 headline numbers use. Toy-task runs use 3 turns x 15 tool calls, an 8,000-character command-output cap and the default
 system prompt unless stated; real-repository runs use 3 turns x 25 tool calls and the two closing questions.
 
-`data-v1` (6 Nov 2026) held the toy-task runs only; `data-v2` holds everything and supersedes it. `data-v1` stays
-available, but `data-v2` is the version to use.
+`data-v1` (6 Nov 2026) held the toy-task runs only; `data-v2` (13 Nov 2026) held everything run until then; `data-v3` (16
+Nov 2026) holds the four archives of `data-v2` unchanged (same checksums) and adds `v3-additions.tar.gz` with the runs of 16
+Nov, and supersedes both. The earlier releases stay available, but `data-v3` is the version to use.
 
 ## Contents
 
@@ -30,9 +31,10 @@ available, but `data-v2` is the version to use.
 | `real-repos.tar.gz` | six real open-source repositories under a safety and a product description, fourteen models |
 | `description-edits.tar.gz` | single-change rewrites of the two attack-like descriptions: full episodes and the first-reply probes |
 | `new-repos.tar.gz` | eighteen further repositories and ten stated uses of one generic library: full episodes and first replies |
+| `v3-additions.tar.gz` | the runs of 16 Nov 2026 (nine harmless-use episodes of the two Claude models, the eleven new descriptions: below), and the full licence texts of the third-party repositories in `LICENSES/` (the copies in the other four archives are placeholders) |
 
 ```bash
-gh release download data-v2 --repo neelnanda-io/safety-framing-eval      # all four archives (or -p <name>)
+gh release download data-v3 --repo neelnanda-io/safety-framing-eval      # all five archives (or -p <name>)
 for f in *.tar.gz; do tar xzf "$f"; done
 ```
 
@@ -247,7 +249,24 @@ Flash), `new_control_muse` (Muse Wonder), `new_control_musespark` (Muse Spark Op
 `g_ai_text` and `g_patrol` (seeds 0–2 each, 126 episodes) and up to three episodes of the spam filter's own side
 (`g_spam_defender`, the harmless baseline, 56 episodes) per model; seven of those baseline episodes were not run for lack
 of budget. The criterion and predictions are in
-`docs/NEW_REPOS_PREREG_S4.md`, the results in `docs/COVERT_SETTINGS.md`. Runs: `new_generic4_sol`, `new_generic4_luna6`, `new_generic4_terra61`, `new_generic4_sol61s`, `new_generic4_fable52`, `new_generic4_opus`, `new_generic4_carbon`, `new_generic4_argon`, `new_generic4_hydrogen`, `new_generic4_gem31pro`, `new_generic4_flash35`, `new_generic4_flash38`, `new_generic4_muse`, `new_generic4_musespark`, `new_generic4_grok`, `new_generic4_kimi`, `new_generic4_dsflash`, `new_generic4_dsv4pro`, `new_generic4_dsv4flash`, `new_generic4_qwen36`, `new_generic4_qwen38`.
+`docs/NEW_REPOS_PREREG_S4.md`, the results in `docs/COVERT_SETTINGS.md`. Nine more baseline episodes of the two Claude
+models were run on 16 Nov 2026 on the same machine, after the test and predictions were committed
+(`docs/CLAUDE_HARMLESS_PREREG.md`): `new_generic4_fable52` seeds 1–5 and `new_generic4_opus` seeds 2–5, $19.67 of model
+calls and about $1.12 of machine time. They are in `data-v3`, in `v3-additions.tar.gz` (the earlier episodes of the same
+two runs are in `new-repos.tar.gz`). Runs: `new_generic4_sol`, `new_generic4_luna6`, `new_generic4_terra61`, `new_generic4_sol61s`, `new_generic4_fable52`, `new_generic4_opus`, `new_generic4_carbon`, `new_generic4_argon`, `new_generic4_hydrogen`, `new_generic4_gem31pro`, `new_generic4_flash35`, `new_generic4_flash38`, `new_generic4_muse`, `new_generic4_musespark`, `new_generic4_grok`, `new_generic4_kimi`, `new_generic4_dsflash`, `new_generic4_dsv4pro`, `new_generic4_dsv4flash`, `new_generic4_qwen36`, `new_generic4_qwen38`.
+
+**Eleven new descriptions** (16 Nov 2026; the laptop; descriptions and predictions in `docs/NEW_WORDINGS_PREREG.md`,
+results in `docs/NOTES.md`). Nothing was blocked. All four runs and the first replies are in `data-v3`, in
+`v3-additions.tar.gz`.
+
+| run | model (config key) | what | episodes | model calls |
+|---|---|---|---|---|
+| `new_generic5_astra` | GPT-6 Astra (`astra`) | the generic RL library (`new_rl`) under six stated uses (`g_china_firewall`, `g_gang_site`, `g_tobacco_docs`, `g_official_records`, `g_rule_retired`, `g_lost_password`), seeds 0-1, and seeds 2-3 of `g_official_records` | 14 | $17.26 |
+| `new_generic5_sol61s` | GPT-6.1 Sol (`sol61s`) | the same | 14 | $4.88 |
+| `real5_sdk_astra` | GPT-6 Astra (`astra`) | the data kit under five descriptions (`fg_refuse_hacking`, `fg_wrong_for_hackers`, `fg_image_clothed`, `fg_refuse_cheating`, `fg_wrong_for_cheats`), seeds 0-1 | 10 | $22.25 |
+| `real5_sdk_sol61s` | GPT-6.1 Sol (`sol61s`) | the same | 10 | $5.67 |
+
+First replies, 10 per description and model (220, $2.06): `results/real/new_wordings_first_words/`.
 
 ## Not in the release
 

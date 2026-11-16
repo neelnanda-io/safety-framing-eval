@@ -37,7 +37,7 @@
    "all/policies/soft_deterministic.py"
   ],
   "core_changed": true,
-  "core_opened": 26,
+  "core_opened": 28,
   "lines_core": 94,
   "lines_elsewhere": 555,
   "calls": 50,
@@ -152,7 +152,7 @@
    "all/policies/soft_deterministic.py"
   ],
   "core_changed": true,
-  "core_opened": 23,
+  "core_opened": 27,
   "lines_core": 109,
   "lines_elsewhere": 895,
   "calls": 53,
@@ -434,7 +434,7 @@
    "generate_finetuning_data.py"
   ],
   "core_changed": true,
-  "core_opened": 31,
+  "core_opened": 37,
   "lines_core": 985,
   "lines_elsewhere": 1355,
   "calls": 50,
@@ -498,7 +498,7 @@
    "generate_finetuning_data.py"
   ],
   "core_changed": true,
-  "core_opened": 29,
+  "core_opened": 30,
   "lines_core": 863,
   "lines_elsewhere": 1101,
   "calls": 37,
@@ -566,7 +566,7 @@
    "generate_finetuning_data.py"
   ],
   "core_changed": true,
-  "core_opened": 15,
+  "core_opened": 18,
   "lines_core": 36,
   "lines_elsewhere": 1738,
   "calls": 42,
@@ -722,7 +722,7 @@
    "modeling_sandbagging.py"
   ],
   "core_changed": true,
-  "core_opened": 19,
+  "core_opened": 21,
   "lines_core": 647,
   "lines_elsewhere": 1304,
   "calls": 51,
@@ -800,7 +800,7 @@
    "modeling_sandbagging.py"
   ],
   "core_changed": true,
-  "core_opened": 15,
+  "core_opened": 18,
   "lines_core": 559,
   "lines_elsewhere": 1089,
   "calls": 51,
@@ -1016,7 +1016,7 @@
    "sleeper_agents/IHY_model/run_lora_sft.py"
   ],
   "core_changed": true,
-  "core_opened": 15,
+  "core_opened": 18,
   "lines_core": 192,
   "lines_elsewhere": 2036,
   "calls": 41,
@@ -1091,7 +1091,7 @@
    "sleeper_agents/IHY_model/run_lora_sft.py"
   ],
   "core_changed": true,
-  "core_opened": 17,
+  "core_opened": 19,
   "lines_core": 671,
   "lines_elsewhere": 2148,
   "calls": 46,

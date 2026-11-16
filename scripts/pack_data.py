@@ -3,7 +3,9 @@ the local username and e-mail addresses scrubbed, and third-party repository con
 no licence.
 
     python scripts/pack_data.py plan                       # what would go where, with counts; writes nothing
-    python scripts/pack_data.py pack                       # writes dist/data-v2/<archive>.tar.gz + MANIFEST.json/.md
+    python scripts/pack_data.py pack --base dist/data-v2   # data-v3: data-v2's archives copied byte for byte, plus
+                                                           # v3-additions.tar.gz with every file they do not hold
+    python scripts/pack_data.py pack --out <dir>           # every archive packed afresh (how data-v2 was built)
     python scripts/pack_data.py pack --only new-repos      # one archive
     python scripts/pack_data.py pack --drop-encrypted --out <dir>   # same, encrypted reasoning blobs replaced (size test)
     python scripts/pack_data.py licences [--github]        # check the licence table against the clones (and GitHub)
@@ -11,6 +13,12 @@ no licence.
 Each archive unpacks at the repository root: `runs/<run>/{episodes,replaced,superseded}/*.json` and, for the first-reply
 probes, `results/real/<folder>/*.json`, plus `THIRD_PARTY_NOTICES.md` and `LICENSES/<repository>.txt` when it holds
 episodes on third-party repositories.
+
+`data-v3` (16 Nov 2026) keeps the four archives of `data-v2` unchanged and adds `v3-additions.tar.gz`, packed by the same
+rules from every file `data-v2` does not hold. Because each archive unpacks its own `THIRD_PARTY_NOTICES.md` at the root,
+the added archive (which sorts last) carries the notice for the whole release and the licence text of every licensed
+repository in it; the `LICENSES/` files inside the `data-v2` archives are placeholders, because the clones were not on
+the machine that packed them.
 
 What is changed on the way out (every JSON string, including dictionary keys, is processed after parsing):
   - absolute paths into the original machine's home folder become `<repo>`, `<venv>` or `<home>`;
@@ -33,6 +41,7 @@ import hashlib
 import io
 import json
 import re
+import shutil
 import socket
 import subprocess
 import sys
@@ -43,8 +52,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RUNS = ROOT / "runs"
-DEFAULT_OUT = ROOT / "dist" / "data-v2"
-RELEASE = "data-v2"
+DEFAULT_OUT = ROOT / "dist" / "data-v3"
+RELEASE = "data-v3"
+# With `pack --base <earlier release>`: the earlier archives are copied unchanged and every file they do not hold goes into
+# this one archive (16 Nov 2026: nine harmless-use episodes of two Claude models, eleven new descriptions).
+ADDED = {"name": "v3-additions",
+         "what": "files added after data-v2: the harmless use on Claude Fable 5.2 (seeds 1-5) and Claude Opus 5.5 (seeds 2-5) "
+                 "on the generic RL library, and eleven new descriptions on GPT-6 Astra and GPT-6.1 Sol (the RL library and "
+                 "the data kit): full episodes and first replies (16 Nov 2026)"}
 
 # --------------------------------------------------------------------------------------------------------------------
 # What goes into which archive. A run folder is packed when its name matches one pattern; folders that match none are
@@ -67,14 +82,14 @@ ARCHIVES = {
     "description-edits": {
         "what": "single-change rewrites of the two attack-like descriptions, and the implied-purpose descriptions on "
                 "twenty-two models: full episodes and first replies (11-13 Nov 2026)",
-        "runs": [r"^real3_", r"^real4_"],
+        "runs": [r"^real3_", r"^real4_", r"^real5_"],        # real5_: the five data-kit descriptions of 16 Nov
         "dirs": ["results/real/first_words"],
     },
     "new-repos": {
         "what": "eighteen further repositories, ControlArena on twenty-two models, and one generic library under stated "
                 "uses: full episodes and first replies (13 Nov 2026)",
         "runs": [r"^new_"],
-        "dirs": ["results/real/new_repos_first_words*"],
+        "dirs": ["results/real/new_repos_first_words*", "results/real/new_wordings_first_words"],   # the latter: 16 Nov
     },
 }
 RUN_SUBDIRS = ("episodes", "replaced", "superseded")
@@ -447,6 +462,64 @@ def add_bytes(tar: tarfile.TarFile, name: str, b: bytes, mtime: float):
     tar.addfile(info, io.BytesIO(b))
 
 
+def _new_unit(name: str) -> dict:
+    return {"archive": name, "files": 0, "episodes": 0, "replaced": 0, "superseded": 0, "first_replies": 0, "incomplete": 0,
+            "raw_bytes": 0, "bytes": 0, "encrypted_bytes": 0, "rules": collections.Counter(), "tasks": set()}
+
+
+COUNTED = ("files", "episodes", "replaced", "superseded", "first_replies", "incomplete", "raw_bytes", "bytes", "encrypted_bytes")
+
+
+def pack_archive(pool, path: Path, name: str, members: list, tasks: dict, drop_enc: bool, keep_history: bool,
+                 manifest: dict, now: float, notice_also: set = frozenset()) -> tuple[dict, dict]:
+    """Pack `members` [(source, member name, unit)] into `path`. Returns the archive's manifest entry and its units.
+    `notice_also`: further repositories for the archive's THIRD_PARTY_NOTICES.md and LICENSES/ (the added archive of a
+    release built on an earlier one names every repository of the release)."""
+    used, n, digests = set(), 0, {}
+    units = collections.OrderedDict()
+    with tarfile.open(path, "w:gz", compresslevel=9) as tar:
+        jobs = [(str(src), member, unit, tasks, drop_enc, keep_history) for src, member, unit in members]
+        for member, b, info in pool.imap(transform, jobs, chunksize=4):
+            if b is None:
+                manifest.setdefault("unreadable", []).append({"file": member, "error": info["error"]})
+                print(f"  SKIPPED {member}: {info['error']}")
+                continue
+            add_bytes(tar, member, b, now)
+            digests[member] = hashlib.sha256(b).hexdigest()
+            n += 1
+            if info["rule"] in ("full", "withheld"):
+                used.add(info["task"])
+            u = units.setdefault(info["unit"], _new_unit(name))
+            u["files"] += 1
+            u["first_replies" if info["kind"] == "first_reply" else info["kind"]] += 1
+            u["incomplete"] += info["incomplete"]
+            if info["own_history"]:
+                manifest.setdefault("own_history_withheld", {})[member] = info["own_history"]
+            for k in ("raw_bytes", "bytes", "encrypted_bytes"):
+                u[k] += info[k]
+            u["rules"][info["rule"]] += 1
+            u["tasks"].add(info["task"])
+        if used | set(notice_also):
+            text, lic = notices(tasks, used | set(notice_also))
+            add_bytes(tar, "THIRD_PARTY_NOTICES.md", text.encode(), now)
+            for k, v in lic.items():
+                add_bytes(tar, k, v.encode(), now)
+                digests[k] = hashlib.sha256(v.encode()).hexdigest()
+            digests["THIRD_PARTY_NOTICES.md"] = hashlib.sha256(text.encode()).hexdigest()
+    bad = verify(path, digests)          # read the archive back: every member must match what was written
+    if bad:
+        raise SystemExit(f"{path.name}: {len(bad)} member(s) differ from what was written, e.g. {bad[:3]}. "
+                         "Nothing is wrong with the source files; pack again (and check free memory).")
+    for u in units.values():
+        u["rules"] = dict(u["rules"])
+        u["tasks"] = sorted(u["tasks"], key=str.lower)
+    size = path.stat().st_size
+    entry = {"file": path.name, "what": "", "files": n, "bytes": size, "sha256": sha256(path), "units": list(units),
+             "third_party": sorted(used, key=str.lower), "members_sha256": digests}
+    print(f"{name}: {n} files, {size / 1e6:.0f} MB")
+    return entry, units
+
+
 def pack(out: Path, only: list | None, drop_enc: bool, workers: int, keep_history: bool = False,
          skip_runs: list | None = None) -> dict:
     tasks = task_table()
@@ -462,62 +535,89 @@ def pack(out: Path, only: list | None, drop_enc: bool, workers: int, keep_histor
         for name, members in files.items():
             if only and name not in only:
                 continue
-            path = out / f"{name}.tar.gz"
-            used, n, digests = set(), 0, {}
-            units = collections.OrderedDict()
-            with tarfile.open(path, "w:gz", compresslevel=9) as tar:
-                jobs = [(str(src), member, unit, tasks, drop_enc, keep_history) for src, member, unit in members]
-                for member, b, info in pool.imap(transform, jobs, chunksize=4):
-                    if b is None:
-                        manifest.setdefault("unreadable", []).append({"file": member, "error": info["error"]})
-                        print(f"  SKIPPED {member}: {info['error']}")
-                        continue
-                    add_bytes(tar, member, b, now)
-                    digests[member] = hashlib.sha256(b).hexdigest()
-                    n += 1
-                    if info["rule"] in ("full", "withheld"):
-                        used.add(info["task"])
-                    u = units.setdefault(info["unit"], {"archive": name, "files": 0, "episodes": 0, "replaced": 0,
-                                                        "superseded": 0, "first_replies": 0, "incomplete": 0,
-                                                        "raw_bytes": 0,
-                                                        "bytes": 0, "encrypted_bytes": 0,
-                                                        "rules": collections.Counter(), "tasks": set()})
-                    u["files"] += 1
-                    u["first_replies" if info["kind"] == "first_reply" else info["kind"]] += 1
-                    u["incomplete"] += info["incomplete"]
-                    if info["own_history"]:
-                        manifest.setdefault("own_history_withheld", {})[member] = info["own_history"]
-                    for k in ("raw_bytes", "bytes", "encrypted_bytes"):
-                        u[k] += info[k]
-                    u["rules"][info["rule"]] += 1
-                    u["tasks"].add(info["task"])
-                if used:
-                    text, lic = notices(tasks, used)
-                    add_bytes(tar, "THIRD_PARTY_NOTICES.md", text.encode(), now)
-                    for k, v in lic.items():
-                        add_bytes(tar, k, v.encode(), now)
-                        digests[k] = hashlib.sha256(v.encode()).hexdigest()
-                    digests["THIRD_PARTY_NOTICES.md"] = hashlib.sha256(text.encode()).hexdigest()
-            bad = verify(path, digests)          # read the archive back: every member must match what was written
-            if bad:
-                raise SystemExit(f"{path.name}: {len(bad)} member(s) differ from what was written, e.g. {bad[:3]}. "
-                                 "Nothing is wrong with the source files; pack again (and check free memory).")
-            for u in units.values():
-                u["rules"] = dict(u["rules"])
-                u["tasks"] = sorted(u["tasks"], key=str.lower)
+            entry, units = pack_archive(pool, out / f"{name}.tar.gz", name, members, tasks, drop_enc, keep_history,
+                                        manifest, now)
+            entry["what"] = ARCHIVES[name]["what"]
             manifest["units"].update(units)
-            size = path.stat().st_size
-            manifest["archives"][name] = {"file": path.name, "what": ARCHIVES[name]["what"], "files": n,
-                                          "bytes": size, "sha256": sha256(path),
-                                          "units": list(units), "third_party": sorted(used, key=str.lower),
-                                          "members_sha256": digests}
-            print(f"{name}: {n} files, {size / 1e6:.0f} MB")
+            manifest["archives"][name] = entry
     if not only:
-        text, _ = notices(tasks, {t for a in manifest["archives"].values() for t in a["third_party"]})
-        (out / "THIRD_PARTY_NOTICES.md").write_text(text)
-        (out / "MANIFEST.json").write_text(json.dumps(manifest, indent=1))
-        (out / "MANIFEST.md").write_text(manifest_md(manifest))
-        (out / "RELEASE_NOTES.md").write_text(release_notes(manifest))
+        write_release_files(out, manifest, tasks)
+    return manifest
+
+
+def write_release_files(out: Path, manifest: dict, tasks: dict):
+    text, _ = notices(tasks, {t for a in manifest["archives"].values() for t in a["third_party"]})
+    (out / "THIRD_PARTY_NOTICES.md").write_text(text)
+    (out / "MANIFEST.json").write_text(json.dumps(manifest, indent=1))
+    (out / "MANIFEST.md").write_text(manifest_md(manifest))
+    (out / "RELEASE_NOTES.md").write_text(release_notes(manifest))
+
+
+def archive_counts(units: dict, names: list) -> dict:
+    k = collections.Counter()
+    for u in names:
+        for x in ("episodes", "replaced", "superseded", "first_replies"):
+            k[x] += units[u][x]
+    return dict(k)
+
+
+def copy_file(src: Path, dst: Path):
+    """A byte-for-byte copy; on macOS a copy-on-write clone (`cp -c`), which takes no extra disk space."""
+    if sys.platform == "darwin" and subprocess.run(["cp", "-c", str(src), str(dst)]).returncode == 0:
+        return
+    shutil.copyfile(src, dst)
+
+
+def pack_onto(base: Path, out: Path, workers: int) -> dict:
+    """A release built on an earlier one: the earlier release's archives copied byte for byte (their SHA-256 checked
+    against its manifest), and every file the plan packs that they do not hold, packed by the same rules into ADDED."""
+    bm = json.loads((base / "MANIFEST.json").read_text())
+    if bm.get("encrypted_reasoning") != "kept":
+        raise SystemExit("the base release dropped encrypted reasoning; pack the additions the same way first")
+    if out.exists() and any(out.iterdir()):
+        raise SystemExit(f"{out} is not empty: write a release into a new folder")
+    tasks = task_table()
+    files, skipped = plan()
+    have = {m for a in bm["archives"].values() for m in a["members_sha256"]}
+    members = [(src, member, unit) for mem in files.values() for src, member, unit in mem if member not in have]
+    out.mkdir(parents=True, exist_ok=True)
+    for a in bm["archives"].values():
+        copy_file(base / a["file"], out / a["file"])
+        if sha256(out / a["file"]) != a["sha256"]:
+            raise SystemExit(f"{a['file']}: the copy differs from the base release's manifest")
+        print(f"{a['file']}: copied from {bm['release']} (SHA-256 checked)")
+    repos = {t: dict(v) for t, v in tasks.items()}
+    for v in repos.values():
+        v.pop("source", None)
+    manifest = {"release": RELEASE, "built": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()),
+                "encrypted_reasoning": "kept",
+                "base": {"release": bm["release"], "built": bm["built"], "archives": [a["file"] for a in bm["archives"].values()],
+                         "how": "copied byte for byte; each archive's SHA-256 equals the base release's manifest"},
+                "archives": {}, "units": {}, "not_packed": skipped, "repositories": repos}
+    for name, a in bm["archives"].items():
+        manifest["archives"][name] = dict(a, counts=archive_counts(bm["units"], a["units"]))
+    manifest["units"] = {k: dict(v) for k, v in bm["units"].items()}
+    for k in ("own_history_withheld", "unreadable"):
+        if bm.get(k):
+            manifest[k] = bm[k]
+    release_repos = {t for a in bm["archives"].values() for t in a["third_party"]}
+    with Pool(workers) as pool:
+        entry, units = pack_archive(pool, out / f"{ADDED['name']}.tar.gz", ADDED["name"], members, tasks, False, False,
+                                    manifest, time.time(), notice_also=release_repos)
+    entry["what"] = ADDED["what"]
+    entry["counts"] = archive_counts(units, list(units))
+    manifest["archives"][ADDED["name"]] = entry
+    for k, u in units.items():                     # a run folder can be partly in an earlier archive and partly added
+        if k in manifest["units"]:
+            old = manifest["units"][k]
+            merged = {"archive": f"{old['archive']}, {ADDED['name']}", **{c: old.get(c, 0) + u[c] for c in COUNTED},
+                      "rules": dict(collections.Counter(old["rules"]) + collections.Counter(u["rules"])),
+                      "tasks": sorted(set(old["tasks"]) | set(u["tasks"]), key=str.lower),
+                      "added": {c: u[c] for c in ("episodes", "replaced", "superseded", "first_replies")}}
+            manifest["units"][k] = merged
+        else:
+            manifest["units"][k] = u
+    write_release_files(out, manifest, tasks)
     return manifest
 
 
@@ -535,20 +635,24 @@ def verify(path: Path, digests: dict) -> list:
 
 def release_notes(m: dict) -> str:
     """The short text for the GitHub release page, with every number taken from the manifest."""
-    per = {}
-    for name, a in m["archives"].items():
-        k = collections.Counter()
-        for u in a["units"]:
-            for x in ("episodes", "replaced", "superseded", "first_replies"):
-                k[x] += m["units"][u][x]
-        per[name] = (a, k)
+    per = {name: (a, collections.Counter(a.get("counts") or archive_counts(m["units"], a["units"])))
+           for name, a in m["archives"].items()}
     what = {"toy-tasks": "the ten toy tasks, every model",
             "real-repos": "six real repositories, twenty-two models",
             "description-edits": "rewritten descriptions of the two attack-like repositories, and the purpose-implied ones",
-            "new-repos": "further repositories, ten stated uses of one library, ControlArena"}
-    lines = [f"Episode transcripts for every experiment in this repository ({sum(a['files'] for a, _ in per.values()):,} "
-             f"files). Supersedes `data-v1`, which held the toy tasks only.", "",
-             "| archive | contents | size |", "|---|---|---|"]
+            "new-repos": "further repositories, ten stated uses of one library, ControlArena",
+            ADDED["name"]: "added after data-v2: the harmless use on two Claude models, eleven new descriptions on GPT-6 Astra "
+                           "and GPT-6.1 Sol"}
+    total = sum(a["files"] for a, _ in per.values())
+    if m.get("base"):
+        b = m["base"]
+        added = per[ADDED["name"]][1]
+        head = (f"Episode transcripts for every experiment in this repository ({total:,} files). Supersedes `{b['release']}`: its "
+                f"{len(b['archives'])} archives are included unchanged (same SHA-256), and `{ADDED['name']}.tar.gz` adds "
+                f"{added['episodes']:,} episodes and {added['first_replies']:,} first replies run since.")
+    else:
+        head = f"Episode transcripts for every experiment in this repository ({total:,} files). Supersedes `data-v1`, which held the toy tasks only."
+    lines = [head, "", "| archive | contents | size |", "|---|---|---|"]
     for name, (a, k) in per.items():
         parts = [f"{k['episodes']:,} episodes"] + ([f"{k['first_replies']:,} first replies"] if k["first_replies"] else [])
         extra = ([f"{k['replaced']} spoiled original{'s' if k['replaced'] != 1 else ''}"] if k["replaced"] else []) + \
@@ -557,8 +661,15 @@ def release_notes(m: dict) -> str:
                      f"{' (plus ' + ', '.join(extra) + ')' if extra else ''} | {a['bytes'] / 1e6:.1f} MB |")
     withheld = sorted(t for t, v in m["repositories"].items() if v["rule"] == "withheld")
     lines += ["", "Unpack at the repository root with `for f in *.tar.gz; do tar xzf \"$f\"; done` (creates `runs/<run>/...` and "
-              "`results/real/<first-reply folders>/`); `docs/RUNS.md` says which run is which.",
-              "Scrubbed on the way out: absolute local paths, the local username and host name, and e-mail addresses "
+              "`results/real/<first-reply folders>/`); `docs/RUNS.md` says which run is which."]
+    if m.get("base"):
+        n_lic = sum(1 for v in m["repositories"].values() if v["rule"] == "full")
+        lines += [f"Licence texts: the `LICENSES/` files inside the {len(m['base']['archives'])} `{m['base']['release']}` archives are "
+                  "placeholders that only name each repository and link to it. `" + ADDED["name"] + ".tar.gz` carries the full "
+                  f"licence text of all {n_lic} licensed repositories in `LICENSES/`, and `THIRD_PARTY_NOTICES.md` for the whole "
+                  "release; it sorts last, so the loop above unpacks it last and leaves the full texts in place. If you unpack "
+                  "only some archives, take `LICENSES/` from `" + ADDED["name"] + ".tar.gz`."]
+    lines += ["Scrubbed on the way out: absolute local paths, the local username and host name, and e-mail addresses "
               "(`<repo>`, `<home>`, `<user>`, `<host>`, `<email>`).",
               f"{len(withheld)} repositories have no licence "
               f"({', '.join(m['repositories'][t]['url'].split('github.com/')[-1] for t in withheld)}): in their episodes the text "
@@ -583,6 +694,10 @@ def manifest_md(m: dict) -> str:
              "", "| archive | files | size | what |", "|---|---|---|---|"]
     for a in m["archives"].values():
         lines.append(f"| `{a['file']}` | {a['files']:,} | {a['bytes'] / 1e6:,.0f} MB | {a['what']} |")
+    if m.get("base"):
+        lines += ["", f"The first {len(m['base']['archives'])} archives are `{m['base']['release']}`'s (built {m['base']['built']}), "
+                  f"copied byte for byte; `{ADDED['name']}.tar.gz` holds every file added since. A run folder split between "
+                  "two archives is listed once below, with both archives and its total."]
     lines += ["", "Rule per file: `own` = the project's own toy task, in full; `full` = permissively licensed repository, "
               "in full; `withheld` = repository with no licence, contents replaced by a placeholder.", "",
               "| run or folder | archive | episodes | replaced | superseded | first replies | unfinished | MB (as packed) | rules | tasks |",
@@ -646,6 +761,8 @@ def main():
                    help="regular expressions for runs still in progress (left out and listed in the manifest)")
     p.add_argument("--keep-own-history", action="store_true",
                    help="keep tool results that showed this project's own git history (withheld by default)")
+    p.add_argument("--base", default=None, metavar="DIR",
+                   help="an earlier release: copy its archives unchanged and pack only the files it does not hold")
     p = sub.add_parser("notes", help="(re)write RELEASE_NOTES.md from an existing MANIFEST.json")
     p.add_argument("--out", default=str(DEFAULT_OUT))
     p = sub.add_parser("licences")
@@ -663,7 +780,12 @@ def main():
         withheld = sorted(t for t, v in tasks.items() if v["rule"] == "withheld")
         print("repositories whose contents are withheld (no licence):", ", ".join(withheld))
     elif a.cmd == "pack":
-        pack(Path(a.out), a.only, a.drop_encrypted, a.workers, a.keep_own_history, a.skip_runs)
+        if a.base:
+            if a.only or a.drop_encrypted or a.keep_own_history or a.skip_runs:
+                raise SystemExit("--base takes no other packing option")
+            pack_onto(Path(a.base), Path(a.out), a.workers)
+        else:
+            pack(Path(a.out), a.only, a.drop_encrypted, a.workers, a.keep_own_history, a.skip_runs)
     elif a.cmd == "notes":
         m = json.loads((Path(a.out) / "MANIFEST.json").read_text())
         (Path(a.out) / "RELEASE_NOTES.md").write_text(release_notes(m))

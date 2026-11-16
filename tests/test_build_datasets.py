@@ -54,3 +54,33 @@ def test_tool_call_shows_one_line_and_cuts_command_and_result():
 
 def test_filled_shows_a_prompt_as_sent_with_stand_ins():
     assert filled('Reply with JSON {{"n": {n}}} about {thing}', n=3, thing="the diff") == 'Reply with JSON {"n": 3} about <the diff>'
+
+
+def test_the_counts_from_committed_files_are_pinned():
+    """The closing questions were replayed afterwards only on the six toy tasks' saved transcripts (runs main3_*, w2_*); the
+    new-library and ControlArena episodes were asked at the end and were wrongly counted as replays before (401). The five
+    data-kit descriptions of 16 Nov are not single-change descriptions."""
+    import sfe.build_datasets as bd
+    closing = bd.section_closing([], {})
+    assert "replayed on top of 132 saved transcripts of the six small toy tasks" in closing and "1,963 answers" in closing
+    assert bd.single_change_counts() == {"rsl_rl": 18, "synthetic-data-kit": 14}
+
+
+def test_the_episode_totals_are_pinned_to_the_data_release():
+    """The episode totals of the page, counted over what data-v3 holds: every run the packer releases (the smoke tests and
+    abandoned attempts are not released, so the working copy has 26 more episodes). Skipped without the episodes, and with
+    data-v2 alone, which predates the runs of 16 Nov."""
+    import sys
+    import pytest
+    import sfe.build_datasets as bd
+    eps = bd.scan()
+    if not eps:
+        pytest.skip("needs the episodes: unpack the data release data-v3 at the repository root")
+    if not (bd.RUNS / "real5_sdk_astra" / "episodes").is_dir():
+        pytest.skip("needs data-v3: data-v2 does not hold the runs of 16 Nov 2026")
+    sys.path.insert(0, str(bd.ROOT / "scripts"))
+    import pack_data
+    released = [e for e in eps if pack_data.archive_of_run(e["run"]) is not None]
+    assert len(released) == 4105 and sum(e["group"] == "other" for e in released) == 845
+    assert "Asked at the end of 1,979 saved episodes" in bd.section_closing(released, {})
+    assert len(eps) in (4105, 4131)                     # the data release, or the working copy with its smoke tests

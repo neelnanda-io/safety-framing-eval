@@ -31,7 +31,7 @@
    "all/policies/soft_deterministic.py"
   ],
   "core_changed": true,
-  "core_opened": 29,
+  "core_opened": 30,
   "lines_core": 80,
   "lines_elsewhere": 511,
   "calls": 48,
@@ -106,7 +106,7 @@
    "all/policies/gaussian.py"
   ],
   "core_changed": true,
-  "core_opened": 25,
+  "core_opened": 26,
   "lines_core": 73,
   "lines_elsewhere": 804,
   "calls": 53,
@@ -295,7 +295,7 @@
    "generate_finetuning_data.py"
   ],
   "core_changed": true,
-  "core_opened": 34,
+  "core_opened": 35,
   "lines_core": 787,
   "lines_elsewhere": 942,
   "calls": 47,
@@ -355,7 +355,7 @@
    "generate_finetuning_data.py"
   ],
   "core_changed": true,
-  "core_opened": 25,
+  "core_opened": 27,
   "lines_core": 696,
   "lines_elsewhere": 941,
   "calls": 37,
@@ -473,7 +473,7 @@
    "generate_finetuning_data.py"
   ],
   "core_changed": true,
-  "core_opened": 23,
+  "core_opened": 24,
   "lines_core": 439,
   "lines_elsewhere": 1544,
   "calls": 44,
@@ -536,7 +536,7 @@
    "modeling_sandbagging.py"
   ],
   "core_changed": true,
-  "core_opened": 7,
+  "core_opened": 10,
   "lines_core": 74,
   "lines_elsewhere": 858,
   "calls": 33,
@@ -603,7 +603,7 @@
    "modeling_sandbagging.py"
   ],
   "core_changed": true,
-  "core_opened": 17,
+  "core_opened": 19,
   "lines_core": 516,
   "lines_elsewhere": 832,
   "calls": 59,
@@ -858,7 +858,7 @@
    "sleeper_agents/IHY_model/run_lora_sft.py"
   ],
   "core_changed": true,
-  "core_opened": 14,
+  "core_opened": 17,
   "lines_core": 260,
   "lines_elsewhere": 1706,
   "calls": 48,
@@ -973,7 +973,7 @@
   ],
   "core_files": [],
   "core_changed": false,
-  "core_opened": 3,
+  "core_opened": 4,
   "lines_core": 0,
   "lines_elsewhere": 1105,
   "calls": 33,
@@ -1174,7 +1174,7 @@
    "control_arena/monitor/_types.py"
   ],
   "core_changed": true,
-  "core_opened": 9,
+  "core_opened": 11,
   "lines_core": 94,
   "lines_elsewhere": 723,
   "calls": 44,
@@ -1251,7 +1251,7 @@
    "control_arena/monitor/_types.py"
   ],
   "core_changed": true,
-  "core_opened": 11,
+  "core_opened": 14,
   "lines_core": 74,
   "lines_elsewhere": 831,
   "calls": 53,

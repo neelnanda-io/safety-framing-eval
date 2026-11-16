@@ -8,7 +8,8 @@ and from the per-user lock files (sfe.real.acquire_user), and a new process only
 Run on the machine, as root, from /root/sfe:
     /opt/harness/bin/python pod/launch_covert.py <part> [--dry-run]
 Parts: s1a (six repositories, seeds 0 1), s1b (seed 2), s2a (purpose implied, seeds 0-2), s3 (ControlArena),
-s2b (purpose implied, seeds 3-5; models given with --models).
+s2b (purpose implied, seeds 3-5; models given with --models), s4 (generic RL library, two borderline uses and the harmless
+one, seeds 0-2), s4h (16 Nov: the harmless use only, Claude Fable 5.2 seeds 1-5 and Claude Opus 5.5 seeds 2-5; see S4H).
 """
 from __future__ import annotations
 
@@ -53,6 +54,15 @@ S3_CAP = {"astra": (20, 7), "sol61s": (2, 3), "fable52": (8, 9), "opus": (7, 6),
 # part cap of $130. (cap, per-episode guard)
 S4_CAP = {"sol61s": [2.7, 1.1], "sol": [6.3, 2.6], "luna6": [0.6, 0.5], "terra61": [1.1, 0.5], "fable52": [15.8, 6.6], "opus": [8.2, 3.4], "carbon": [6.5, 2.7], "argon": [3.7, 2.3], "hydrogen": [2.8, 1.2], "gem31pro": [4.8, 2.0], "flash35": [6.2, 2.6], "flash38": [2.0, 0.8], "muse": [17.6, 7.3], "musespark": [1.8, 0.7], "grok": [16.0, 6.7], "kimi": [7.2, 3.0], "dsflash": [1.5, 0.6], "dsv4pro": [5.9, 2.5], "dsv4flash": [1.1, 0.5], "qwen36": [10.5, 4.4], "qwen38": [4.5, 1.9]}
 S4_SLOW = {"qwen38": 5, "dsv4pro": 5}
+# s4h (16 Nov 2026, docs/CLAUDE_HARMLESS_PREREG.md): the harmless stated use g_spam_defender ONLY, on the two Claude models, into
+# the same runs as 13 Nov. The machine comes back empty and cannot see the episodes already on the laptop (Fable seed 0, Opus
+# seeds 0 1), so the seeds are named here, never inferred. (seeds, run cap, per-episode guard), all in USD.
+# One episode at a time per model, as in the 13 Nov S4 relaunch, so that the run cap really stops episodes from starting: the
+# last one starts only if the earlier ones cost less than the cap. Worst case per run = cap + one episode, and one episode is
+# at most its guard (checked after turns 1 and 2) plus turn 3 and the closing questions. 13 Nov costs on this library: Fable
+# $2.81-3.69 an episode (at most $2.80 after two turns, at most $1.54 for any turn); Opus $1.28-2.08 ($1.14, $1.01).
+# Fable 16.5 + (4.0 + 1.9 + 0.12) = 22.5; Opus 7.5 + (2.2 + 1.3 + 0.07) = 11.1; together at most about $33.6 of the $35 job cap.
+S4H = {"fable52": (["1", "2", "3", "4", "5"], 16.5, 4.0), "opus": (["2", "3", "4", "5"], 7.5, 2.2)}
 SLOW = {"muse", "grok", "astra"}           # long episodes: one more episode at a time
 
 
@@ -91,6 +101,14 @@ def plan(part: str, models: list[str] | None, conc_s1: int = 2, only_seeds: list
                         "args": ["--run", f"new_generic4_{m}", "--models", m, "--tasks", "new_rl",
                                  "--framings", "g_patrol", "g_ai_text", "g_spam_defender", "--seeds", "0", "1", "2",
                                  "--cap-usd", str(cap), "--max-episode-usd", str(mx)]})
+    elif part == "s4h":
+        for m in (models or list(S4H)):
+            seeds, cap, mx = S4H[m]
+            env = {"SFE_REAL_TASKS_DIR": "real_tasks_new", **({"SFE_FILTER_ATTEMPTS": "6"} if m in CLAUDE else {})}   # = s4
+            out.append({"name": f"s4h_{m}", "conc": 1, "env": env,
+                        "args": ["--run", f"new_generic4_{m}", "--models", m, "--tasks", "new_rl",
+                                 "--framings", "g_spam_defender", "--seeds", *seeds,
+                                 "--cap-usd", str(cap), "--max-episode-usd", str(mx)]})
     elif part == "s3":
         for m in (models or ["astra", "sol61s"] + OLD + ["sol"] + NEW):
             seeds = ["0", "1", "2"] if m == "astra" else (["2"] if m == "sol61s" else ["0", "1"])
@@ -128,7 +146,7 @@ def users_in_use() -> set[str]:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("part", choices=["s1a", "s1b", "s1c", "s2a", "s2b", "s3", "s4"])
+    ap.add_argument("part", choices=["s1a", "s1b", "s1c", "s2a", "s2b", "s3", "s4", "s4h"])
     ap.add_argument("--models", nargs="*", default=None)
     ap.add_argument("--cap-scale", type=float, default=1.0, help="multiply every run's cap (stage 2: fit the part's remaining budget)")
     ap.add_argument("--dry-run", action="store_true")

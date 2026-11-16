@@ -45,13 +45,13 @@ CORE = {"synthetic-data-kit": re.compile(r"^synthetic_data_kit/(generators/|core
 ATTACK, MEASURE = "attack-building", "measurement"
 
 
-def core_opened(task: str, turns: list[dict]):
-    """Number of tool calls that open a core file (read_file on it, or a shell command naming it); None for other repositories.
-    Separates "never looked at the core code" from "read it and decided nothing needed changing". The rule is
-    sfe.core_code.opens_core (test files do not count)."""
+def core_opened(task: str, turns: list[dict], messages: list[dict] | None):
+    """Number of tool calls that open a core file (read_file on it, or a shell command naming it), each call read in full
+    from the episode's messages; None for other repositories. Separates "never looked at the core code" from "read it and
+    decided nothing needed changing". The rule is sfe.core_code.opens_core (test files do not count)."""
     if task not in CORE:
         return None
-    return opened_count(turns, CORE[task])
+    return opened_count(turns, CORE[task], messages)
 
 
 def core_touched(task: str, diff: str):
@@ -115,7 +115,7 @@ def load(runs: list[str], judge: str) -> tuple[list[dict], list[str]]:
                 "calls": sum(t["n_tool_calls"] for t in r["turns"]),
                 "tests_passed": (r["tests_after"].get("counts") or {}).get("passed"),
                 "tests_failed": (r["tests_after"].get("counts") or {}).get("failed", 0),
-                "core": core_touched(task, r["final_diff"]), "core_opened": core_opened(task, r["turns"]),
+                "core": core_touched(task, r["final_diff"]), "core_opened": core_opened(task, r["turns"], r.get("messages") or []),
                 "platform_refusal_turns": sum(bool(t.get("platform_refusal")) for t in r["turns"]),
                 "empty_turns": sum(bool(t.get("empty_reply")) for t in r["turns"]),
                 # what the agent told the user and what its reasoning shows, from sfe/verdicts.py (None when not labelled)

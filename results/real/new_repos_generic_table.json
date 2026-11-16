@@ -236,7 +236,7 @@
       "all/memory/generalized_advantage.py",
       "all/memory/replay_buffer.py"
      ],
-     "core_opened": 18,
+     "core_opened": 22,
      "lines_core": 69,
      "lines_elsewhere": 437,
      "folders": {
@@ -257,7 +257,7 @@
       "all/memory/replay_buffer.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 8,
+     "core_opened": 9,
      "lines_core": 27,
      "lines_elsewhere": 473,
      "folders": {
@@ -327,7 +327,7 @@
      "core_files": [
       "all/memory/replay_buffer.py"
      ],
-     "core_opened": 8,
+     "core_opened": 10,
      "lines_core": 14,
      "lines_elsewhere": 649,
      "folders": {
@@ -443,7 +443,7 @@
       "all/memory/replay_buffer.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 11,
+     "core_opened": 12,
      "lines_core": 70,
      "lines_elsewhere": 802,
      "folders": {
@@ -481,7 +481,7 @@
       "all/memory/replay_buffer.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 18,
+     "core_opened": 20,
      "lines_core": 71,
      "lines_elsewhere": 729,
      "folders": {
@@ -1031,7 +1031,7 @@
       "all/memory/generalized_advantage.py",
       "all/memory/replay_buffer.py"
      ],
-     "core_opened": 17,
+     "core_opened": 18,
      "lines_core": 41,
      "lines_elsewhere": 374,
      "folders": {
@@ -1055,7 +1055,7 @@
       "all/memory/replay_buffer.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 25,
+     "core_opened": 26,
      "lines_core": 106,
      "lines_elsewhere": 608,
      "folders": {
@@ -1112,7 +1112,7 @@
       "all/memory/replay_buffer.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 12,
+     "core_opened": 14,
      "lines_core": 46,
      "lines_elsewhere": 631,
      "folders": {
@@ -1141,7 +1141,7 @@
       "all/memory/replay_buffer.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 25,
+     "core_opened": 27,
      "lines_core": 111,
      "lines_elsewhere": 888,
      "folders": {
@@ -1353,7 +1353,7 @@
       "all/approximation/q_dist.py",
       "all/memory/replay_buffer.py"
      ],
-     "core_opened": 18,
+     "core_opened": 21,
      "lines_core": 58,
      "lines_elsewhere": 436,
      "folders": {
@@ -1409,7 +1409,7 @@
       "all/memory/replay_buffer.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 15,
+     "core_opened": 17,
      "lines_core": 57,
      "lines_elsewhere": 554,
      "folders": {
@@ -1430,7 +1430,7 @@
       "all/memory/replay_buffer.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 13,
+     "core_opened": 14,
      "lines_core": 83,
      "lines_elsewhere": 737,
      "folders": {
@@ -1607,7 +1607,7 @@
       "all/memory/replay_buffer.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 10,
+     "core_opened": 11,
      "lines_core": 34,
      "lines_elsewhere": 599,
      "folders": {
@@ -1646,7 +1646,7 @@
      "core_files": [
       "all/memory/replay_buffer.py"
      ],
-     "core_opened": 8,
+     "core_opened": 9,
      "lines_core": 44,
      "lines_elsewhere": 724,
      "folders": {
@@ -1734,7 +1734,7 @@
       "all/core/state.py",
       "all/memory/replay_buffer.py"
      ],
-     "core_opened": 9,
+     "core_opened": 10,
      "lines_core": 30,
      "lines_elsewhere": 865,
      "folders": {
@@ -1758,7 +1758,7 @@
       "all/memory/replay_buffer.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 13,
+     "core_opened": 14,
      "lines_core": 39,
      "lines_elsewhere": 809,
      "folders": {
@@ -1781,7 +1781,7 @@
       "all/memory/replay_buffer.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 15,
+     "core_opened": 16,
      "lines_core": 69,
      "lines_elsewhere": 758,
      "folders": {
@@ -1801,7 +1801,7 @@
      "core_files": [
       "all/approximation/checkpointer/__init__.py"
      ],
-     "core_opened": 5,
+     "core_opened": 6,
      "lines_core": 4,
      "lines_elsewhere": 978,
      "folders": {
@@ -1858,7 +1858,7 @@
       "all/memory/advantage.py",
       "all/memory/generalized_advantage.py"
      ],
-     "core_opened": 9,
+     "core_opened": 10,
      "lines_core": 22,
      "lines_elsewhere": 886,
      "folders": {
@@ -1934,7 +1934,7 @@
       "all/memory/generalized_advantage.py",
       "all/memory/replay_buffer.py"
      ],
-     "core_opened": 14,
+     "core_opened": 17,
      "lines_core": 31,
      "lines_elsewhere": 296,
      "folders": {
@@ -1955,7 +1955,7 @@
       "all/memory/replay_buffer.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 16,
+     "core_opened": 18,
      "lines_core": 49,
      "lines_elsewhere": 412,
      "folders": {
@@ -2009,7 +2009,7 @@
       "all/memory/replay_buffer.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 17,
+     "core_opened": 19,
      "lines_core": 69,
      "lines_elsewhere": 387,
      "folders": {
@@ -2032,7 +2032,7 @@
       "all/memory/replay_buffer.py",
       "all/memory/segment_tree.py"
      ],
-     "core_opened": 20,
+     "core_opened": 23,
      "lines_core": 67,
      "lines_elsewhere": 367,
      "folders": {

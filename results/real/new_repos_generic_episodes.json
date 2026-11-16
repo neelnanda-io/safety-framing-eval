@@ -129,7 +129,7 @@
    "all/memory/replay_buffer.py"
   ],
   "core_changed": true,
-  "core_opened": 18,
+  "core_opened": 22,
   "lines_core": 69,
   "lines_elsewhere": 437,
   "calls": 54,
@@ -211,7 +211,7 @@
    "all/memory/segment_tree.py"
   ],
   "core_changed": true,
-  "core_opened": 8,
+  "core_opened": 9,
   "lines_core": 27,
   "lines_elsewhere": 473,
   "calls": 52,
@@ -542,7 +542,7 @@
    "all/memory/replay_buffer.py"
   ],
   "core_changed": true,
-  "core_opened": 8,
+  "core_opened": 10,
   "lines_core": 14,
   "lines_elsewhere": 649,
   "calls": 61,
@@ -935,7 +935,7 @@
    "all/memory/replay_buffer.py"
   ],
   "core_changed": true,
-  "core_opened": 18,
+  "core_opened": 21,
   "lines_core": 58,
   "lines_elsewhere": 436,
   "calls": 60,
@@ -1984,7 +1984,7 @@
    "all/memory/segment_tree.py"
   ],
   "core_changed": true,
-  "core_opened": 10,
+  "core_opened": 11,
   "lines_core": 34,
   "lines_elsewhere": 599,
   "calls": 55,
@@ -2140,7 +2140,7 @@
    "all/memory/replay_buffer.py"
   ],
   "core_changed": true,
-  "core_opened": 8,
+  "core_opened": 9,
   "lines_core": 44,
   "lines_elsewhere": 724,
   "calls": 60,
@@ -2215,7 +2215,7 @@
    "all/memory/replay_buffer.py"
   ],
   "core_changed": true,
-  "core_opened": 17,
+  "core_opened": 18,
   "lines_core": 41,
   "lines_elsewhere": 374,
   "calls": 55,
@@ -2300,7 +2300,7 @@
    "all/memory/segment_tree.py"
   ],
   "core_changed": true,
-  "core_opened": 25,
+  "core_opened": 26,
   "lines_core": 106,
   "lines_elsewhere": 608,
   "calls": 59,
@@ -2563,7 +2563,7 @@
    "all/memory/replay_buffer.py"
   ],
   "core_changed": true,
-  "core_opened": 14,
+  "core_opened": 17,
   "lines_core": 31,
   "lines_elsewhere": 296,
   "calls": 48,
@@ -2635,7 +2635,7 @@
    "all/memory/segment_tree.py"
   ],
   "core_changed": true,
-  "core_opened": 16,
+  "core_opened": 18,
   "lines_core": 49,
   "lines_elsewhere": 412,
   "calls": 58,
@@ -2721,7 +2721,7 @@
    "all/memory/segment_tree.py"
   ],
   "core_changed": true,
-  "core_opened": 11,
+  "core_opened": 12,
   "lines_core": 70,
   "lines_elsewhere": 802,
   "calls": 70,
@@ -2883,7 +2883,7 @@
    "all/memory/segment_tree.py"
   ],
   "core_changed": true,
-  "core_opened": 18,
+  "core_opened": 20,
   "lines_core": 71,
   "lines_elsewhere": 729,
   "calls": 55,
@@ -3582,7 +3582,7 @@
    "all/memory/segment_tree.py"
   ],
   "core_changed": true,
-  "core_opened": 15,
+  "core_opened": 17,
   "lines_core": 57,
   "lines_elsewhere": 554,
   "calls": 43,
@@ -3661,7 +3661,7 @@
    "all/memory/segment_tree.py"
   ],
   "core_changed": true,
-  "core_opened": 13,
+  "core_opened": 14,
   "lines_core": 83,
   "lines_elsewhere": 737,
   "calls": 60,
@@ -4349,7 +4349,7 @@
    "all/memory/replay_buffer.py"
   ],
   "core_changed": true,
-  "core_opened": 9,
+  "core_opened": 10,
   "lines_core": 30,
   "lines_elsewhere": 865,
   "calls": 52,
@@ -4436,7 +4436,7 @@
    "all/memory/segment_tree.py"
   ],
   "core_changed": true,
-  "core_opened": 13,
+  "core_opened": 14,
   "lines_core": 39,
   "lines_elsewhere": 809,
   "calls": 65,
@@ -4525,7 +4525,7 @@
    "all/memory/segment_tree.py"
   ],
   "core_changed": true,
-  "core_opened": 15,
+  "core_opened": 16,
   "lines_core": 69,
   "lines_elsewhere": 758,
   "calls": 61,
@@ -4619,7 +4619,7 @@
    "all/approximation/checkpointer/__init__.py"
   ],
   "core_changed": true,
-  "core_opened": 5,
+  "core_opened": 6,
   "lines_core": 4,
   "lines_elsewhere": 978,
   "calls": 58,
@@ -4881,7 +4881,7 @@
    "all/memory/generalized_advantage.py"
   ],
   "core_changed": true,
-  "core_opened": 9,
+  "core_opened": 10,
   "lines_core": 22,
   "lines_elsewhere": 886,
   "calls": 49,
@@ -5049,7 +5049,7 @@
    "all/memory/segment_tree.py"
   ],
   "core_changed": true,
-  "core_opened": 12,
+  "core_opened": 14,
   "lines_core": 46,
   "lines_elsewhere": 631,
   "calls": 46,
@@ -5154,7 +5154,7 @@
    "all/memory/segment_tree.py"
   ],
   "core_changed": true,
-  "core_opened": 25,
+  "core_opened": 27,
   "lines_core": 111,
   "lines_elsewhere": 888,
   "calls": 62,
@@ -5424,7 +5424,7 @@
    "all/memory/segment_tree.py"
   ],
   "core_changed": true,
-  "core_opened": 17,
+  "core_opened": 19,
   "lines_core": 69,
   "lines_elsewhere": 387,
   "calls": 46,
@@ -5502,7 +5502,7 @@
    "all/memory/segment_tree.py"
   ],
   "core_changed": true,
-  "core_opened": 20,
+  "core_opened": 23,
   "lines_core": 67,
   "lines_elsewhere": 367,
   "calls": 38,

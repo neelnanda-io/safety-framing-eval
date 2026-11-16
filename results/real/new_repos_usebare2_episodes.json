@@ -98,7 +98,7 @@
   ],
   "core_files": [],
   "core_changed": false,
-  "core_opened": 4,
+  "core_opened": 5,
   "lines_core": 0,
   "lines_elsewhere": 2087,
   "calls": 67,
@@ -294,7 +294,7 @@
    "sandbagging/math_setting.py"
   ],
   "core_changed": true,
-  "core_opened": 9,
+  "core_opened": 10,
   "lines_core": 56,
   "lines_elsewhere": 1208,
   "calls": 46,
