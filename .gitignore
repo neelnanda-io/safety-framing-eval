@@ -3,6 +3,7 @@ api.secrets
 __pycache__/
 *.pyc
 runs/
+runs_rerun/
 results/sandboxes/
 .pytest_cache/
 *.log

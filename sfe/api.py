@@ -191,11 +191,16 @@ async def chat(model: Model, messages: list[dict], *, tools: list | None = None,
             status = getattr(e, "status_code", None)
             if log:
                 log(f"api attempt {k + 1}/{MAX_ATTEMPTS} failed ({status}): {err[:200]}")
-            if "blocked the response" in err:
+            if "blocked the response" in err or "blocked the request" in err:
                 # Google's API refused to return this reply (seen 11 Nov 2026 as a 502 "Gemini blocked the response: OTHER"
                 # on a safety-described task, six attempts out of six). That is a provider refusal, not a network fault:
                 # report it the way Anthropic's filter is reported (empty reply, finish reason content_filter, no cost)
                 # so the episode records it instead of being thrown away as a failed request.
+                # Added 21 Nov 2026: Google's filter may refuse the REQUEST instead ("Gemini blocked the request: OTHER",
+                # HTTP 403, error_type content_policy_violation; as an empty-choices reply or a PermissionDeniedError).
+                # Before this line the harness retried such a call six times and ended the episode incomplete (four Gemini
+                # 4 Neon episodes of docs/GEMINI4_PREREG.md); it is now the same filter block, decided by agent.py's
+                # FILTER_ATTEMPTS. tests/test_google_request_block.py uses those episodes' saved error text.
                 return Reply("", "", [], None, None, 0.0, "Google (blocked)", "content_filter", k + 1)
             if status in (400, 401, 402, 404):
                 break

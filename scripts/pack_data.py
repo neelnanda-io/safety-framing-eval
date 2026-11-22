@@ -3,22 +3,37 @@ the local username and e-mail addresses scrubbed, and third-party repository con
 no licence.
 
     python scripts/pack_data.py plan                       # what would go where, with counts; writes nothing
-    python scripts/pack_data.py pack --base dist/data-v2   # data-v3: data-v2's archives copied byte for byte, plus
-                                                           # v3-additions.tar.gz with every file they do not hold
+    python scripts/pack_data.py pack --base dist/data-v4 --out dist/data-v5 --skip-runs '^ca_bugfix'
+                                                           # data-v5: data-v4's archives copied byte for byte, plus
+                                                           # v5-additions.tar.gz with every file they do not hold, less
+                                                           # the runs still going (data-v3 and data-v4 were built the
+                                                           # same way, on data-v2 and data-v3)
     python scripts/pack_data.py pack --out <dir>           # every archive packed afresh (how data-v2 was built)
     python scripts/pack_data.py pack --only new-repos      # one archive
     python scripts/pack_data.py pack --drop-encrypted --out <dir>   # same, encrypted reasoning blobs replaced (size test)
     python scripts/pack_data.py licences [--github]        # check the licence table against the clones (and GitHub)
 
-Each archive unpacks at the repository root: `runs/<run>/{episodes,replaced,superseded}/*.json` and, for the first-reply
-probes, `results/real/<folder>/*.json`, plus `THIRD_PARTY_NOTICES.md` and `LICENSES/<repository>.txt` when it holds
-episodes on third-party repositories.
+Each archive unpacks at the repository root: `runs/<run>/{episodes,replaced,superseded}/*.json`, for the first-reply
+probes `results/real/<folder>/*.json`, and (from data-v4) `runs_rerun/<run>/episodes/*.json`, plus `THIRD_PARTY_NOTICES.md`
+and `LICENSES/<repository>.txt` when it holds episodes on third-party repositories.
 
 `data-v3` (16 Nov 2026) keeps the four archives of `data-v2` unchanged and adds `v3-additions.tar.gz`, packed by the same
 rules from every file `data-v2` does not hold. Because each archive unpacks its own `THIRD_PARTY_NOTICES.md` at the root,
 the added archive (which sorts last) carries the notice for the whole release and the licence text of every licensed
 repository in it; the `LICENSES/` files inside the `data-v2` archives are placeholders, because the clones were not on
 the machine that packed them.
+
+`data-v4` (built 16 Nov 2026, never released on its own) keeps the five archives of `data-v3` unchanged and adds
+`v4-additions.tar.gz`: the 24 episodes of the two tests of 16 Nov 2026 evening, and the sixteen toy-task episodes re-run on
+16 Nov because the originals ran or read another episode's patch script through the shared `/tmp` (docs/NOTES.md). The
+re-runs are packed under `runs_rerun/<run>/`, so unpacking never overwrites an original under `runs/`. Like
+`v3-additions.tar.gz`, it carries the full licence texts.
+
+`data-v5` (22 Nov 2026) keeps the six archives of `data-v4` unchanged and adds `v5-additions.tar.gz`: the runs of 17 to 21
+Nov 2026 (GPT-6.2 Astra and GPT-6.2 Sol on the toy tasks and the real repositories, their extra repeats and the purpose
+test, the ControlArena same-files control, Gemini 4 Hydrogen and Gemini 4 Neon) and of 22 Nov 2026 (the purpose only in
+the code, and the ladder of how much the user says: runs `real7_*`, docs/CODE_NAMES_LADDER_PREREG.md). Runs still going
+when it was packed are left out with `--skip-runs`: the manifest counts them but does not name them.
 
 What is changed on the way out (every JSON string, including dictionary keys, is processed after parsing):
   - absolute paths into the original machine's home folder become `<repo>`, `<venv>` or `<home>`;
@@ -52,14 +67,25 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RUNS = ROOT / "runs"
-DEFAULT_OUT = ROOT / "dist" / "data-v3"
-RELEASE = "data-v3"
+# Episodes re-run apart from the published ones (16 Nov 2026: the sixteen toy episodes spoiled by the shared /tmp). They are
+# packed under runs_rerun/<run>/ so that unpacking a release never replaces an original under runs/.
+RERUNS = ROOT / "runs_rerun"
+DEFAULT_OUT = ROOT / "dist" / "data-v5"
+RELEASE = "data-v5"
 # With `pack --base <earlier release>`: the earlier archives are copied unchanged and every file they do not hold goes into
-# this one archive (16 Nov 2026: nine harmless-use episodes of two Claude models, eleven new descriptions).
-ADDED = {"name": "v3-additions",
-         "what": "files added after data-v2: the harmless use on Claude Fable 5.2 (seeds 1-5) and Claude Opus 5.5 (seeds 2-5) "
-                 "on the generic RL library, and eleven new descriptions on GPT-6 Astra and GPT-6.1 Sol (the RL library and "
-                 "the data kit): full episodes and first replies (16 Nov 2026)"}
+# this one archive. data-v3 (16 Nov 2026 morning) added `v3-additions.tar.gz` on top of data-v2, data-v4 (16 Nov evening,
+# never released on its own) `v4-additions.tar.gz` on top of data-v3, and data-v5 adds this one on top of data-v4.
+ADDED = {"name": "v5-additions",
+         "what": "files added after data-v4: GPT-6.2 Astra and GPT-6.2 Sol on the six toy tasks and the four real-repository "
+                 "settings, with their extra repeats on the two attack-like repositories, the purpose test on rsl_rl and the "
+                 "ControlArena same-files control; GPT-5.6 Sol on that control; Gemini 4 Hydrogen on the toy tasks and "
+                 "Gemini 4 Neon on the toy tasks and the real repositories (17-21 Nov 2026); the purpose only in the code "
+                 "and the ladder of how much the user says, on rsl_rl (22 Nov 2026)"}
+# Earlier releases that were built but never published on their own: their archives are in the next release unchanged.
+UNRELEASED = {"data-v4"}
+# Archives whose LICENSES/ files are placeholders (packed without the clones, data-v2); every later added archive carries the
+# full texts. Used only to word the release notes.
+PLACEHOLDER_LICENCES = ("toy-tasks.tar.gz", "real-repos.tar.gz", "description-edits.tar.gz", "new-repos.tar.gz")
 
 # --------------------------------------------------------------------------------------------------------------------
 # What goes into which archive. A run folder is packed when its name matches one pattern; folders that match none are
@@ -69,7 +95,7 @@ ARCHIVES = {
     "toy-tasks": {
         "what": "the ten toy tasks (six original, four harder), every model, the description family and the replays "
                 "with reasoning carried (5-10 Nov 2026)",
-        "runs": [r"^main[23]_", r"^v1_main_", r"^w[234]_", r"^hard_(std|scarce)_", r"^native_", r"^pilot2?_astra$",
+        "runs": [r"^main[23]_", r"^v1_main_", r"^w[2-6]_", r"^hard_(std|scarce)_", r"^native_", r"^pilot2?_astra$",
                  r"^calib_", r"^smoke7b?$", r"^fam_"],
         "dirs": [],
     },
@@ -82,7 +108,8 @@ ARCHIVES = {
     "description-edits": {
         "what": "single-change rewrites of the two attack-like descriptions, and the implied-purpose descriptions on "
                 "twenty-two models: full episodes and first replies (11-13 Nov 2026)",
-        "runs": [r"^real3_", r"^real4_", r"^real5_"],        # real5_: the five data-kit descriptions of 16 Nov
+        # real5_: the five data-kit descriptions of 16 Nov; real7_: the code-names test and ladder of 22 Nov (rsl_rl)
+        "runs": [r"^real3_", r"^real4_", r"^real5_", r"^real7_"],
         "dirs": ["results/real/first_words"],
     },
     "new-repos": {
@@ -148,6 +175,12 @@ _TAILS = [USER[i:] for i in range(1, len(USER))] if len(USER) >= 4 else []      
 _HEADS = [USER[:i] for i in range(len(USER) - 1, 0, -1)] if len(USER) >= 4 else []  # longest first
 USER_TAIL = re.compile(rf"(?<![A-Za-z0-9])(?:{'|'.join(map(re.escape, _TAILS))})(?=/Code/)") if _TAILS else None
 USER_HEAD = re.compile(rf"/home/(?:{'|'.join(map(re.escape, _HEADS))})(?![A-Za-z0-9])") if _HEADS else None
+# ... and a proper prefix where a cut fell inside pytest's per-user folder name ("pytest-of-" + the start of the username,
+# then "..."; found 22 Nov 2026 in a toy-task episode of GPT-6.2 Astra), or any prefix of five letters or more right before
+# the "..." of a cut.
+USER_PYTEST = re.compile(rf"pytest-of-(?:{'|'.join(map(re.escape, _HEADS))})(?![A-Za-z0-9])") if _HEADS else None
+USER_CUT = re.compile(rf"(?<![A-Za-z0-9])(?:{'|'.join(map(re.escape, [h for h in _HEADS if len(h) >= 5]))})(?=\.\.\.|…)") \
+    if [h for h in _HEADS if len(h) >= 5] else None
 # An address needs a real top-level domain and must not run on into a name, so code such as `q@k.transpose(...)`,
 # `x@torch.no_grad` or `@pytest.mark.parametrize` is left alone.
 TLDS = (r"com|org|net|edu|gov|mil|int|io|ai|dev|app|co|me|info|biz|us|uk|eu|de|fr|ch|nl|be|at|se|dk|fi|it|es|pt|ie|pl|cz|"
@@ -172,12 +205,16 @@ def scrub(s: str) -> str:
             s = LINUX_HOME.sub("<home>", s)
         if USER_HEAD:
             s = USER_HEAD.sub("<home>", s)
+        if USER_PYTEST and "pytest-of-" in s:
+            s = USER_PYTEST.sub("pytest-of-<user>", s)
         if USER_TAIL and "/Code/" in s:
             s = USER_TAIL.sub("<user>", s)
     if HOST_RE and HOST_RE.search(s):
         s = HOST_RE.sub("<host>", s)
     if USER_WORD and USER_WORD.search(s):
         s = USER_WORD.sub("<user>", s)
+    if USER_CUT and ("..." in s or "…" in s):
+        s = USER_CUT.sub("<user>", s)
     if "@" in s:
         s = EMAIL.sub(lambda m: m.group(0) if EMAIL_KEEP.search(m.group(0)) else "<email>", s)
     return s
@@ -365,20 +402,28 @@ def archive_of_run(run: str) -> str | None:
 
 def plan(skip_runs: list | None = None) -> tuple[dict, list]:
     """archive -> list of (source path, archive member name, unit) ; plus the run folders not packed.
-    `skip_runs`: patterns for runs still in progress, left out of this packing and listed as such."""
+    `skip_runs`: patterns for runs still in progress, left out of this packing and counted without a name."""
     out = {name: [] for name in ARCHIVES}
     skipped = []
     for run_dir in sorted(p for p in RUNS.iterdir() if p.is_dir()):
         run = run_dir.name
         a = archive_of_run(run)
         files = [f for sub in RUN_SUBDIRS for f in sorted((run_dir / sub).glob("*.json"))]
-        if a is not None and any(re.search(p, run) for p in skip_runs or []):
-            skipped.append({"run": run, "files": len(files), "why": "still running: packed at the last pass"})
+        if any(re.search(p, run) for p in skip_runs or []):        # whether or not an archive would take it; not named
+            skipped.append({"run": None, "files": len(files), "why": "still running when this release was packed: not in it"})
             continue
         if a is None:
             skipped.append({"run": run, "files": len(files), "why": "abandoned attempt or one-off smoke test"})
             continue
         out[a] += [(f, f"runs/{run}/{f.parent.name}/{f.name}", f"runs/{run}") for f in files]
+    for run_dir in sorted(p for p in RERUNS.iterdir() if p.is_dir()) if RERUNS.is_dir() else []:
+        run = run_dir.name
+        a = archive_of_run(run)
+        files = [f for sub in RUN_SUBDIRS for f in sorted((run_dir / sub).glob("*.json"))]
+        if a is None:
+            skipped.append({"run": f"runs_rerun/{run}", "files": len(files), "why": "re-run of a run that is not packed"})
+            continue
+        out[a] += [(f, f"runs_rerun/{run}/{f.parent.name}/{f.name}", f"runs_rerun/{run}") for f in files]
     for name, spec in ARCHIVES.items():
         for pattern in spec["dirs"]:
             for d in sorted(p for p in ROOT.glob(pattern) if p.is_dir()):
@@ -415,11 +460,12 @@ def transform(job) -> tuple:
     own_history = 0 if keep_history or rule != "own" else withhold_own_history(d)
     if drop_enc:
         d = drop_encrypted(d)
-    incomplete = member.startswith("runs/") and d.get("complete") is False
+    in_runs = member.split("/")[0] in ("runs", "runs_rerun")
+    incomplete = in_runs and d.get("complete") is False
     b = json.dumps(d, indent=1).encode()
     return member, b, {"unit": unit, "task": task, "rule": rule, "raw_bytes": len(raw), "bytes": len(b),
                        "incomplete": incomplete, "own_history": own_history,
-                       "encrypted_bytes": enc, "kind": member.split("/")[2] if member.startswith("runs/") else "first_reply"}
+                       "encrypted_bytes": enc, "kind": member.split("/")[2] if in_runs else "first_reply"}
 
 
 def notices(tasks: dict, used: set) -> tuple[str, dict]:
@@ -527,7 +573,8 @@ def pack(out: Path, only: list | None, drop_enc: bool, workers: int, keep_histor
     out.mkdir(parents=True, exist_ok=True)
     manifest = {"release": RELEASE, "built": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()),
                 "encrypted_reasoning": "removed" if drop_enc else "kept", "archives": {}, "units": {},
-                "not_packed": skipped, "repositories": tasks}
+                "not_packed": [s for s in skipped if s["run"]], "still_running": sum(1 for s in skipped if not s["run"]),
+                "repositories": tasks}
     for t in manifest["repositories"].values():
         t.pop("source", None)
     now = time.time()
@@ -568,16 +615,17 @@ def copy_file(src: Path, dst: Path):
     shutil.copyfile(src, dst)
 
 
-def pack_onto(base: Path, out: Path, workers: int) -> dict:
+def pack_onto(base: Path, out: Path, workers: int, skip_runs: list | None = None) -> dict:
     """A release built on an earlier one: the earlier release's archives copied byte for byte (their SHA-256 checked
-    against its manifest), and every file the plan packs that they do not hold, packed by the same rules into ADDED."""
+    against its manifest), and every file the plan packs that they do not hold, packed by the same rules into ADDED.
+    `skip_runs`: patterns for runs still going, left out, and counted but not named in the manifest."""
     bm = json.loads((base / "MANIFEST.json").read_text())
     if bm.get("encrypted_reasoning") != "kept":
         raise SystemExit("the base release dropped encrypted reasoning; pack the additions the same way first")
     if out.exists() and any(out.iterdir()):
         raise SystemExit(f"{out} is not empty: write a release into a new folder")
     tasks = task_table()
-    files, skipped = plan()
+    files, skipped = plan(skip_runs)
     have = {m for a in bm["archives"].values() for m in a["members_sha256"]}
     members = [(src, member, unit) for mem in files.values() for src, member, unit in mem if member not in have]
     out.mkdir(parents=True, exist_ok=True)
@@ -592,10 +640,13 @@ def pack_onto(base: Path, out: Path, workers: int) -> dict:
     manifest = {"release": RELEASE, "built": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()),
                 "encrypted_reasoning": "kept",
                 "base": {"release": bm["release"], "built": bm["built"], "archives": [a["file"] for a in bm["archives"].values()],
-                         "how": "copied byte for byte; each archive's SHA-256 equals the base release's manifest"},
-                "archives": {}, "units": {}, "not_packed": skipped, "repositories": repos}
+                         "how": "copied byte for byte; each archive's SHA-256 equals the base release's manifest",
+                         **({"base": bm["base"]} if bm.get("base") else {})},
+                "archives": {}, "units": {}, "not_packed": [s for s in skipped if s["run"]],
+                "still_running": sum(1 for s in skipped if not s["run"]), "repositories": repos}
     for name, a in bm["archives"].items():
-        manifest["archives"][name] = dict(a, counts=archive_counts(bm["units"], a["units"]))
+        # the base manifest's own per-archive counts when it has them: its units may already merge two archives' files
+        manifest["archives"][name] = dict(a, counts=a.get("counts") or archive_counts(bm["units"], a["units"]))
     manifest["units"] = {k: dict(v) for k, v in bm["units"].items()}
     for k in ("own_history_withheld", "unreadable"):
         if bm.get(k):
@@ -639,17 +690,49 @@ def release_notes(m: dict) -> str:
            for name, a in m["archives"].items()}
     what = {"toy-tasks": "the ten toy tasks, every model",
             "real-repos": "six real repositories, twenty-two models",
-            "description-edits": "rewritten descriptions of the two attack-like repositories, and the purpose-implied ones",
+            "description-edits": "rewritten descriptions of the two attack-like repositories, and the ones that describe the "
+                                 "purpose neutrally",
             "new-repos": "further repositories, ten stated uses of one library, ControlArena",
-            ADDED["name"]: "added after data-v2: the harmless use on two Claude models, eleven new descriptions on GPT-6 Astra "
-                           "and GPT-6.1 Sol"}
+            "v3-additions": "added after data-v2: the harmless use on two Claude models, eleven new descriptions on GPT-6 Astra "
+                            "and GPT-6.1 Sol",
+            "v4-additions": "added after data-v3: four more seeds on two stated uses of the generic RL library, eight more "
+                            "ControlArena episodes of GPT-5.6 Sol, and sixteen toy-task episodes re-run because the originals "
+                            "were spoiled by a shared temporary folder (under `runs_rerun/`)",
+            ADDED["name"]: "added after data-v4: GPT-6.2 Astra and GPT-6.2 Sol (six toy tasks, four real-repository settings, "
+                           "extra repeats, the purpose test), the ControlArena same-files control (GPT-5.6 Sol and both "
+                           "GPT-6.2 models), Gemini 4 Hydrogen (toy tasks), Gemini 4 Neon (toy tasks and real repositories), "
+                           "and the purpose only in the code with the ladder of how much the user says (rsl_rl, 22 Nov)"}
     total = sum(a["files"] for a, _ in per.values())
+    def reruns_in(entry: dict) -> int:
+        """Re-run episodes (runs_rerun/) packed in one archive."""
+        return sum((m["units"][k].get("added") or m["units"][k])["episodes"] for k in entry["units"] if k.startswith("runs_rerun/"))
+
+    def adds(entry: dict, k: collections.Counter, since: str, note: str = "") -> str:
+        r = reruns_in(entry)
+        return (f"`{entry['file']}`{note} adds {k['episodes'] - r:,} episodes" + (f" and {k['first_replies']:,} first replies"
+                if k["first_replies"] else "") + f" run since `{since}`" + (f", plus {r} re-runs of spoiled toy-task episodes "
+                "kept under `runs_rerun/` (the originals under `runs/` are unchanged)" if r else ""))
+
     if m.get("base"):
         b = m["base"]
-        added = per[ADDED["name"]][1]
-        head = (f"Episode transcripts for every experiment in this repository ({total:,} files). Supersedes `{b['release']}`: its "
-                f"{len(b['archives'])} archives are included unchanged (same SHA-256), and `{ADDED['name']}.tar.gz` adds "
-                f"{added['episodes']:,} episodes and {added['first_replies']:,} first replies run since.")
+        added_entry, added = per[ADDED["name"]]
+        bb = b.get("base")
+        if b["release"] in UNRELEASED and bb:
+            # the base was built but never released: say what it added, and supersede the release before it
+            mid = [f for f in b["archives"] if f not in bb["archives"]]
+            mids = [(a, k) for a, k in per.values() if a["file"] in mid]
+            head = (f"Episode transcripts for every experiment in this repository ({total:,} files). Supersedes `{bb['release']}`: "
+                    f"its {len(bb['archives'])} archives are included unchanged (same SHA-256). "
+                    + "; ".join(adds(a, k, bb["release"], f", built on {b['built'][:10]} for a `{b['release']}` that was "
+                                     "never released on its own,") for a, k in mids)
+                    + "; and " + adds(added_entry, added, b["release"]) + ".")
+        else:
+            head = (f"Episode transcripts for every experiment in this repository ({total:,} files). Supersedes `{b['release']}`: its "
+                    f"{len(b['archives'])} archives are included unchanged (same SHA-256), and " + adds(added_entry, added, b["release"]) + ".")
+        if m.get("still_running"):
+            n = m["still_running"]
+            head += (f" {'One run folder' if n == 1 else f'{n} run folders'} still going when this release was packed "
+                     f"{'is' if n == 1 else 'are'} not in it.")
     else:
         head = f"Episode transcripts for every experiment in this repository ({total:,} files). Supersedes `data-v1`, which held the toy tasks only."
     lines = [head, "", "| archive | contents | size |", "|---|---|---|"]
@@ -660,14 +743,19 @@ def release_notes(m: dict) -> str:
         lines.append(f"| `{a['file']}` | {what.get(name, a['what'])}: {' and '.join(parts)}"
                      f"{' (plus ' + ', '.join(extra) + ')' if extra else ''} | {a['bytes'] / 1e6:.1f} MB |")
     withheld = sorted(t for t, v in m["repositories"].items() if v["rule"] == "withheld")
-    lines += ["", "Unpack at the repository root with `for f in *.tar.gz; do tar xzf \"$f\"; done` (creates `runs/<run>/...` and "
-              "`results/real/<first-reply folders>/`); `docs/RUNS.md` says which run is which."]
+    lines += ["", "Unpack at the repository root with `for f in *.tar.gz; do tar xzf \"$f\"; done` (creates `runs/<run>/...`, "
+              "`results/real/<first-reply folders>/`" + (" and `runs_rerun/<run>/...`" if any(k.startswith("runs_rerun/") for k in m["units"]) else "")
+              + "); `docs/RUNS.md` says which run is which."]
     if m.get("base"):
         n_lic = sum(1 for v in m["repositories"].values() if v["rule"] == "full")
-        lines += [f"Licence texts: the `LICENSES/` files inside the {len(m['base']['archives'])} `{m['base']['release']}` archives are "
-                  "placeholders that only name each repository and link to it. `" + ADDED["name"] + ".tar.gz` carries the full "
-                  f"licence text of all {n_lic} licensed repositories in `LICENSES/`, and `THIRD_PARTY_NOTICES.md` for the whole "
-                  "release; it sorts last, so the loop above unpacks it last and leaves the full texts in place. If you unpack "
+        placeholder = [a["file"] for a in m["archives"].values() if a["file"] in PLACEHOLDER_LICENCES]
+        full = [a["file"] for a in m["archives"].values() if a["file"] not in PLACEHOLDER_LICENCES]
+        lines += [f"Licence texts: the `LICENSES/` files inside the {len(placeholder)} archives first released in `data-v2` are "
+                  "placeholders that only name each repository and link to it. "
+                  + (", ".join(f"`{f}`" for f in full[:-1]) + " and " if len(full) > 1 else "") + f"`{full[-1]}`"
+                  + (" each carry" if len(full) > 1 else " carries") + f" the full licence text of all {n_lic} licensed "
+                  "repositories in `LICENSES/`, and `THIRD_PARTY_NOTICES.md` for the whole release; `" + ADDED["name"]
+                  + ".tar.gz` sorts last, so the loop above unpacks it last and leaves the full texts in place. If you unpack "
                   "only some archives, take `LICENSES/` from `" + ADDED["name"] + ".tar.gz`."]
     lines += ["Scrubbed on the way out: absolute local paths, the local username and host name, and e-mail addresses "
               "(`<repo>`, `<home>`, `<user>`, `<host>`, `<email>`).",
@@ -695,7 +783,10 @@ def manifest_md(m: dict) -> str:
     for a in m["archives"].values():
         lines.append(f"| `{a['file']}` | {a['files']:,} | {a['bytes'] / 1e6:,.0f} MB | {a['what']} |")
     if m.get("base"):
-        lines += ["", f"The first {len(m['base']['archives'])} archives are `{m['base']['release']}`'s (built {m['base']['built']}), "
+        b = m["base"]
+        never = (f", never released on its own; its first {len(b['base']['archives'])} are `{b['base']['release']}`'s"
+                 if b["release"] in UNRELEASED and b.get("base") else "")
+        lines += ["", f"The first {len(b['archives'])} archives are `{b['release']}`'s (built {b['built']}{never}), "
                   f"copied byte for byte; `{ADDED['name']}.tar.gz` holds every file added since. A run folder split between "
                   "two archives is listed once below, with both archives and its total."]
     lines += ["", "Rule per file: `own` = the project's own toy task, in full; `full` = permissively licensed repository, "
@@ -781,9 +872,9 @@ def main():
         print("repositories whose contents are withheld (no licence):", ", ".join(withheld))
     elif a.cmd == "pack":
         if a.base:
-            if a.only or a.drop_encrypted or a.keep_own_history or a.skip_runs:
-                raise SystemExit("--base takes no other packing option")
-            pack_onto(Path(a.base), Path(a.out), a.workers)
+            if a.only or a.drop_encrypted or a.keep_own_history:
+                raise SystemExit("--base takes no other packing option but --out, --workers and --skip-runs")
+            pack_onto(Path(a.base), Path(a.out), a.workers, a.skip_runs)
         else:
             pack(Path(a.out), a.only, a.drop_encrypted, a.workers, a.keep_own_history, a.skip_runs)
     elif a.cmd == "notes":

@@ -12,7 +12,7 @@
 <div class="answer"><strong>Short answer.</strong> On repositories whose code is identical apart from names, comments and a one-paragraph
 description, GPT-6 Astra and GPT-6.1 Sol complete measurably fewer hidden rubric items when the work is described as AI-safety
 research. No other model tested does this on the original six tasks. On four harder tasks the gap grows for GPT-6.1 Sol
-(about 10 points) and Astra (+4 to +9, depending on whether judge-flagged episodes are excluded) and appears for GPT-6.1 Terra, almost entirely on a monitor-evasion RL task. The largest shortfalls are scope
+(about 10 points) and Astra (+4 to +9, depending on whether judge-flagged episodes are excluded), mostly on a monitor-evasion RL task; GPT-6.1 Terra shows one too, but it is not clearly more than chance once the episodes spoiled by a shared temporary folder are re-run (a correction of 16 Nov 2026, under Pitfalls). The largest shortfalls are scope
 restrictions the model mentions in one clause and never explains; asked afterwards, the models say they will not improve
 evasion, backdoor or obfuscation capability, and keep refusing when told the work is authorised. The rest of the gap is
 silent: specific fixes skipped, then denied.</div>
@@ -166,6 +166,7 @@ writes), so that condition is excluded. GPT-6 Astra, run through OpenAI's own AP
 
 <h2 id="pitfalls">Pitfalls worth knowing</h2>
 <ul>
+<li><strong>Concurrent episodes shared a temporary folder</strong> (found and added 16 Nov 2026). On the laptop, agents wrote patch scripts to <code>/tmp</code> under common names, and sixteen harder-task episodes ran or read another episode’s script. Run again one at a time, the harder-task gaps at the standard setting become GPT-6.1 Sol +10.3, GPT-6.1 Terra +5.7 and GPT-6 Astra +4.5 (+9.0 over all episodes), and Astra’s scarce-reading gap +4.1. GPT-6.1 Terra’s is then not below 0.05 after the Holm correction (0.087, against 0.012 in the table above; 0.33 with the spoiled episodes dropped instead), GPT-6.1 Sol’s sits at that line in every version (0.0445 with the re-runs, 0.066 as published), and Astra’s verdict does not change. The original six tasks do not move. Details: <code>docs/NOTES.md</code> in the repository.</li>
 <li><strong>The command filter.</strong> Two versions silently rejected ordinary edit scripts (anything containing <code>open(</code> or
 <code>...</code>; then a bare <code>/</code> or <code>/tmp</code>) in both framings, spoiling two full runs and creating fake "blocked" labels.
 The current filter is tested against 4,056 real agent commands.</li>
@@ -192,7 +193,7 @@ a broader sample of safety work would test how far it generalises.</li>
 <ul>
 <li>Does the gap scale with how directly a change improves evasion of oversight? A graded family of framings around one codebase would say.</li>
 <li>Are the silent omissions the same mechanism as the announced restriction at lower intensity?</li>
-<li>Which GPT-6 / 6.1 models share it, and does it track a specific training change? GPT-6 Sol shows none; GPT-6.1 Terra only on monitor evasion.</li>
+<li>Which GPT-6 / 6.1 models share it, and does it track a specific training change? GPT-6 Sol shows none; GPT-6.1 Terra only on monitor evasion (16 Nov 2026: and that gap is not clearly more than chance once the episodes spoiled by a shared temporary folder are re-run; see Pitfalls).</li>
 <li>How much of the silent gap could item-level diffing of agent output against a reference solution catch?</li>
 </ul>
 

@@ -6,6 +6,7 @@ results/real/summary.json; the prose is results/followup_body.html with {{FIG_*}
     python -m sfe.family && python -m sfe.real_analyze --runs ... && python -m sfe.build_followup
 """
 import json
+import re
 import statistics as st
 from collections import defaultdict
 from pathlib import Path
@@ -442,13 +443,13 @@ def rerun_note() -> str:
            f"contains fixes the checklist is built from, and two more found one of those copies. The rest downloaded another "
            f"release or a dependency, or used a folder holding one. None was from the three OpenAI models. ")
     if landed == len(rep):
-        return out + ("All were set aside and run again, one at a time, on a machine with no internet access. The figures here use the re-runs."
+        return out + ("All were set aside and run again, one at a time, on a machine where the agent could not look up host names. The figures here use the re-runs."
                       + (" One episode of the later description-edit runs was also discarded and run again, after two running episodes "
                          "were given the same user account by mistake." if later else ""))
     if landed:
-        return out + (f"They were set aside. {words[landed].capitalize()} have been run again so far, on a machine with no internet access; "
+        return out + (f"They were set aside. {words[landed].capitalize()} have been run again so far, on a machine where the agent could not look up host names; "
                       f"the others are left out of the figures here.")
-    return out + "They are left out of the figures here and are being run again on a machine with no internet access."
+    return out + "They are left out of the figures here and are being run again on a machine where the agent could not look up host names."
 
 
 def fill_numbers(body: str) -> str:
@@ -523,6 +524,13 @@ def main() -> None:
         body = body.replace("{{FG_EXTRA}}", extra.read_text() if extra.exists() else "").replace("{{TABLE_IMPLIED}}", implied_html())
         rb = RES / "followup_readme_bullet.html"        # one bullet on the README-only arm, written once those episodes are in
         body = body.replace("{{README_BULLET}}", rb.read_text() if rb.exists() else "")
+    # 18 Nov 2026: the judges who saw only what the user saw (docs/USER_MISLED_PREREG.md, rule 2 of "What would change the
+    # write-up"), from sfe/purpose_writeup.py; the qualifying words go where their file is absent (the public copy)
+    from sfe.purpose_writeup import judged_numbers
+    judged = judged_numbers()
+    body = re.sub(r"<!-- judged-start -->(.*?)<!-- judged-end -->", (lambda mm: mm.group(1)) if judged else "", body, flags=re.S)
+    for k, v in judged.items():
+        body = body.replace("{{" + k + "}}", v)
     body = fill_numbers(body)
     figs = {"{{FIG_ME}}": lambda: fig_family("monitor_evasion_rl", ME_ROWS, 0, 100, [0, 25, 50, 75, 100], "training code edited", "training code edited in"),
             "{{FIG_DM}}": lambda: fig_family("diff_monitor", DM_ROWS, 70, 95, [70, 75, 80, 85, 90, 95], "detector fixes made", "detector fixes made:"),

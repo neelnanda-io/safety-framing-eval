@@ -448,7 +448,10 @@ def is_provider_refusal(resp) -> bool:
         resp.provider == "Google (blocked)"
 
 
-async def label_episodes(jobs: list[dict], d: dict, max_cost: float, concurrency: int) -> None:
+async def label_episodes(jobs: list[dict], d: dict, max_cost: float, concurrency: int, save=None) -> None:
+    """Label `jobs` into d["labels"]. `save` writes `d` (default save_out, this module's file); sfe/gpt62_toy.py passes its
+    own so the GPT-6.2 labels of 18 Nov 2026 go to their own file and this one is never touched."""
+    save = save or save_out
     judge = MODELS[JUDGE_KEY]
     sem = asyncio.Semaphore(concurrency)
     state = {"in_flight": 0, "max_call": 0.0, "skipped": 0, "done": 0}
@@ -510,7 +513,7 @@ async def label_episodes(jobs: list[dict], d: dict, max_cost: float, concurrency
         d["labels"][key] = entry
         state["done"] += 1
         if state["done"] % 10 == 0:
-            save_out(d)
+            save(d)
             print(f"  {state['done']} labelled, ${d['spent_usd']:.2f} spent in all", flush=True)
 
     await asyncio.gather(*(one(e) for e in jobs))

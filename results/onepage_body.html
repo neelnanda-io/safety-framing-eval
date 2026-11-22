@@ -122,7 +122,7 @@ code{font-size:.88em}
     <tr><td>Chain-of-thought evidence of ethical doubt</td><td>Could not test. Reasoning is hidden; OpenAI’s summaries almost never mention the decision</td></tr>
     <tr><td>Training-checkpoint and weight-subtraction analysis</td><td>Could not test</td></tr>
   </table></div>
-  <p>New here: GPT-6.1 Sol shows a larger gap (4.4, replicated on fresh seeds at 3.5), and GPT-6.1 Terra shows one only on the monitor-evasion task.</p>
+  <p>New here: GPT-6.1 Sol shows a larger gap (4.4, replicated on fresh seeds at 3.5). GPT-6.1 Terra shows one only on the larger repositories below, more than half of it on the monitor-evasion task, and it is not clearly more than chance once the episodes spoiled by a shared temporary folder are re-run (a correction of 16 Nov 2026, below).</p>
 </div></details>
 
 <details><summary>Evidence that the gap is targeted avoidance</summary><div>
@@ -153,7 +153,8 @@ code{font-size:.88em}
 </div></details>
 
 <details><summary>Larger repositories and the other models</summary><div>
-  <p>Four repositories of about 1,600 lines with 62 to 64 items each. Gaps: GPT-6.1 Sol 10.6, GPT-6.1 Terra 6.1, Astra 4.2 on matched pairs and 8.7 over all episodes, GPT-5.6 Sol 0.5. Nearly all of it is the monitor-evasion task.</p>
+  <p>Four repositories of about 1,600 lines with 62 to 64 items each. Gaps: GPT-6.1 Sol 10.6, GPT-6.1 Terra 6.1, Astra 4.2 on matched pairs and 8.7 over all episodes, GPT-5.6 Sol 0.5. Most of it is the monitor-evasion task: all of GPT-6.1 Sol’s, more than half of Astra’s and of GPT-6.1 Terra’s.</p>
+  <p>Correction, 16 Nov 2026: sixteen episodes on these tasks (one of them a calibration run) ran or read another episode’s patch script, because episodes running at the same time on the laptop shared a temporary folder. Run again one at a time, the gaps become GPT-6.1 Sol 10.3, GPT-6.1 Terra 5.7, Astra 4.5 on matched pairs and 9.0 over all episodes. GPT-6.1 Terra’s is then not clearly more than chance after correcting for the eleven comparisons (Holm-adjusted p 0.087, against 0.012 as first published; 0.33 with the spoiled episodes dropped instead), GPT-6.1 Sol’s sits at that line in every version (0.066 as published, 0.0445 with the re-runs), and Astra’s verdict does not change. The original six tasks do not move. Details are in the repository’s notes (docs/NOTES.md).</p>
   <img src="fig/hard.png" alt="Safety and capabilities completion by model on the four larger repositories">
 </div></details>
 
@@ -167,7 +168,7 @@ code{font-size:.88em}
     <li>Ten paired tasks, each in a safety, a capabilities and a neutral version. Three turns of 15 tool calls. One hidden test per rubric item. A framing-blind judge labels each final message. Refused or blocked episodes are dropped with their twin.</li>
     <li>Statistics: permutation test within task, Holm correction, bootstrap over tasks. With six tasks the task-level intervals are wide: Astra’s is −0.7 to +7.4.</li>
     <li>Code and all 2,084 episode transcripts: <a href="https://github.com/neelnanda-io/safety-framing-eval">github.com/neelnanda-io/safety-framing-eval</a></li>
-    <li>Full write-up: <a href="https://claude.ai/artifact/5zJ8pe9jFy4qRPyZsr7qsf">shareable page</a></li>
+    <li>Full write-up: <a href="https://claude.ai/artifact/5zJ8pe9jFy4qRPyZsr7qsf">shareable page</a> (written 6 Nov 2026; it does not carry the correction above)</li>
     <li>Original report: <a href="https://alignment.openai.com/misalignment-reports/covert-underperformance-on-safety-research-tasks/">alignment.openai.com</a></li>
   </ul>
 </div></details>

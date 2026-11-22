@@ -140,7 +140,9 @@ def clean_shared_tmp(keep: Path | None = None, user: str | None = None) -> int:
 
 def agent_can_reach_internet() -> bool | None:
     """Can a command run as the agent look up and reach the package index? Recorded in every episode (None if the check
-    itself could not run). On a clean machine this must be False: the system prompt says the machine is offline."""
+    itself could not run). On a clean machine this must be False: the system prompt says the machine is offline.
+    It is a name lookup only: on a machine with no name servers (pod/offline.sh) it returns False although a connection to a
+    numeric address still works, so False means "no host-name lookups", not "no network" (docs/NOTES.md, 16 Nov 2026)."""
     code = ("import socket,sys\n"
             "try:\n    socket.create_connection((socket.gethostbyname('pypi.org'), 443), timeout=6).close(); print('yes')\n"
             "except Exception as e:\n    print('no', type(e).__name__)")
@@ -234,18 +236,28 @@ def note_block(note: str) -> str:
     return f"\n\n## How we use this (internal)\n\n{note.strip()}\n"
 
 
+def code_of(task: dict, framing: str) -> tuple[str, str]:
+    """(source repository, commit) that a description checks out: the task's own, unless the description names other code
+    with its own "source" and "pin" (the code-variant descriptions of 22 Nov 2026, docs/CODE_NAMES_LADDER_PREREG.md: one
+    commit on top of the task's pin, made by scripts/make_rsl_rl_variants.py). Every earlier description has neither key."""
+    fr = task["framings"][framing]
+    return fr.get("source", task["source"]), fr.get("pin", task["pin"])
+
+
 def make_checkout(task: dict, framing: str, user: str | None = None) -> tuple[Path, Path, str]:
-    """Fresh workspace: <tmp>/w<random>/<repo name> holding the project's history up to the pinned commit plus one
-    commit that adds the framing's README section. Returns (workspace, repo, base commit hash)."""
+    """Fresh workspace: <tmp>/w<random>/<repo name> holding the project's history up to the pinned commit (or the
+    description's own commit, code_of) plus one commit that adds the framing's README section. Returns (workspace, repo,
+    base commit hash)."""
     ws = Path(tempfile.gettempdir()) / f"w{uuid.uuid4().hex[:10]}"
     repo = ws / task["name"]
     home = ws / "home"
     for d in (repo, home, ws / "tmp"):
         d.mkdir(parents=True)
     env = git_env(home)
-    src = str((ROOT / task["source"]).resolve())
+    source, pin = code_of(task, framing)
+    src = str((ROOT / source).resolve())
     sh(["git", "init", "-q", "-b", task.get("branch", "main")], repo, env)
-    sh(["git", "fetch", "-q", src, task["pin"]], repo, env)       # only the pinned commit's ancestors: no later commits
+    sh(["git", "fetch", "-q", src, pin], repo, env)               # only the pinned commit's ancestors: no later commits
     sh(["git", "reset", "-q", "--hard", "FETCH_HEAD"], repo, env)
     (repo / ".git" / "FETCH_HEAD").unlink()                       # it records the local source path
     sh(["git", "remote", "add", "origin", task["url"]], repo, env)
@@ -388,7 +400,7 @@ async def run_real_episode(spec: RealSpec, run_dir: Path, log=print) -> dict:
     ws, repo, base = make_checkout(task, spec.framing, user)
     sb = RealSandbox(repo, ws, venv, task.get("pythonpath", "."), user)
     record: dict = {"spec": asdict(spec), "id": spec.id, "model_id": model.model_id, "started": time.time(),
-                    "base_commit": base, "pin": task["pin"], "turns": [], "cost_usd": 0.0, "error": None,
+                    "base_commit": base, "pin": code_of(task, spec.framing)[1], "turns": [], "cost_usd": 0.0, "error": None,
                     "filter_attempts": agent_mod.FILTER_ATTEMPTS, "platform": platform.platform(),
                     "sandbox_user": user,
                     "tmp_seeded": sorted(p.name for p in (TMP_SEED / task["name"]).iterdir()) if (TMP_SEED / task["name"]).is_dir() else [],

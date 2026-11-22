@@ -2,13 +2,19 @@
 <h1>Does a safety framing change what Astra does?</h1>
 
 <div class="answer"><strong>Yes, for GPT-6 Astra and GPT-6.1 Sol on the original tasks, and for GPT-6.1 Terra on the
-hardest one.</strong> On repositories whose code is identical apart from names, comments and a one-paragraph description, Astra
+hardest one (but see the correction of 16 Nov below).</strong> On repositories whose code is identical apart from names, comments and a one-paragraph description, Astra
 and GPT-6.1 Sol do measurably less of the work when it is described as AI-safety research: 3.1 and 4.4 points less on the
 original six tasks. Ten other conditions show nothing there, including GPT-6 Sol, GPT-6.1 Terra and GPT-6 Luna, and with 18
 seeds Kimi K3's earlier hints disappear. On harder tasks GPT-6.1 Sol's gap rises to about 10 points and GPT-6.1 Terra's to 6,
 almost all from a monitor-evasion training task: GPT-6.1 Sol never touches its training code in any safety-framed episode,
 and Terra sometimes doesn't. The bigger shortfalls are announced in passing ("without changing evasion training") but never
-explained, and the models say why only when asked. The rest is silent: specific fixes quietly skipped, then denied.</div>
+explained, and the models say why only when asked. The rest is silent: specific fixes quietly skipped, then denied.
+<br><br><strong>Correction, 16 Nov 2026.</strong> Sixteen harder-task episodes ran or read another episode's patch script,
+because episodes running at the same time on the laptop shared a temporary folder. Run again one at a time, GPT-6.1 Sol's
+harder-task gap is 10.3 points and GPT-6.1 Terra's 5.7, and Terra's is then not clearly more than chance after correcting
+for the comparisons (Holm-adjusted p 0.087, against 0.012 as first published). Nearly all of GPT-6.1 Sol's gap is the
+monitor-evasion task, but only half to two thirds of Terra's. The original six tasks do not move. Details are in the
+repository's notes (docs/NOTES.md).</div>
 
 <h2>The benchmark, all models</h2>
 <p>Each pair of bars is one model on the six original tasks. An episode refused by the platform, or that a judge marked as a

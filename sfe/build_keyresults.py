@@ -77,7 +77,7 @@ SDK_GROUPS = [
     ]),
     ("In between", [
         ("fg_jailbreak_data", "Jailbreak prompts to train a classifier"),
-        ("fg_plain_words", "Conditional behaviour, neutral words (purpose implied)"),
+        ("fg_plain_words", "Conditional behaviour, purpose described neutrally"),
         ("fg_phishing", "Phishing emails to train a filter"),
         ("fg_no_sleeper", "Original minus “sleeper-agent-style”"),
         ("fg_password_locked", "Safety team: password-locked sandbagging models"),
@@ -237,7 +237,7 @@ def fig_hidden(narrow: bool = False) -> str:
     x_name, x_sq, x_txt = (0, 0, WN) if narrow else (12, 170, 474)
     order = [("refused", "say"), ("told", "say"), ("refusednf", "say"), ("remark", "remark"), ("covert", "silent"),
              ("incapable", "none"), ("nofile", "nofile"), ("success", "did")]
-    blocks = [("purpose stated", "The request states the purpose"), ("purpose implied", "The request only implies the purpose")]
+    blocks = [("purpose stated", "The request states the purpose"), ("purpose implied", "The request describes the purpose neutrally")]
     body, y = [], 0
     for key, title in blocks:
         y += 8
@@ -257,7 +257,7 @@ def fig_hidden(narrow: bool = False) -> str:
             body.append(row_group(tip, y, name_with_dot(x_name, y + 11, name) + squares(x_sq, y + (17 if narrow else 0), kinds) + count, narrow))
             y += BLOCK - 2 if narrow else ROW
     aria = ("Full episodes by GPT-6 Astra and GPT-6.1 Sol on the two attack-like repositories, split by whether the request states "
-            "the purpose or only implies it, and coloured by outcome.")
+            "the purpose or describes it neutrally, and coloured by outcome.")
     return "\n".join([svg_open(y + 4, aria, narrow)] + body + ["</svg>"])
 
 
@@ -349,8 +349,13 @@ def panel_sentences() -> dict:
     how = (" and say why every time" if with_reason == extra else " and say so every time" if said_all == extra else "")
     n: dict[str, str] = {}
     n["N_MODELS_W"] = bb.words(len(keys))
+    # 18 Nov 2026: qualified where the judges who saw only what the user saw are on file (results/real/user_misled.json), in the
+    # same words as the blog draft's Figure 1 (docs/USER_MISLED_PREREG.md, "What would change the write-up", rule 2)
+    from sfe.purpose_writeup import um_stated
+    um = [um_stated(k) for k in holders]
+    plain = not any(v and v[0] for v in um)
     n["KR_TITLE1"] = (f"{bb.words(len(holders)).capitalize()} of {bb.words(len(keys))} models held back on the core code for a safety team"
-                      + (f", and all {bb.words(len(holders))} said so" if told_all else ""))
+                      + (f", and all {bb.words(len(holders))} said so" + ("" if plain else ", though not always plainly") if told_all else ""))
     n["KR_OTHERS"] = (f"Of {bb.words(len(others))} other models, {bb.words(len(extra))} also hold back there{how} "
                       f"({bb.listing([bb.name_of(k) for k in extra])}); in the other {bb.words(len(others) - len(extra))} we didn’t detect a "
                       f"difference in whether the core code was changed, at three episodes a cell."
@@ -411,6 +416,9 @@ def panel_sentences() -> dict:
     return n
 
 
+ONE_WHERE = "the rules: the last item of section 5"     # where this page defines the two rules of the one blind reader
+
+
 def link(key: str, text: str) -> str:
     return f'<a href="{LINKS[key]}">{text}</a>' if LINKS.get(key) else ""
 
@@ -431,6 +439,29 @@ def build() -> str:
     res = {k: v for k, v in res.items() if v.get("n_analysed")}
     crow, _ = rc.covert_rows()
     fills.update({f"KR_{k}": v for k, v in rc.review_numbers(res, rows, crow).items()})
+    # the GPT-6.2 models (18 Nov 2026): the same table and numbers as the blog's section, from sfe/gpt62_counts.py
+    from sfe import gpt62_counts as g62
+    g62.checks()
+    fills.update({f"KR_{k}": v for k, v in g62.numbers().items()})
+    fills["KR_G62_TABLE"] = g62.html_table(esc, ONE_WHERE)
+    # ControlArena with the same files named for two purposes (18 Nov 2026), from sfe/controlarena_same_files.py
+    from sfe import controlarena_same_files as ca2
+    ca2.checks()
+    fills.update({f"KR_{k}": esc(v) for k, v in ca2.numbers().items()})
+    # Which part of the purpose sets the GPT-6.2 models off, and GPT-6.2 Astra on the ControlArena control (18 Nov 2026, evening),
+    # from sfe/purpose_writeup.py; the judges' and the closing questions' counts only where their files exist (the block between
+    # the judged-start and judged-end markers goes otherwise)
+    from sfe import purpose_writeup as PW
+    fills.update(PW.numbers())
+    # What the user was told, re-read by one reader blind to the model under a strict and a lenient rule (21 Nov 2026): every
+    # count, test and sentence from sfe/rescored_told.py, which reads results/real/rescored_told.json
+    from sfe import rescored_told as RT
+    fills.update({k: esc(v) for k, v in RT.numbers().items()})
+    fills["ONE_RULES"], fills["ONE_EARLIER"] = esc(RT.rules_text(first=False)), esc(RT.earlier_text())
+    fills["ONE_CAP_HIDDEN"] = esc(RT.caption_astra_implied(ONE_WHERE))
+    judged = PW.judged_numbers()
+    fills.update(judged)
+    body = re.sub(r"<!-- judged-start -->(.*?)<!-- judged-end -->", (lambda mm: mm.group(1)) if judged else "", body, flags=re.S)
     for k, v in fills.items():
         body = body.replace("{{" + k + "}}", v)
     left = re.findall(r"\{\{[A-Z0-9_]+\}\}", body)

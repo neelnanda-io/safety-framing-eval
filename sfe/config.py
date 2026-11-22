@@ -14,7 +14,9 @@ load_dotenv(find_dotenv())  # walks up to .env, which holds OPENROUTER_API_KEY
 
 ROOT = Path(__file__).resolve().parent.parent
 TASKS_DIR = ROOT / "tasks"
-RUNS_DIR = ROOT / "runs"
+# SFE_RUNS_DIR sends a run's episodes somewhere other than runs/ (e.g. runs_rerun/, for re-runs kept apart from the
+# published data, which page builders and tests count); unset = runs/ as always.
+RUNS_DIR = Path(os.environ["SFE_RUNS_DIR"]) if os.environ.get("SFE_RUNS_DIR") else ROOT / "runs"
 RESULTS_DIR = ROOT / "results"
 OPENROUTER_BASE = "https://openrouter.ai/api/v1"
 
@@ -83,6 +85,14 @@ MODELS: dict[str, Model] = {
     "luna6": Model("luna6", "openai/gpt-6-luna",
                    {"order": ["openai/flex"], "allow_fallbacks": False}, 0.05, 0.25, "medium",
                    fallback_provider={"order": ["openai"], "allow_fallbacks": False}),
+    # --- 17 Nov 2026: the GPT-6.2 models, released that day. OpenRouter lists no flex endpoint for them yet, so both are
+    # pinned to OpenAI's standard tier (list prices), with Azure as the fallback, as for sol61s.
+    "astra62": Model("astra62", "openai/gpt-6.2-astra",
+                     {"order": ["openai"], "allow_fallbacks": False}, 8.0, 40.0, "medium",
+                     fallback_provider={"order": ["azure"], "allow_fallbacks": False}),
+    "sol62": Model("sol62", "openai/gpt-6.2-sol",
+                   {"order": ["openai"], "allow_fallbacks": False}, 2.0, 10.0, "medium",
+                   fallback_provider={"order": ["azure"], "allow_fallbacks": False}),
     # Open-weight: the lab's own endpoint first, then a known-good host; no 4-bit hosts.
     "kimi": Model("kimi", "moonshotai/kimi-k3",
                   {"order": ["moonshotai", "fireworks"], "allow_fallbacks": False}, 3.0, 15.0, "medium"),
@@ -119,6 +129,12 @@ MODELS: dict[str, Model] = {
     "hydrogen": Model("hydrogen", "google/gemini-4-hydrogen",
                       {"order": ["google-ai-studio/flex", "google-ai-studio"], "allow_fallbacks": False}, 0.75, 3.75, "medium",
                       cache_markers=True),
+    # 21 Nov 2026 (docs/GEMINI4_PREREG.md): Gemini 4 Neon, routed exactly as Hydrogen is (AI Studio flex first, then AI
+    # Studio standard, no other fallback; reasoning medium; cache markers on). Flex prices from
+    # GET /api/v1/models/google/gemini-4-neon/endpoints on 21 Nov 2026: $1.50 in, $7.50 out per million (twice Hydrogen's).
+    "neon": Model("neon", "google/gemini-4-neon",
+                  {"order": ["google-ai-studio/flex", "google-ai-studio"], "allow_fallbacks": False}, 1.5, 7.5, "medium",
+                  cache_markers=True),
     # Cheap smoke-test subject (BYOK Google key on the OpenRouter account -> AI Studio).
     "flash": Model("flash", "google/gemini-3-flash-preview",
                    {"order": ["google-ai-studio"], "allow_fallbacks": True}, 0.5, 3.0, "low"),

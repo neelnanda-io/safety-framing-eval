@@ -38,7 +38,11 @@ NAMES = {"astra": "GPT-6 Astra", "sol61s": "GPT-6.1 Sol", "sol": "GPT-5.6 Sol",
          # added 13 Nov 2026 (the covert-setting batch); names only, nothing else depends on the order
          "musespark": "Muse Spark Open", "dsv4pro": "DeepSeek V4 Pro", "dsv4flash": "DeepSeek V4 Flash",
          "qwen36": "Qwen3.6 27B", "qwen38": "Qwen3.8 27B", "luna6": "GPT-6 Luna", "terra61": "GPT-6.1 Terra",
-         "hydrogen": "Gemini 4 Hydrogen"}
+         "hydrogen": "Gemini 4 Hydrogen",
+         # added 18 Nov 2026 (docs/GPT62_PREREG.md); names only, so that `--models astra62 sol62` can select them
+         "astra62": "GPT-6.2 Astra", "sol62": "GPT-6.2 Sol",
+         # added 21 Nov 2026 (docs/GEMINI4_PREREG.md); a name only, so that `--models neon` can select it
+         "neon": "Gemini 4 Neon"}
 # code that IS the attack-like functionality in the two attack-like repositories (data generation; RL training)
 CORE = {"synthetic-data-kit": re.compile(r"^synthetic_data_kit/(generators/|core/create\.py)"),
         "rsl_rl": re.compile(r"^rsl_rl/(algorithms|storage|models|modules|networks)/")}

@@ -146,7 +146,7 @@ def how_told(rows: list[dict], fg: dict) -> tuple[list[tuple], dict]:
                                  and r.get("complete", True) and r["outcome"] and (plat is None or plat(r))]
     border = pick("stated_borderline", lambda r: r["platform"] == "laptop" or r["model"] == "sol61s")
     out = [tally("Purpose stated", stated),
-           tally("Purpose in neutral words (“implied”)", pick("implied")),
+           tally("Purpose described neutrally", pick("implied")),
            tally("ControlArena, attack side named", pick("control_attack")),
            tally("Two borderline stated uses", border)]
     atk = [fg[f"{t}|fg_attack|{m}"]["episodes"] for t in ("rsl_rl", "synthetic-data-kit") for m in ab]
@@ -172,12 +172,16 @@ def review_numbers(res: dict, rows: list[dict], crow: list[dict]) -> dict:
     efforts = {MODELS[k].reasoning_effort for k in res if k in MODELS}
     assert efforts == {"medium"}, efforts
     n["RT_EFFORT"] = "medium"
+    # The dates of the episodes the pages show: the panel's models and the two GPT-6.2 models (21 Nov 2026: a run of a model not
+    # yet on the pages, such as Gemini 4 Neon's first episodes, no longer moves the end date)
+    from sfe.gpt62_counts import NEW as G62
+    shown = set(res) | set(G62)
     started = []
     for pat in ("real_*", "real2_*", "real3_*", "real4_*", "new_*"):
         for f in glob.glob(str(RUNS / pat / "episodes" / "*.json")):
-            s = json.loads(Path(f).read_text()).get("started")
-            if s:
-                started.append(s)
+            e = json.loads(Path(f).read_text())
+            if e.get("started") and e.get("spec", {}).get("model") in shown:
+                started.append(e["started"])
     lo_, hi_ = time.gmtime(min(started)), time.gmtime(max(started))
     n["RT_DATES"] = f"{lo_.tm_mday} to {hi_.tm_mday} November 2026" if lo_.tm_mon == hi_.tm_mon == 11 else "November 2026"
     # B2: per-repository gaps behind Astra's headline; the cleanest number; the 44 intervals
